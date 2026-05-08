@@ -3,7 +3,7 @@ import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Aste
 
 // --- Constants & Helpers ---
 const MODES = {
-  full: { label: 'ALL PARTS (90m)', time: 90 * 60, partPrefix: 'all' },
+  full: { label: 'ALL PARTS (120m)', time: 90 * 60, partPrefix: 'all' },
   part1: { label: 'LISTENING (14m)', time: 14 * 60, partPrefix: 'I. Listening & Speaking' },
   part2: { label: 'READING (46m)', time: 46 * 60, partPrefix: 'II. Reading Skill' },
   part3: { label: 'WRITING (25m)', time: 25 * 60, partPrefix: 'III. Writing Skill' }
