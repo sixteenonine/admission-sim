@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
 
 // --- Constants & Helpers ---
 const MODES = {
@@ -51,6 +51,81 @@ const EXAM_PARTS = [
 const FLAT_EXAM_SUBS = EXAM_PARTS.flatMap(main => 
   main.subs.map(sub => ({ ...sub, mainLabel: main.label }))
 );
+
+const TECHNIQUE_GUIDES = {
+  s1: {
+    title: 'Short Conversation',
+    tips: [
+      'เน้นฟังหรืออ่านให้ออกว่า ใครคุยกับใคร ที่ไหน (Who, Where) เพื่อจับบริบท',
+      'ระวัง Idioms (สำนวน) ช้อยส์ที่แปลตรงตัวเป๊ะๆ มักจะเป็นข้อหลอก',
+      'คำตอบมักจะซ่อนอยู่ในประโยคตอบกลับ (ประโยคที่ 2) ของบทสนทนา'
+    ]
+  },
+  s2: {
+    title: 'Long Conversation',
+    tips: [
+      'กวาดสายตาอ่านคำถามและช้อยส์ล่วงหน้า (Skimming) เพื่อจับทางว่าเขาจะคุยเรื่องอะไร',
+      'จับน้ำเสียง (Tone) และอารมณ์ของคนพูด ว่ากังวล ยินดี หรือกำลังมีปัญหา',
+      'ข้อควรรู้: บทสนทนายาวมักจะเริ่มจากการทักทาย -> บอกปัญหา -> เสนอทางแก้ปัญหา'
+    ]
+  },
+  s3: {
+    title: 'Advertisement',
+    tips: [
+      'ห้ามอ่านทุกบรรทัด! ใช้เทคนิค Scanning หาเฉพาะสิ่งที่โจทย์ถาม (ราคา, วันที่, สถานที่)',
+      'ระวังคำดอกจัน (*) หรือเงื่อนไขตัวเล็กจิ๋ว (Terms and Conditions) มักเป็นจุดหลอก',
+      'โฆษณามักเล่นคำชวนเชื่อ ให้แยกให้ออกว่าอันไหนคือ Fact อันไหนคือการโฆษณาเกินจริง'
+    ]
+  },
+  s4: {
+    title: 'Product/Service Review',
+    tips: [
+      'หา Tone ของรีวิวให้เจอตั้งแต่ประโยคแรก ว่าเป็น Positive (บวก) หรือ Negative (ลบ)',
+      'สังเกตคำคุณศัพท์ (Adjectives) ที่ผู้เขียนใช้บรรยายความรู้สึกต่อสินค้า',
+      'จับประเด็นให้ได้ว่าผู้เขียน "แนะนำ" (Recommend) ให้ซื้อต่อหรือไม่'
+    ]
+  },
+  s5: {
+    title: 'News Report',
+    tips: [
+      'ใจความสำคัญ (Main Idea) จะอยู่ที่ย่อหน้าแรกเสมอ (Lead Paragraph) ให้อ่านจุดนี้ให้เคลียร์',
+      'ใช้หลัก 5W1H (Who, What, Where, When, Why) ในการไล่ล่าหาคำตอบ',
+      'ระวังการใช้คำพ้องความหมาย (Synonyms) ช้อยส์มักจะเปลี่ยนคำจากในเนื้อเรื่องเพื่อวัดคลังศัพท์'
+    ]
+  },
+  s6: {
+    title: 'Visual (Graph/Chart)',
+    tips: [
+      'เริ่มที่การอ่านชื่อกราฟ (Title) และป้ายกำกับแกน X, Y เสมอเพื่อเข้าใจภาพรวม',
+      'เช็คหน่วย (Units) ให้ชัวร์ เช่น กราฟบอกเป็นหลักพัน (in thousands) หรือเป็น %',
+      'ไฮไลต์คำบรรยายแนวโน้ม (Trends) ในโจทย์ เช่น increase (เพิ่ม), plummet (ตกฮวบ), fluctuate (ผันผวน)'
+    ]
+  },
+  s7: {
+    title: 'General Articles',
+    tips: [
+      'ใช้เทคนิค Skimming อ่านประโยคแรกและประโยคสุดท้ายของแต่ละย่อหน้า เพื่อเก็ท Main Idea ไวๆ',
+      'ถ้าเจอศัพท์ที่ไม่รู้ ให้เดาความหมายจากบริบทแวดล้อม (Context Clues) อย่าเพิ่งสติแตก',
+      'สังเกต Transition words (คำเชื่อม) เช่น However, Therefore มันคือตัวบอกทิศทางของเรื่อง'
+    ]
+  },
+  s8: {
+    title: 'Text Completion',
+    tips: [
+      'เช็ค Grammar บริเวณรอบๆ ช่องว่าง (หน้าและหลังช่องว่าง) เช่น Tense หรือ Subject-Verb Agreement',
+      'ดู Part of Speech ให้ชัวร์ว่าจุดนั้นต้องการ Noun, Verb, Adjective หรือ Adverb',
+      'สังเกตคำเชื่อม (and, but, or) เพื่อหาทิศทางของความหมาย (คล้อยตาม หรือ ขัดแย้ง)'
+    ]
+  },
+  s9: {
+    title: 'Paragraph Organization',
+    tips: [
+      'หา "ประโยคเปิด" ให้เจอ (ต้องเป็นประโยคใจความกว้างๆ ไม่มี Pronoun ลอยๆ หรือ Linker นำหน้า)',
+      'จับคู่ลำดับเวลา (Time Order) และดูความสอดคล้องของคำเชื่อม (Connectors)',
+      'เช็ค Pronoun Reference (เช่น He, This, These factors) ว่ามันกำลังอ้างอิงถึงคำนามในประโยคไหน'
+    ]
+  }
+};
 
 const calculateScores = (scores) => {
   let listening = 0, reading = 0, writing = 0;
@@ -1136,7 +1211,7 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
     if (!history || history.length === 0) return [];
     return history.slice(0, 5).reverse().map((s, idx) => {
        return {
-         label: `#${s.sessionNumber || idx + 1}`,
+         label: `รอบ ${s.sessionNumber || idx + 1}`,
          score: s.finalScore || 0,
          time: s.finishTime ? s.finishTime / 60 : s.totalTime / 60,
        };
@@ -1415,7 +1490,7 @@ const TopMarkedPartsWidget = memo(({ history, themeVals, cfg }) => {
   );
 });
 
-const SubPartHeatmapWidget = memo(({ history, themeVals, cfg }) => {
+const SubPartHeatmapWidget = memo(({ history, themeVals, cfg, onPartClick }) => {
   const { bg, theme, raisedGradient, shadowOuter } = themeVals;
   const isDarkMode = theme.bg === "#1e2229";
 
@@ -1438,7 +1513,7 @@ const SubPartHeatmapWidget = memo(({ history, themeVals, cfg }) => {
        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 z-10 border-b border-white/10 pb-4 relative">
          <div className="flex flex-col">
            <h3 className="font-bold tracking-wide" style={{ color: theme.textMain, transform: `translate(${cfg.spHeatTitleX}px, ${cfg.spHeatTitleY}px)`, fontSize: `${cfg.spHeatTitleSize}px` }}>Performance Heatmap</h3>
-           <p className="font-medium opacity-60 uppercase tracking-widest mt-1" style={{ color: theme.textSub, transform: `translate(${cfg.spHeatSubX}px, ${cfg.spHeatSubY}px)`, fontSize: `${cfg.spHeatSubSize}px` }}>วิเคราะห์จุดแข็ง-จุดอ่อนรายพาร์ทย้อนหลัง</p>
+           <p className="font-medium opacity-60 uppercase tracking-widest mt-1" style={{ color: theme.textSub, transform: `translate(${cfg.spHeatSubX}px, ${cfg.spHeatSubY}px)`, fontSize: `${cfg.spHeatSubSize}px` }}>คลิกที่ชื่อพาร์ทเพื่อดูคัมภีร์เทคนิคการทำข้อสอบ</p>
          </div>
          <div className="flex flex-col items-start lg:items-end gap-1.5" style={{ transform: `translate(${cfg.spHeatLegX}px, ${cfg.spHeatLegY}px)` }}>
             <div className="flex items-center gap-2">
@@ -1455,15 +1530,15 @@ const SubPartHeatmapWidget = memo(({ history, themeVals, cfg }) => {
                 <div className="shrink-0" style={{ width: `${cfg.spHeatLblW}px` }}></div>
                 {sessions.map(s => (
                    <div key={s.id} className="flex-1 text-center flex flex-col justify-end pb-1">
-                      <span className="font-bold uppercase tracking-wider" style={{ color: theme.textMain, fontSize: `${cfg.spHeatLblSize}px` }}>#{s.sessionNumber}</span>
+                      <span className="font-bold uppercase tracking-wider" style={{ color: theme.textMain, fontSize: `${cfg.spHeatLblSize}px` }}>รอบ {s.sessionNumber}</span>
                    </div>
                 ))}
              </div>
              
              <div className="flex flex-col gap-2">
                  {FLAT_EXAM_SUBS.map(sub => (
-                    <div key={sub.id} className="flex gap-2 items-center">
-                       <div className="shrink-0 font-bold uppercase tracking-wider text-right pr-2 leading-tight" style={{ color: theme.textSub, width: `${cfg.spHeatLblW}px`, fontSize: `${cfg.spHeatLblSize}px` }} title={sub.label}>
+                    <div key={sub.id} className="flex gap-2 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-xl p-1 -ml-1 transition-colors" onClick={() => onPartClick(sub.id)}>
+                       <div className="shrink-0 font-bold uppercase tracking-wider text-right pr-1 leading-tight group-hover:text-blue-500 transition-colors" style={{ color: theme.textSub, width: `${cfg.spHeatLblW}px`, fontSize: `${cfg.spHeatLblSize}px` }} title={`คลิกเพื่อดูเทคนิคทำพาร์ท ${sub.label}`}>
                           {SHORT_LABELS[sub.id]}
                        </div>
                        {sessions.map(s => {
@@ -1492,7 +1567,146 @@ const SubPartHeatmapWidget = memo(({ history, themeVals, cfg }) => {
   );
 });
 
-function SkillProfileView({ themeVals, setCurrentView, history, targetScore, setTargetScore, cfg }) {
+function TechniqueHubView({ themeVals, setCurrentView, history, cfg, onPartClick }) {
+  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, indentedGradient, shadowDeepInset, shadowCap, shadowTrench } = themeVals;
+
+  // คำนวณคะแนนเฉลี่ยแต่ละพาร์ทจาก History
+  const averages = useMemo(() => {
+    const result = {};
+    FLAT_EXAM_SUBS.forEach(sub => {
+      let totalRaw = 0;
+      let validCount = 0;
+      history.forEach(s => {
+        const scoreRaw = s.scores?.[sub.id];
+        if (scoreRaw !== '' && scoreRaw !== undefined && scoreRaw !== null) {
+          totalRaw += Number(scoreRaw);
+          validCount++;
+        }
+      });
+      if (validCount > 0) {
+        result[sub.id] = (totalRaw / validCount) / sub.max * 100;
+      } else {
+        result[sub.id] = null;
+      }
+    });
+    return result;
+  }, [history]);
+
+  return (
+    <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in slide-in-from-bottom-8 duration-300 mx-auto max-w-6xl gap-8">
+      <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setCurrentView('timer')} className="w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5 shrink-0" style={{ background: bg, boxShadow: shadowOuter, color: theme.textMain }}>
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-xl font-bold tracking-wide truncate" style={{ color: theme.textMain }}>Technique Hub</h2>
+            <p className="text-xs font-medium opacity-60 uppercase tracking-widest mt-1 truncate" style={{ color: theme.textSub }}>คัมภีร์เทคนิคการทำข้อสอบ 9 พาร์ท</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {FLAT_EXAM_SUBS.map(sub => {
+          const percent = averages[sub.id];
+          const needsImprovement = percent !== null && percent < 50;
+          const isExcellent = percent !== null && percent >= 75;
+          
+          let statusColor = theme.textHighlight;
+          let statusText = "ไม่มีประวัติคะแนน";
+          let shadowStyle = shadowOuter;
+          let bgStyle = raisedGradient;
+          let StatusIcon = BookOpen;
+
+          if (needsImprovement) {
+            statusColor = '#ef4444';
+            statusText = "ต้องปรับปรุง (Score < 50%)";
+            StatusIcon = TrendingDown;
+          } else if (isExcellent) {
+            statusColor = '#10b981';
+            statusText = "ทำได้ดีเยี่ยม (Score ≥ 75%)";
+            StatusIcon = Award;
+          } else if (percent !== null) {
+            statusColor = '#f59e0b';
+            statusText = "พอใช้ (Score 50-74%)";
+            StatusIcon = Activity;
+          }
+
+          return (
+            <div key={sub.id} onClick={() => onPartClick(sub.id)} className="p-6 rounded-[2rem] border border-white/5 flex flex-col gap-4 cursor-pointer hover:scale-[1.02] transition-transform relative overflow-hidden group" style={{ background: bgStyle, boxShadow: shadowStyle }}>
+              {needsImprovement && (
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-bl-full opacity-[0.05] pointer-events-none" style={{ background: statusColor }}></div>
+              )}
+              <div className="flex justify-between items-start relative z-10">
+                 <div className="w-12 h-12 rounded-full flex items-center justify-center border border-white/10 shrink-0 group-hover:scale-110 transition-transform" style={{ background: indentedGradient, boxShadow: shadowTrench, color: statusColor }}>
+                    <StatusIcon size={20} />
+                 </div>
+                 <span className="text-[10px] font-bold px-2 py-1 rounded-full border border-white/5" style={{ background: indentedGradient, color: theme.textSub, boxShadow: shadowDeepInset }}>{sub.range}</span>
+              </div>
+              <div className="flex flex-col relative z-10">
+                <span className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 truncate" style={{ color: theme.textMain }}>{sub.mainLabel}</span>
+                <span className="text-lg font-bold leading-tight" style={{ color: theme.textMain }}>{sub.label}</span>
+              </div>
+              <div className="mt-auto pt-4 border-t border-black/5 dark:border-white/5 flex items-center gap-2 relative z-10">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor, boxShadow: `0 0 6px ${statusColor}` }}></div>
+                <span className="text-[11px] font-bold tracking-wider" style={{ color: statusColor }}>{statusText}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TechniqueDetailView({ themeVals, partId, onBack, cfg }) {
+  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowCap, indentedGradient, shadowDeepInset } = themeVals;
+  const guide = TECHNIQUE_GUIDES[partId];
+  if (!guide) return null;
+
+  return (
+    <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in slide-in-from-right-8 duration-300 mx-auto max-w-4xl gap-6">
+      <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5 shrink-0" style={{ background: bg, boxShadow: shadowOuter, color: theme.textMain }}>
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-xl font-bold tracking-wide truncate" style={{ color: theme.textMain }}>{guide.title}</h2>
+            <p className="text-xs font-medium opacity-60 uppercase tracking-widest mt-1 truncate" style={{ color: theme.textSub }}>คัมภีร์เทคนิคสอบ</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full p-6 lg:p-10 rounded-[2.5rem] border border-white/5 flex flex-col gap-6" style={{ background: bg, boxShadow: shadowOuter }}>
+         <div className="flex items-center gap-4 mb-2">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center border border-white/10 shrink-0" style={{ background: raisedGradient, boxShadow: shadowCap }}>
+              <BookOpen size={28} className="text-emerald-500 drop-shadow-md" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-2xl font-black leading-tight" style={{ color: theme.textMain }}>Techniques & Tips</span>
+              <span className="text-sm font-bold opacity-50 uppercase tracking-widest mt-1" style={{ color: theme.textSub }}>เทคนิคการทำโจทย์</span>
+            </div>
+         </div>
+
+         <div className="flex flex-col gap-4 mt-2">
+            {guide.tips.map((tip, idx) => (
+              <div key={idx} className="flex gap-4 p-5 md:p-6 rounded-[2rem] border border-white/5 items-start" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-black mt-0.5" style={{ background: raisedGradient, color: '#10b981', boxShadow: shadowPlateau }}>
+                  {idx + 1}
+                </div>
+                <p className="text-base md:text-lg font-medium leading-relaxed" style={{ color: theme.textMain }}>
+                  {tip}
+                </p>
+              </div>
+            ))}
+         </div>
+      </div>
+    </div>
+  );
+}
+
+function SkillProfileView({ themeVals, setCurrentView, history, targetScore, setTargetScore, cfg, onPartClick }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient } = themeVals;
 
   return (
@@ -1533,7 +1747,7 @@ function SkillProfileView({ themeVals, setCurrentView, history, targetScore, set
          <div className="w-full flex flex-col gap-6">
            <TopTagsWidget history={history} themeVals={themeVals} cfg={cfg} />
            <TopMarkedPartsWidget history={history} themeVals={themeVals} cfg={cfg} />
-           <SubPartHeatmapWidget history={history} themeVals={themeVals} cfg={cfg} />
+           <SubPartHeatmapWidget history={history} themeVals={themeVals} cfg={cfg} onPartClick={onPartClick} />
          </div>
       )}
 
@@ -1585,7 +1799,7 @@ function ReflectionLobby({ themeVals, setCurrentView, reflectionHistory, setActi
                     <CalendarDays size={18} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-xs lg:text-sm truncate" style={{ color: theme.textMain }}>Ref #{session.sessionNumber || '?'}</span>
+                    <span className="font-bold text-xs lg:text-sm truncate" style={{ color: theme.textMain }}>รอบ {session.sessionNumber || '?'}</span>
                     <span className="text-[8px] lg:text-[10px] font-bold uppercase tracking-wider opacity-60 truncate" style={{ color: theme.textSub }}>{session.date}</span>
                     <span className="text-[8px] font-bold uppercase opacity-40 truncate mt-0.5" style={{ color: theme.textSub }}>{MODES[session.mode]?.label || session.mode}</span>
                   </div>
@@ -1899,7 +2113,7 @@ function ReflectionView({ themeVals, setCurrentView, sessionData, isDraftMode, o
           </button>
           <div className="flex flex-col min-w-0">
             <h2 className="text-xl font-bold tracking-wide truncate" style={{ color: theme.textMain }}>
-              Time Reflection #{sessionData.sessionNumber || '?'}
+              Time Reflection รอบ {sessionData.sessionNumber || '?'}
             </h2>
             <div className="flex items-center gap-2 mt-1 text-xs font-medium opacity-80 uppercase tracking-widest truncate" style={{ color: theme.textSub }}>
               <span className="truncate">{sessionData.date}</span>
@@ -2161,6 +2375,7 @@ function DevAdjustPanel({ cfg, updateCfg, showTempDev, setShowTempDev, lcdHue, s
             {renderS3("Setting Button", "settingBtnScale", "settingBtnX", "settingBtnY", "0.5", "2", "0.05")}
             {renderS3("Game Button", "gameBtnScale", "gameBtnX", "gameBtnY", "0.5", "2", "0.05")}
             {renderS3("Reflection Button", "refBtnScale", "refBtnX", "refBtnY", "0.5", "2", "0.05")}
+            {renderS3("Tech Button", "techBtnScale", "techBtnX", "techBtnY", "0.5", "2", "0.05")}
             {renderS3("Header Text", "headerScale", "headerX", "headerY", "0.5", "2", "0.05")}
           </div>
 
@@ -2235,7 +2450,7 @@ export default function App() {
   const [lcdScrollSpeed, setLcdScrollSpeed] = useState(60.5);
   const [lcdScrollGap, setLcdScrollGap] = useState(80);
 
-  const [currentView, setCurrentView] = useState('timer'); // 'timer' | 'tictactoe' | 'skill_profile' | 'reflection_lobby' | 'reflection' | 'reflection_draft' | 'score_edit'
+  const [currentView, setCurrentView] = useState('timer'); // 'timer' | 'tictactoe' | 'skill_profile' | 'reflection_lobby' | 'reflection' | 'reflection_draft' | 'score_edit' | 'technique_hub' | 'technique_detail'
   
   const [examSequence, setExamSequence] = useState(savedState.examSequence || [...RECOMMENDED_SEQUENCE]);
   const [customPresets, setCustomPresets] = useState(savedState.customPresets || []);
@@ -2249,6 +2464,9 @@ export default function App() {
   const [customTags, setCustomTags] = useState(savedState.customTags || ['#ลังเลศัพท์', '#ทำไม่ทัน', '#เดา']);
   const [targetScore, setTargetScore] = useState(savedState.targetScore || 80);
 
+  const [activeTechniqueId, setActiveTechniqueId] = useState(null);
+  const [techniquePrevView, setTechniquePrevView] = useState('timer');
+
   const [cfg, setCfg] = useState({
     scale: 1, trackRadius: 129, trackStroke: 14, bgTrackStroke: 26,
     depthOuter: 18, depthTrench: 9, depthCap: 9, depthDimple: 3, dimpleSize: 47,
@@ -2258,6 +2476,7 @@ export default function App() {
     settingBtnScale: 0.5, settingBtnX: -305, settingBtnY: 236,
     gameBtnScale: 0.5, gameBtnX: 1194, gameBtnY: 236,
     refBtnScale: 0.5, refBtnX: 1194, refBtnY: 90,
+    techBtnScale: 0.5, techBtnX: -305, techBtnY: 90,
     leftPanelScale: 0.8, leftPanelX: 67, leftPanelY: -41,
     controlPanelScale: 1.05, controlPanelX: 197, controlPanelY: -19,
     rightPanelScale: 0.85, rightPanelX: -112, rightPanelY: -116,
@@ -2501,7 +2720,7 @@ export default function App() {
   }, [activeSessionId]);
 
   return (
-    <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
+    <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
       <div dangerouslySetInnerHTML={{ __html: `
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Prompt:wght@200;300;400;500;600&display=swap');
@@ -2562,6 +2781,22 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <div onClick={() => { 
+                if (!isRunning) { 
+                  setDraftSession(null); 
+                  setCurrentView('technique_hub'); 
+                }
+              }} 
+              className={`absolute z-50 flex items-center justify-center transition-all ${isRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105 active:scale-95'}`} style={{ width: '100px', height: '100px', borderRadius: '24px', background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, transform: `scale(${cfg.techBtnScale}) translate(${cfg.techBtnX}px, ${cfg.techBtnY}px)`, transformOrigin: 'center center' }} title="Technique Hub (คัมภีร์เทคนิค)">
+              <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
+                <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
+                  <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center relative border border-white/10 group" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowCap }}>
+                    <BookOpen size={14} className="opacity-60 group-hover:text-emerald-400 group-hover:opacity-100 transition-colors" color={themeVals.theme.textMain} />
+                  </div>
+                </div>
+              </div>
+            </div>
         
             <TimerDashboard cfg={cfg} themeVals={themeVals} timeLeft={timeLeft} totalTime={totalTime.current} isRunning={isRunning} speed={speed} marks={marks} ambientOn={ambientOn} toggleAmbient={toggleAmbient} toggleTimer={toggleTimer} skipTime={skipTime} resetTimer={resetTimer} trackHue={trackHue} countdown={countdown} isAutoTrackHue={isAutoTrackHue} />
           </div>
@@ -2574,8 +2809,43 @@ export default function App() {
         <GameBoyWidget cfg={cfg} themeVals={themeVals} setCurrentView={setCurrentView} />
       )}
 
+      {currentView === 'technique_hub' && (
+        <TechniqueHubView 
+          themeVals={themeVals} 
+          setCurrentView={setCurrentView} 
+          history={reflectionHistory} 
+          cfg={cfg} 
+          onPartClick={(id) => { 
+            setActiveTechniqueId(id); 
+            setTechniquePrevView('technique_hub'); 
+            setCurrentView('technique_detail'); 
+          }} 
+        />
+      )}
+
+      {currentView === 'technique_detail' && (
+        <TechniqueDetailView 
+          themeVals={themeVals} 
+          partId={activeTechniqueId} 
+          onBack={() => setCurrentView(techniquePrevView)} 
+          cfg={cfg} 
+        />
+      )}
+
       {currentView === 'skill_profile' && (
-        <SkillProfileView themeVals={themeVals} setCurrentView={setCurrentView} history={reflectionHistory} targetScore={targetScore} setTargetScore={setTargetScore} cfg={cfg} />
+        <SkillProfileView 
+          themeVals={themeVals} 
+          setCurrentView={setCurrentView} 
+          history={reflectionHistory} 
+          targetScore={targetScore} 
+          setTargetScore={setTargetScore} 
+          cfg={cfg} 
+          onPartClick={(id) => { 
+            setActiveTechniqueId(id); 
+            setTechniquePrevView('skill_profile'); 
+            setCurrentView('technique_detail'); 
+          }} 
+        />
       )}
 
       {currentView === 'reflection_lobby' && (
@@ -2612,7 +2882,7 @@ export default function App() {
         />
       )}
 
-      {(currentView.includes('reflection') || currentView === 'timer' || currentView === 'skill_profile') && (
+      {(currentView.includes('reflection') || currentView === 'timer' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail') && (
         <DevAdjustPanel cfg={cfg} updateCfg={updateCfg} showTempDev={showTempDev} setShowTempDev={setShowTempDev} lcdHue={lcdHue} setLcdHue={setLcdHue} trackHue={trackHue} setTrackHue={setTrackHue} lcdBrightness={lcdBrightness} setLcdBrightness={setLcdBrightness} lcdScrollSpeed={lcdScrollSpeed} setLcdScrollSpeed={setLcdScrollSpeed} lcdScrollGap={lcdScrollGap} setLcdScrollGap={setLcdScrollGap} />
       )}
 
