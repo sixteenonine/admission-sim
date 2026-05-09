@@ -13,10 +13,10 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
 
   // 1. หยุดทุกเสียงทันทีเมื่อปิดปุ่ม Ambient หรือเปลี่ยนไปโหมดอื่น
   useEffect(() => {
-    if (!ambientOn || mode !== 'full') {
+    if (!ambientOn || !isRunning || mode !== 'full') {
       Howler.stop();
     }
-  }, [ambientOn, mode]);
+  }, [ambientOn, isRunning, mode]);
 
   // 2. รีเซ็ตสถานะเสียงเมื่อเริ่มสอบใหม่
   useEffect(() => {
