@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
+import useExamAudio from './hooks/useExamAudio';
 
 // --- Constants & Helpers ---
 const MODES = {
@@ -452,7 +453,7 @@ const StaticClockFace = memo(({ textSubColor }) => (
   </svg>
 ));
 
-const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, speed, marks, ambientOn, toggleAmbient, toggleTimer, skipTime, resetTimer, trackHue, countdown, isAutoTrackHue }) => {
+const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, speed, marks, ambientOn, toggleAmbient, toggleTimer, skipTime, resetTimer, trackHue, countdown, isAutoTrackHue, mode }) => {
   const [isClockMode, setIsClockMode] = useState(false);
   const { bg, theme, raisedGradient, indentedGradient, shadowOuter, shadowCap, shadowPlateau, shadowTrench, shadowDimple } = themeVals;
 
@@ -554,9 +555,9 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
         className="flex items-center justify-center gap-6 mt-6 z-10 w-full max-w-[340px]"
         style={{ transform: `scale(${cfg.controlPanelScale}) translate(${cfg.controlPanelX}px, ${cfg.controlPanelY}px)`, transformOrigin: 'center center', transition: 'transform 0.1s' }}
       >
-        <button onClick={toggleAmbient} className="w-14 h-14 rounded-full flex items-center justify-center transition-all active:scale-[0.98] border border-white/5" style={{ background: bg, color: ambientOn ? '#3b82f6' : theme.textMain, boxShadow: shadowPlateau }}>
-          {ambientOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
-        </button>
+        <button onClick={toggleAmbient} disabled={mode !== 'full'} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border border-white/5 ${mode !== 'full' ? 'opacity-30 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: bg, color: ambientOn && mode === 'full' ? '#3b82f6' : theme.textMain, boxShadow: shadowPlateau }}>
+  {ambientOn && mode === 'full' ? <Volume2 size={20} /> : <VolumeX size={20} />}
+</button>
         <button onClick={toggleTimer} className="w-[84px] h-[84px] rounded-full flex items-center justify-center transition-all active:scale-[0.98] border border-white/5" style={{ background: bg, color: theme.textMain, boxShadow: shadowPlateau }}>
           {isRunning ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-2" />}
         </button>
@@ -2515,6 +2516,14 @@ export default function App() {
   });
 
   const updateCfg = useCallback((key, val) => setCfg(p => ({ ...p, [key]: Number(val) })), []);
+  
+  useExamAudio({
+    timeLeft,
+    totalTime: totalTime.current,
+    isRunning,
+    ambientOn,
+    mode
+  });
 
   useEffect(() => {
     // ใช้ Debounce หน่วงเวลาเซฟ 1.5 วินาที เพื่อไม่ให้ดิสก์ทำงานหนัก และป้องกันแอปหน่วง
@@ -2600,6 +2609,7 @@ export default function App() {
     setCountdown(null);
     setMarks([]);
     setFinishTime(null);
+    if (selectedKey !== 'full') setAmbientOn(false);
   }, []);
 
   const themeVals = useMemo(() => {
@@ -2798,7 +2808,7 @@ export default function App() {
               </div>
             </div>
         
-            <TimerDashboard cfg={cfg} themeVals={themeVals} timeLeft={timeLeft} totalTime={totalTime.current} isRunning={isRunning} speed={speed} marks={marks} ambientOn={ambientOn} toggleAmbient={toggleAmbient} toggleTimer={toggleTimer} skipTime={skipTime} resetTimer={resetTimer} trackHue={trackHue} countdown={countdown} isAutoTrackHue={isAutoTrackHue} />
+            <TimerDashboard cfg={cfg} themeVals={themeVals} timeLeft={timeLeft} totalTime={totalTime.current} isRunning={isRunning} speed={speed} marks={marks} ambientOn={ambientOn} toggleAmbient={toggleAmbient} toggleTimer={toggleTimer} skipTime={skipTime} resetTimer={resetTimer} trackHue={trackHue} countdown={countdown} isAutoTrackHue={isAutoTrackHue} mode={mode} />
           </div>
 
           <RightPanelWidget cfg={cfg} themeVals={themeVals} progressState={progressState} lcdHue={lcdHue} setLcdHue={setLcdHue} trackHue={trackHue} setTrackHue={setTrackHue} isAutoTrackHue={isAutoTrackHue} setIsAutoTrackHue={setIsAutoTrackHue} lcdBrightness={lcdBrightness} setLcdBrightness={setLcdBrightness} lcdScrollSpeed={lcdScrollSpeed} setLcdScrollSpeed={setLcdScrollSpeed} lcdScrollGap={lcdScrollGap} setLcdScrollGap={setLcdScrollGap} addMark={addMark} isRunning={isRunning} timeLeft={timeLeft} totalTime={totalTime.current} finishTime={finishTime} setFinishTime={setFinishTime} setTimeLeft={setTimeLeft} />
