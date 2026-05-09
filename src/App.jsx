@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
 import useExamAudio from './hooks/useExamAudio';
-
 // --- Constants & Helpers ---
 const MODES = {
   full: { label: 'ALL PARTS (90m)', time: 90 * 60, partPrefix: 'all' },
@@ -191,51 +190,71 @@ const PACING_RULES = {
   'Paragraph Organization': { qCount: 5, mins: 10 },
 };
 
-const calculateProgressState = (timeLeft, totalTime, fullSequence, mode) => {
+const buildExamTimeline = (fullSequence, mode) => {
   const sequence = mode === 'full' 
     ? fullSequence 
     : fullSequence.filter(item => item.part === MODES[mode].partPrefix);
 
-  if (sequence.length === 0) return { part: 'ERROR', subPart: 'No items', qText: '0/0' };
+  if (sequence.length === 0) return { items: [], totalQ: 0 };
 
-  const totalQInMode = sequence.reduce((sum, item) => sum + (PACING_RULES[item.label]?.qCount || 0), 0);
-
-  if (timeLeft === totalTime) return { part: sequence[0].part, subPart: sequence[0].label, qText: `0/${totalQInMode}` };
-  if (timeLeft <= 0) return { part: 'EXAM FINISHED', subPart: 'TIME UP', qText: `${totalQInMode}/${totalQInMode}` };
-  
-  const elapsedSeconds = Math.round(totalTime - timeLeft);
   let cumulativeSeconds = 0;
   let cumulativeQuestions = 0;
+  const items = [];
 
   for (let i = 0; i < sequence.length; i++) {
     const item = sequence[i];
-    const rule = PACING_RULES[item.label] || { qCount: 8, mins: 10 }; 
+    const rule = PACING_RULES[item.label] || { qCount: 8, mins: 10 };
     const ruleSeconds = rule.mins * 60;
     
-    if (elapsedSeconds <= cumulativeSeconds + ruleSeconds) {
-      const timeInPartSeconds = Math.max(0, elapsedSeconds - cumulativeSeconds);
-      const currentQInPart = Math.floor((timeInPartSeconds * rule.qCount) / ruleSeconds);
-      const currentGlobalQ = Math.min(totalQInMode, cumulativeQuestions + currentQInPart);
-      
-      return { part: item.part, subPart: item.label, qText: `${currentGlobalQ}/${totalQInMode}` };
-    }
+    items.push({
+      ...item,
+      rule,
+      startSec: cumulativeSeconds,
+      endSec: cumulativeSeconds + ruleSeconds,
+      startQ: cumulativeQuestions,
+      endQ: cumulativeQuestions + rule.qCount
+    });
+
     cumulativeSeconds += ruleSeconds;
     cumulativeQuestions += rule.qCount;
   }
-  
-  return mode === 'full' 
-    ? { part: 'IV. REVIEW & CHECK', subPart: 'Review Answers', qText: `${totalQInMode}/${totalQInMode}` }
-    : { part: 'EXAM FINISHED', subPart: 'TIME UP', qText: `${totalQInMode}/${totalQInMode}` };
+
+  return { items, totalQ: cumulativeQuestions };
 };
 
-const generateReflectionPoints = (marks, totalTime, examSequence, mode) => {
+const calculateProgressState = (timeLeft, totalTime, timeline, mode) => {
+  const { items, totalQ } = timeline;
+
+  if (!items || items.length === 0) return { part: 'ERROR', subPart: 'No items', qText: '0/0' };
+
+  if (timeLeft === totalTime) return { part: items[0].part, subPart: items[0].label, qText: `0/${totalQ}` };
+  if (timeLeft <= 0) return { part: 'EXAM FINISHED', subPart: 'TIME UP', qText: `${totalQ}/${totalQ}` };
+  
+  const elapsedSeconds = Math.round(totalTime - timeLeft);
+  
+  const activeItem = items.find(item => elapsedSeconds >= item.startSec && elapsedSeconds < item.endSec);
+
+  if (activeItem) {
+    const timeInPartSeconds = elapsedSeconds - activeItem.startSec;
+    const ruleSeconds = activeItem.endSec - activeItem.startSec;
+    const currentQInPart = Math.floor((timeInPartSeconds * activeItem.rule.qCount) / ruleSeconds);
+    const currentGlobalQ = Math.min(totalQ, activeItem.startQ + currentQInPart);
+    return { part: activeItem.part, subPart: activeItem.label, qText: `${currentGlobalQ}/${totalQ}` };
+  }
+  
+  return mode === 'full' 
+    ? { part: 'IV. REVIEW & CHECK', subPart: 'Review Answers', qText: `${totalQ}/${totalQ}` }
+    : { part: 'EXAM FINISHED', subPart: 'TIME UP', qText: `${totalQ}/${totalQ}` };
+};
+
+const generateReflectionPoints = (marks, totalTime, timeline, mode) => {
   return marks.map((percent, index) => {
     const elapsedSeconds = (percent / 100) * totalTime;
     const mins = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
     const secs = Math.floor(elapsedSeconds % 60).toString().padStart(2, '0');
     
     const simulatedTimeLeft = totalTime - elapsedSeconds;
-    const exactState = calculateProgressState(simulatedTimeLeft, totalTime, examSequence, mode);
+    const exactState = calculateProgressState(simulatedTimeLeft, totalTime, timeline, mode);
 
     return {
       id: index,
@@ -247,44 +266,6 @@ const generateReflectionPoints = (marks, totalTime, examSequence, mode) => {
     };
   });
 };
-
-// --- MOCK DATA FOR DEMO PURPOSES ---
-const makeMockPoints = (count) => Array.from({length: count}).map((_, i) => ({
-  id: `mock-pt-${i}`,
-  timestamp: `0${Math.floor(i/2) + 1}:${(i*15)%60 === 0 ? '00' : (i*15)%60}`,
-  partName: 'I. Listening & Speaking',
-  qText: `${i+1}/80`,
-  tags: ['#ลังเลศัพท์', '#เดา'],
-  note: ''
-}));
-
-const MOCK_HISTORY = [
-  {
-    id: 'mock-5', sessionNumber: 5, date: '15 พ.ค. 2569, 10:00 น.', mode: 'full', totalTime: 5400, finishTime: 4500, // 75 mins
-    finalScore: 85, scores: { s1: 10, s2: 7, s3: 6, s4: 6, s5: 5, s6: 6, s7: 12, s8: 12, s9: 4 }, // 68/80
-    pointsData: makeMockPoints(3),
-  },
-  {
-    id: 'mock-4', sessionNumber: 4, date: '12 พ.ค. 2569, 14:30 น.', mode: 'full', totalTime: 5400, finishTime: 4920, // 82 mins
-    finalScore: 75, scores: { s1: 9, s2: 6, s3: 5, s4: 5, s5: 5, s6: 5, s7: 10, s8: 11, s9: 4 }, // 60/80
-    pointsData: makeMockPoints(6),
-  },
-  {
-    id: 'mock-3', sessionNumber: 3, date: '08 พ.ค. 2569, 09:15 น.', mode: 'full', totalTime: 5400, finishTime: 5100, // 85 mins
-    finalScore: 62.5, scores: { s1: 8, s2: 5, s3: 4, s4: 5, s5: 4, s6: 5, s7: 8, s8: 8, s9: 3 }, // 50/80
-    pointsData: makeMockPoints(10),
-  },
-  {
-    id: 'mock-2', sessionNumber: 2, date: '05 พ.ค. 2569, 16:00 น.', mode: 'full', totalTime: 5400, finishTime: 5280, // 88 mins
-    finalScore: 55, scores: { s1: 7, s2: 4, s3: 4, s4: 4, s5: 3, s6: 4, s7: 7, s8: 8, s9: 3 }, // 44/80
-    pointsData: makeMockPoints(12),
-  },
-  {
-    id: 'mock-1', sessionNumber: 1, date: '01 พ.ค. 2569, 10:30 น.', mode: 'full', totalTime: 5400, finishTime: null, // 90 mins
-    finalScore: 45, scores: { s1: 6, s2: 4, s3: 3, s4: 3, s5: 3, s6: 3, s7: 5, s8: 7, s9: 2 }, // 36/80
-    pointsData: makeMockPoints(18),
-  }
-];
 
 // ==========================================
 // COMPONENT: Shared UI Components
@@ -340,14 +321,15 @@ const TopBarWidget = memo(({ cfg, themeVals, isDarkMode, setIsDarkMode, mode, ha
   );
 });
 
-const RightPanelWidget = memo(({ cfg, themeVals, progressState, lcdHue, setLcdHue, trackHue, setTrackHue, isAutoTrackHue, setIsAutoTrackHue, lcdBrightness, setLcdBrightness, lcdScrollSpeed, setLcdScrollSpeed, lcdScrollGap, setLcdScrollGap, addMark, isRunning, timeLeft, totalTime, finishTime, setFinishTime, setTimeLeft }) => {
+// OPTIMIZED: แยก progressState เป็น string พื้นฐาน, เอา timeLeft ออกไป, และรับ onFinishClick เข้ามาแทน เพื่อเปิดทางให้ React.memo ทำงานได้เต็มประสิทธิภาพ 100%
+const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, setLcdHue, trackHue, setTrackHue, isAutoTrackHue, setIsAutoTrackHue, lcdBrightness, lcdScrollSpeed, lcdScrollGap, addMark, isRunning, finishTime, onFinishClick }) => {
   const [customLcdText, setCustomLcdText] = useState("CUSTOM");
   const [lcdDisplayMode, setLcdDisplayMode] = useState('exam');
   const [isLcdEditOpen, setIsLcdEditOpen] = useState(false);
 
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap, shadowTrench } = themeVals;
 
-  const displayedLcdText = lcdDisplayMode === 'exam' ? progressState.qText : customLcdText;
+  const displayedLcdText = lcdDisplayMode === 'exam' ? qText : customLcdText;
   
   const lcdText = '#4cfc23';
   const lcdTextGlow = "0 0 5px rgba(76,252,35,0.8), 0 0 15px rgba(76,252,35,0.4)";
@@ -364,8 +346,8 @@ const RightPanelWidget = memo(({ cfg, themeVals, progressState, lcdHue, setLcdHu
   return (
     <div className="w-full flex flex-col items-center gap-5 transition-all relative z-[60] pointer-events-none" style={{ maxWidth: `${cfg.lcdWidth}px`, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
       <div className="relative z-20 flex flex-col items-center text-center gap-1 w-full px-4 pointer-events-auto" style={{ transform: `scale(${cfg.headerScale}) translate(${cfg.headerX}px, ${cfg.headerY}px)`, transformOrigin: 'center center', transition: 'transform 0.1s' }}>
-        <span className="text-[11px] uppercase tracking-[0.2em] font-medium" style={{ color: theme.textSub }}>{progressState.part}</span>
-        <h2 className="text-[36px] leading-[1.1] font-light tracking-wide whitespace-nowrap" style={{ color: theme.textMain }}>{progressState.subPart}</h2>
+        <span className="text-[11px] uppercase tracking-[0.2em] font-medium" style={{ color: theme.textSub }}>{part}</span>
+        <h2 className="text-[36px] leading-[1.1] font-light tracking-wide whitespace-nowrap" style={{ color: theme.textMain }}>{subPart}</h2>
       </div>
 
       <div className="w-full rounded-[2.5rem] p-6 flex flex-col gap-6 border border-white/10 pointer-events-auto" style={{ boxShadow: shadowOuter, background: bg, transform: `scale(${cfg.rightPanelScale}) translate(${cfg.rightPanelX}px, ${cfg.rightPanelY}px)`, transformOrigin: 'top center', transition: 'transform 0.1s' }}>
@@ -422,10 +404,7 @@ const RightPanelWidget = memo(({ cfg, themeVals, progressState, lcdHue, setLcdHu
             <Asterisk size={cfg.btnIconSize * 0.5} strokeWidth={3} className="text-[#ea580c] mb-1" />
             <span className="font-semibold tracking-[0.15em] uppercase" style={{ fontSize: `${cfg.btnFontSize * 0.8}px`, color: theme.textSub }}>Mark</span>
           </button>
-          <button onClick={() => {
-            if (!finishTime) setFinishTime(totalTime - timeLeft);
-            else setTimeLeft(0);
-          }} disabled={!isRunning && !finishTime} className="flex-1 flex flex-col items-center justify-center transition-all active:scale-[0.98] border border-white/30" style={{ height: `${cfg.btnHeight * 0.8}px`, borderRadius: `${cfg.btnRadius}px`, boxShadow: shadowPlateau, background: finishTime ? '#10b981' : bg, color: finishTime ? '#ffffff' : theme.textSub, opacity: (isRunning || finishTime) ? 1 : 0.6 }}>
+          <button onClick={onFinishClick} disabled={!isRunning && !finishTime} className="flex-1 flex flex-col items-center justify-center transition-all active:scale-[0.98] border border-white/30" style={{ height: `${cfg.btnHeight * 0.8}px`, borderRadius: `${cfg.btnRadius}px`, boxShadow: shadowPlateau, background: finishTime ? '#10b981' : bg, color: finishTime ? '#ffffff' : theme.textSub, opacity: (isRunning || finishTime) ? 1 : 0.6 }}>
             {finishTime ? (
               <>
                 <span className="font-bold uppercase opacity-90" style={{ fontSize: `${cfg.btnFontSize * 0.7}px` }}>Done in {Math.floor(finishTime/60)}:{(Math.floor(finishTime)%60).toString().padStart(2,'0')}</span>
@@ -1874,17 +1853,19 @@ function ManageTagsPanel({ customTags, setCustomTags, themeVals, cfg, isManageTa
 
   if (!isManageTagsOpen) return null;
 
+  const safeCustomTags = Array.isArray(customTags) ? customTags : [];
+
   const handleAddCustomTag = (e) => {
     e.preventDefault();
     const trimmed = newTagInput.trim();
     if (!trimmed) return;
     const finalTag = trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
-    if (!customTags.includes(finalTag)) setCustomTags([...customTags, finalTag]);
+    if (!safeCustomTags.includes(finalTag)) setCustomTags([...safeCustomTags, finalTag]);
     setNewTagInput('');
   };
 
   const handleDeleteTag = (tagToDelete) => {
-    setCustomTags(customTags.filter(t => t !== tagToDelete));
+    setCustomTags(safeCustomTags.filter(t => t !== tagToDelete));
   };
 
   const tagShadow = `inset 2px 2px ${cfg.refTagShadow}px ${theme.shadowDark}, inset -2px -2px ${cfg.refTagShadow}px ${theme.shadowLight}`;
@@ -1925,7 +1906,7 @@ function ManageTagsPanel({ customTags, setCustomTags, themeVals, cfg, isManageTa
         </button>
       </form>
       <div className="flex flex-wrap" style={{ gap: `${cfg.refItemGap}px` }}>
-        {customTags.map(tag => renderTag(tag, () => handleDeleteTag(tag)))}
+        {safeCustomTags.map(tag => renderTag(tag, () => handleDeleteTag(tag)))}
       </div>
     </div>
   );
@@ -1935,15 +1916,20 @@ function ReflectionCardItem({ point, index, customTags, themeVals, cfg, onUpdate
   const [isNoteExpanded, setIsNoteExpanded] = useState(false);
   const { bg, theme, shadowPlateau, raisedGradient, shadowDeepInset, indentedGradient, shadowTrench } = themeVals;
 
-  const [qCurr, qTot] = point.qText.split('/');
+  const safeQText = point?.qText != null ? String(point.qText) : '0/0';
+  const [qCurr, qTot] = safeQText.split('/');
+  const safeTags = Array.isArray(point?.tags) ? point.tags : [];
+  const safeCustomTags = Array.isArray(customTags) ? customTags : [];
+
   const rightColShadow = `inset 4px 4px ${cfg.refRightColShadow}px ${theme.shadowDark}, inset -4px -4px ${cfg.refRightColShadow}px ${theme.shadowLight}`;
   const tagShadow = `inset 2px 2px ${cfg.refTagShadow}px ${theme.shadowDark}, inset -2px -2px ${cfg.refTagShadow}px ${theme.shadowLight}`;
 
   const handleTagClick = useCallback((tag) => {
-      const isActive = point.tags.includes(tag);
-      const newTags = isActive ? point.tags.filter(t => t !== tag) : [...point.tags, tag];
-      onUpdatePoint(sessionId, point.id, 'tags', newTags);
-  }, [point.tags, point.id, sessionId, onUpdatePoint]);
+      const currentTags = Array.isArray(point?.tags) ? point.tags : [];
+      const isActive = currentTags.includes(tag);
+      const newTags = isActive ? currentTags.filter(t => t !== tag) : [...currentTags, tag];
+      onUpdatePoint(sessionId, point?.id, 'tags', newTags);
+  }, [point?.tags, point?.id, sessionId, onUpdatePoint]);
 
   const renderTag = (tag, isActive, onClick) => (
     <button
@@ -1970,7 +1956,7 @@ function ReflectionCardItem({ point, index, customTags, themeVals, cfg, onUpdate
         <div className="flex justify-between items-center w-full" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
           <div className="flex items-center opacity-50" style={{ color: theme.textMain, gap: `${cfg.refItemGap/2}px`, transform: `translate(${cfg.refTimeX}px, ${cfg.refTimeY}px)` }}>
             <Clock size={cfg.refIconSize} />
-            <span style={{ fontSize: `${cfg.refTimeSize}px`, fontWeight: 'bold', letterSpacing: '0.05em' }}>{point.timestamp}</span>
+            <span style={{ fontSize: `${cfg.refTimeSize}px`, fontWeight: 'bold', letterSpacing: '0.05em' }}>{point?.timestamp || '--:--'}</span>
           </div>
           {qCurr && qTot && (
             <div style={{ color: theme.textMain, fontSize: `${cfg.refQTextSize}px`, fontWeight: 900, transform: `translate(${cfg.refQTextX}px, ${cfg.refQTextY}px)` }}>
@@ -1980,28 +1966,28 @@ function ReflectionCardItem({ point, index, customTags, themeVals, cfg, onUpdate
         </div>
 
         <h3 style={{ color: theme.textMain, fontSize: `${cfg.refPartSize}px`, fontWeight: 'bold', letterSpacing: '0.025em', transform: `translate(${cfg.refPartX}px, ${cfg.refPartY}px)` }}>
-          {point.partName}
+          {point?.partName || 'Unknown Part'}
         </h3>
 
         <div className="w-full h-[1px] opacity-10" style={{ background: theme.textMain }} />
 
         <div className="flex flex-wrap" style={{ gap: `${cfg.refItemGap}px`, transform: `translate(${cfg.refTagX}px, ${cfg.refTagY}px)` }}>
-          {customTags.map(tag => renderTag(tag, point.tags.includes(tag), () => handleTagClick(tag)))}
+          {safeCustomTags.map(tag => renderTag(tag, safeTags.includes(tag), () => handleTagClick(tag)))}
         </div>
 
         <div style={{ transform: `translate(${cfg.refNoteX}px, ${cfg.refNoteY}px)` }}>
           {isNoteExpanded ? (
-            <NoteInputArea initialNote={point.note} onSave={(val) => onUpdatePoint(sessionId, point.id, 'note', val)} onClose={() => setIsNoteExpanded(false)} themeVals={themeVals} cfg={cfg} />
+            <NoteInputArea initialNote={point?.note} onSave={(val) => onUpdatePoint(sessionId, point?.id, 'note', val)} onClose={() => setIsNoteExpanded(false)} themeVals={themeVals} cfg={cfg} />
           ) : (
             <div className="flex flex-col items-start" style={{ gap: `${cfg.refItemGap/2}px` }}>
               <button 
                 onClick={() => setIsNoteExpanded(true)} 
                 className="font-bold flex items-center opacity-60 hover:opacity-100 transition-opacity"
-                style={{ fontSize: `${cfg.refNoteSize}px`, gap: `${cfg.refItemGap/2}px`, color: point.note ? '#3b82f6' : theme.textMain }}
+                style={{ fontSize: `${cfg.refNoteSize}px`, gap: `${cfg.refItemGap/2}px`, color: point?.note ? '#3b82f6' : theme.textMain }}
               >
-                <MessageSquare size={cfg.refIconSize * 0.7} /> {point.note ? 'แก้ไขบันทึกย่อ' : 'เพิ่มบันทึกย่อ'}
+                <MessageSquare size={cfg.refIconSize * 0.7} /> {point?.note ? 'แก้ไขบันทึกย่อ' : 'เพิ่มบันทึกย่อ'}
               </button>
-              {point.note && (
+              {point?.note && (
                 <p className="opacity-70 italic border-l-2 border-blue-500/30 pl-2 ml-1 mt-1" style={{ fontSize: `${cfg.refNoteSize}px`, color: theme.textSub }}>
                   "{point.note.length > 60 ? point.note.substring(0, 60) + '...' : point.note}"
                 </p>
@@ -2014,6 +2000,142 @@ function ReflectionCardItem({ point, index, customTags, themeVals, cfg, onUpdate
       <div className="shrink-0 flex flex-col items-center justify-center relative border-l border-white/5" style={{ width: `${cfg.refRightColWidth}px`, gap: `${cfg.refItemGap}px`, background: indentedGradient, boxShadow: rightColShadow }}>
         <Asterisk size={cfg.refAsteriskSize} strokeWidth={2.5} className="text-[#ea580c] relative z-10 drop-shadow-md" style={{ transform: `translate(${cfg.refAsteriskX}px, ${cfg.refAsteriskY}px)` }} />
         <span className="font-black uppercase tracking-widest opacity-40 relative z-10" style={{ color: theme.textMain, fontSize: `${cfg.refMarkSize}px`, fontFamily: "'Outfit', 'Prompt', sans-serif", transform: `translate(${cfg.refMarkX}px, ${cfg.refMarkY}px)` }}>Mark {index + 1}</span>
+      </div>
+    </div>
+  );
+}
+
+function ReflectionView({ themeVals, setCurrentView, sessionData, isDraftMode, onUpdatePoint, onUpdateSessionData, onSaveDraft, onDiscardDraft, customTags, setCustomTags, cfg, onOpenScoreEdit }) {
+  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, indentedGradient, shadowTrench, shadowCap } = themeVals;
+  const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  if (!sessionData) return null;
+  
+  const pointsData = Array.isArray(sessionData.pointsData) ? sessionData.pointsData : [];
+  const currentCalculatedScores = calculateScores(sessionData.scores || {});
+  const safeCustomTags = Array.isArray(customTags) ? customTags : [];
+
+  return (
+    <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in slide-in-from-bottom-8 duration-500 mx-auto" style={{ maxWidth: `${cfg.refCardMaxWidth}px`, gap: `${cfg.refCardGap}px` }}>
+      
+      <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              if (isDraftMode) setShowDiscardConfirm(true);
+              else setCurrentView('reflection_lobby');
+            }} 
+            className="w-12 h-12 rounded-full flex items-center justify-center border border-white/5 shrink-0" 
+            style={{ background: bg, boxShadow: shadowOuter, color: theme.textMain }}
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-xl font-bold tracking-wide truncate" style={{ color: theme.textMain }}>
+              Time Reflection รอบ {sessionData.sessionNumber || '?'}
+            </h2>
+            <div className="flex items-center gap-2 mt-1 text-xs font-medium opacity-80 uppercase tracking-widest truncate" style={{ color: theme.textSub }}>
+              <span className="truncate">{sessionData.date || 'Unknown Date'}</span>
+              <span className="w-1 h-1 rounded-full bg-current shrink-0"></span>
+              <span className="font-bold shrink-0" style={{ color: sessionData.finalScore >= 50 ? '#10b981' : '#f87171' }}>
+                SCORE: {sessionData.finalScore != null ? sessionData.finalScore : '-'}/100
+              </span>
+              {sessionData.finishTime != null && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-current shrink-0"></span>
+                  <span className="font-bold shrink-0 text-blue-400">
+                    TIME: {Math.floor(sessionData.finishTime/60)}:{(Math.floor(sessionData.finishTime)%60).toString().padStart(2,'0')} M
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          <button 
+            onClick={() => setIsManageTagsOpen(!isManageTagsOpen)}
+            className={`px-4 py-2.5 rounded-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider border ${isManageTagsOpen ? 'border-white/20 opacity-100' : 'border-white/5 opacity-70'}`}
+            style={{ background: isManageTagsOpen ? indentedGradient : bg, boxShadow: shadowOuter, color: theme.textMain }}
+          >
+            <Tag size={14} /> แท็ก
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full p-6 rounded-[2rem] border border-white/5 flex flex-col gap-5 z-10 relative" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Award size={16} className="text-blue-500" />
+            <span className="text-[11px] uppercase font-bold tracking-widest" style={{ color: theme.textHighlight }}>Score Breakdown</span>
+          </div>
+          <button onClick={onOpenScoreEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/5" style={{ background: indentedGradient, boxShadow: shadowDeepInset, color: theme.textMain }}>
+            <span className="text-[9px] font-bold uppercase tracking-wider">แก้ไขคะแนนรายหัวข้อ</span>
+            <ChevronRight size={12} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {EXAM_PARTS.map(part => (
+            <div key={part.id} className="p-4 rounded-[1.25rem] border border-white/5 flex flex-col gap-1" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest truncate" style={{ color: theme.textSub }} title={part.label}>{part.label}</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                 <span className="text-2xl font-black" style={{ color: theme.textMain }}>
+                   {currentCalculatedScores.hasInput ? currentCalculatedScores[part.id] : '-'}
+                 </span>
+                 <span className="text-xs font-bold opacity-40" style={{ color: theme.textSub }}>/ {part.max}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/20 backdrop-blur-md px-4 animate-in fade-in duration-200">
+          <div className="p-6 rounded-[2rem] max-w-sm w-full border border-white/10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200" style={{ background: bg, boxShadow: shadowOuter }}>
+             <h3 className="text-lg font-bold mb-2" style={{color: theme.textMain}}>ละทิ้งบันทึกนี้?</h3>
+             <p className="text-sm mb-6 opacity-70" style={{color: theme.textSub}}>หากกดละทิ้ง ข้อมูล Reflection ครั้งนี้จะไม่ถูกบันทึกลงใน History Lobby</p>
+             <div className="flex w-full gap-3">
+                <button onClick={() => setShowDiscardConfirm(false)} className="flex-1 py-3.5 rounded-2xl font-bold opacity-70 border border-white/10 hover:opacity-100 transition-opacity" style={{color: theme.textMain, background: indentedGradient}}>ยกเลิก</button>
+                <button onClick={() => { setShowDiscardConfirm(false); onDiscardDraft(); }} className="flex-1 py-3.5 rounded-2xl font-bold text-white shadow-lg transition-transform active:scale-95" style={{background: '#f87171'}}>ยืนยันละทิ้ง</button>
+             </div>
+          </div>
+        </div>
+      )}
+
+      <ManageTagsPanel customTags={safeCustomTags} setCustomTags={setCustomTags} themeVals={themeVals} cfg={cfg} isManageTagsOpen={isManageTagsOpen} />
+
+      <div className="w-full flex flex-col relative mt-4" style={{ gap: `${cfg.refCardGap}px` }}>
+        {pointsData.length === 0 ? (
+          <div className="text-center p-12 rounded-3xl border border-white/5 opacity-50 font-medium" style={{ color: theme.textSub, background: raisedGradient, boxShadow: shadowPlateau }}>
+            ไม่มีบันทึกเวลา (Mark Point) ในรอบนี้
+          </div>
+        ) : (
+          pointsData.map((point, index) => (
+             <ReflectionCardItem 
+                key={point?.id != null ? point.id : `point-${index}`} 
+                point={point} 
+                index={index} 
+                customTags={safeCustomTags} 
+                themeVals={themeVals} 
+                cfg={cfg} 
+                onUpdatePoint={onUpdatePoint} 
+                sessionId={sessionData.id} 
+             />
+          ))
+        )}
+
+        {isDraftMode && (
+          <button 
+            onClick={onSaveDraft}
+            className="w-full mt-4 mb-8 py-5 rounded-[2rem] font-bold tracking-[0.15em] text-[13px] uppercase flex justify-center items-center gap-3 border border-white/5 transition-transform active:scale-[0.98]"
+            style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}
+          >
+            <History size={18} className="text-emerald-500" />
+            <span>บันทึก Reflection ลงใน Lobby</span>
+          </button>
+        )}
+
       </div>
     </div>
   );
@@ -2088,328 +2210,72 @@ function ScoreEditView({ themeVals, sessionData, onSave, onCancel, cfg }) {
   );
 }
 
-function ReflectionView({ themeVals, setCurrentView, sessionData, isDraftMode, onUpdatePoint, onUpdateSessionData, onSaveDraft, onDiscardDraft, customTags, setCustomTags, cfg, onOpenScoreEdit }) {
-  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, indentedGradient, shadowTrench, shadowCap } = themeVals;
-  const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-
-  if (!sessionData) return null;
-  const pointsData = sessionData.pointsData || [];
-  const currentCalculatedScores = calculateScores(sessionData.scores || {});
-
-  return (
-    <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in slide-in-from-bottom-8 duration-500 mx-auto" style={{ maxWidth: `${cfg.refCardMaxWidth}px`, gap: `${cfg.refCardGap}px` }}>
-      
-      <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => {
-              if (isDraftMode) setShowDiscardConfirm(true);
-              else setCurrentView('reflection_lobby');
-            }} 
-            className="w-12 h-12 rounded-full flex items-center justify-center border border-white/5 shrink-0" 
-            style={{ background: bg, boxShadow: shadowOuter, color: theme.textMain }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex flex-col min-w-0">
-            <h2 className="text-xl font-bold tracking-wide truncate" style={{ color: theme.textMain }}>
-              Time Reflection รอบ {sessionData.sessionNumber || '?'}
-            </h2>
-            <div className="flex items-center gap-2 mt-1 text-xs font-medium opacity-80 uppercase tracking-widest truncate" style={{ color: theme.textSub }}>
-              <span className="truncate">{sessionData.date}</span>
-              <span className="w-1 h-1 rounded-full bg-current shrink-0"></span>
-              <span className="font-bold shrink-0" style={{ color: sessionData.finalScore >= 50 ? '#10b981' : '#f87171' }}>
-                SCORE: {sessionData.finalScore}/100
-              </span>
-              {sessionData.finishTime && (
-                <>
-                  <span className="w-1 h-1 rounded-full bg-current shrink-0"></span>
-                  <span className="font-bold shrink-0 text-blue-400">
-                    TIME: {Math.floor(sessionData.finishTime/60)}:{(Math.floor(sessionData.finishTime)%60).toString().padStart(2,'0')} M
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <button 
-            onClick={() => setIsManageTagsOpen(!isManageTagsOpen)}
-            className={`px-4 py-2.5 rounded-full flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider border ${isManageTagsOpen ? 'border-white/20 opacity-100' : 'border-white/5 opacity-70'}`}
-            style={{ background: isManageTagsOpen ? indentedGradient : bg, boxShadow: shadowOuter, color: theme.textMain }}
-          >
-            <Tag size={14} /> แท็ก
-          </button>
-        </div>
-      </div>
-
-      <div className="w-full p-6 rounded-[2rem] border border-white/5 flex flex-col gap-5 z-10 relative" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Award size={16} className="text-blue-500" />
-            <span className="text-[11px] uppercase font-bold tracking-widest" style={{ color: theme.textHighlight }}>Score Breakdown</span>
-          </div>
-          <button onClick={onOpenScoreEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/5" style={{ background: indentedGradient, boxShadow: shadowDeepInset, color: theme.textMain }}>
-            <span className="text-[9px] font-bold uppercase tracking-wider">แก้ไขคะแนนรายหัวข้อ</span>
-            <ChevronRight size={12} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {EXAM_PARTS.map(part => (
-            <div key={part.id} className="p-4 rounded-[1.25rem] border border-white/5 flex flex-col gap-1" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-              <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest truncate" style={{ color: theme.textSub }} title={part.label}>{part.label}</span>
-              <div className="flex items-baseline gap-1 mt-1">
-                 <span className="text-2xl font-black" style={{ color: theme.textMain }}>
-                   {currentCalculatedScores.hasInput ? currentCalculatedScores[part.id] : '-'}
-                 </span>
-                 <span className="text-xs font-bold opacity-40" style={{ color: theme.textSub }}>/ {part.max}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {showDiscardConfirm && (
-        <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/20 backdrop-blur-md px-4 animate-in fade-in duration-200">
-          <div className="p-6 rounded-[2rem] max-w-sm w-full border border-white/10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200" style={{ background: bg, boxShadow: shadowOuter }}>
-             <h3 className="text-lg font-bold mb-2" style={{color: theme.textMain}}>ละทิ้งบันทึกนี้?</h3>
-             <p className="text-sm mb-6 opacity-70" style={{color: theme.textSub}}>หากกดละทิ้ง ข้อมูล Reflection ครั้งนี้จะไม่ถูกบันทึกลงใน History Lobby</p>
-             <div className="flex w-full gap-3">
-                <button onClick={() => setShowDiscardConfirm(false)} className="flex-1 py-3.5 rounded-2xl font-bold opacity-70 border border-white/10" style={{color: theme.textMain, background: indentedGradient}}>ยกเลิก</button>
-                <button onClick={() => { setShowDiscardConfirm(false); onDiscardDraft(); }} className="flex-1 py-3.5 rounded-2xl font-bold text-white shadow-lg" style={{background: '#f87171'}}>ยืนยันละทิ้ง</button>
-             </div>
-          </div>
-        </div>
-      )}
-
-      <ManageTagsPanel customTags={customTags} setCustomTags={setCustomTags} themeVals={themeVals} cfg={cfg} isManageTagsOpen={isManageTagsOpen} />
-
-      <div className="w-full flex flex-col relative mt-4" style={{ gap: `${cfg.refCardGap}px` }}>
-        {pointsData.length === 0 ? (
-          <div className="text-center p-12 rounded-3xl border border-white/5 opacity-50 font-medium" style={{ color: theme.textSub, background: raisedGradient, boxShadow: shadowPlateau }}>
-            ไม่มีบันทึกเวลา (Mark Point) ในรอบนี้
-          </div>
-        ) : (
-          pointsData.map((point, index) => (
-             <ReflectionCardItem 
-                key={point.id} 
-                point={point} 
-                index={index} 
-                customTags={customTags} 
-                themeVals={themeVals} 
-                cfg={cfg} 
-                onUpdatePoint={onUpdatePoint} 
-                sessionId={sessionData.id} 
-             />
-          ))
-        )}
-
-        {isDraftMode && (
-          <button 
-            onClick={onSaveDraft}
-            className="w-full mt-4 mb-8 py-5 rounded-[2rem] font-bold tracking-[0.15em] text-[13px] uppercase flex justify-center items-center gap-3 border border-white/5"
-            style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}
-          >
-            <History size={18} className="text-emerald-500" />
-            <span>บันทึก Reflection ลงใน Lobby</span>
-          </button>
-        )}
-
-      </div>
-    </div>
-  );
-}
-
-function DevAdjustPanel({ cfg, updateCfg, showTempDev, setShowTempDev, lcdHue, setLcdHue, trackHue, setTrackHue, lcdBrightness, setLcdBrightness, lcdScrollSpeed, setLcdScrollSpeed, lcdScrollGap, setLcdScrollGap }) {
-  const renderS1 = (l, k, min, max, step=1) => (
-    <div key={k} className="flex justify-between items-center">
-      <label className="text-[10px] font-mono">{l}</label>
-      <div className="flex items-center gap-2 w-2/3">
-        <input type="range" min={min} max={max} step={step} value={cfg[k]} onChange={e=>updateCfg(k, e.target.value)} className="w-full h-1 accent-emerald-500"/>
-        <span className="text-[9px] font-mono w-8 text-right">{cfg[k]}</span>
-      </div>
-    </div>
-  );
+const UI_CFG = {
+  scale: 1, trackRadius: 129, trackStroke: 14, bgTrackStroke: 26,
+  depthOuter: 18, depthTrench: 9, depthCap: 9, depthDimple: 3, dimpleSize: 47,
+  timeFontSize: 4.6, timeY: 5, labelFontSize: 14, labelY: 6,
+  lcdWidth: 304, lcdBezelPadding: 9, lcdHeight: 72, lcdRadiusInner: 20, lcdFontSize: 41,
+  btnHeight: 120, btnRadius: 24, btnIconSize: 64, btnFontSize: 13, btnSlopeBlur: 30, btnEdgeBlur: 0,   
+  settingBtnScale: 0.5, settingBtnX: -305, settingBtnY: 236,
+  gameBtnScale: 0.5, gameBtnX: 1194, gameBtnY: 236,
+  refBtnScale: 0.5, refBtnX: 1194, refBtnY: 90,
+  techBtnScale: 0.5, techBtnX: -305, techBtnY: 90,
+  leftPanelScale: 0.8, leftPanelX: 67, leftPanelY: -41,
+  controlPanelScale: 1.05, controlPanelX: 197, controlPanelY: -19,
+  rightPanelScale: 0.85, rightPanelX: -112, rightPanelY: -116,
+  headerScale: 1, headerX: -269, headerY: 257,
+  gameboyScale: 0.75, gameboyX: -17, gameboyY: 130,
+  gbBodyWidth: 321, gbBodyHeight: 665, gbBezelHeight: 358, gbScreenWidth: 255, gbScreenHeight: 300,
+  gbDpadScale: 1.15, gbDpadX: 6, gbDpadY: 42, gbActionBtnScale: 0.85, gbActionBtnX: 0, gbActionBtnY: -65,
+  gbSystemBtnScale: 0.7, gbSystemBtnX: -120, gbSystemBtnY: -200, gbSpeakerScale: 0.75, gbSpeakerX: -25, gbSpeakerY: 11,
+  gbLogoScale: 1, gbLogoX: 0, gbLogoY: 0,
+  dropRadius: 11, dropShadowBlur: 11, dropShadowSpread: -10,
   
-  const renderS2 = (title, x, y, min="-500", max="500", step="1") => (
-    <div key={title} className="flex flex-col gap-1">
-      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">{title} (X / Y)</span>
-      <div className="flex gap-2">
-        <div className="flex flex-col w-1/2 gap-1"><span className="text-[9px] font-mono text-center">{cfg[x]}px</span><input type="range" min={min} max={max} step={step} value={cfg[x]} onChange={e=>updateCfg(x, e.target.value)} className="w-full h-1 accent-orange-500"/></div>
-        <div className="flex flex-col w-1/2 gap-1"><span className="text-[9px] font-mono text-center">{cfg[y]}px</span><input type="range" min={min} max={max} step={step} value={cfg[y]} onChange={e=>updateCfg(y, e.target.value)} className="w-full h-1 accent-orange-500"/></div>
-      </div>
-    </div>
-  );
-
-  const renderS3 = (title, s, x, y, minS=10, maxS=60, stepS=1) => (
-    <div key={title} className="flex flex-col gap-1">
-      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">{title}</span>
-      <div className="flex gap-2">
-        <div className="flex flex-col w-1/3 gap-1"><span className="text-[9px] font-mono text-center">{cfg[s]}</span><input type="range" min={minS} max={maxS} step={stepS} value={cfg[s]} onChange={e=>updateCfg(s, e.target.value)} className="w-full h-1 accent-orange-500"/></div>
-        <div className="flex flex-col w-1/3 gap-1"><span className="text-[9px] font-mono text-center">{cfg[x]}px</span><input type="range" min="-500" max="500" step="1" value={cfg[x]} onChange={e=>updateCfg(x, e.target.value)} className="w-full h-1 accent-orange-500"/></div>
-        <div className="flex flex-col w-1/3 gap-1"><span className="text-[9px] font-mono text-center">{cfg[y]}px</span><input type="range" min="-500" max="500" step="1" value={cfg[y]} onChange={e=>updateCfg(y, e.target.value)} className="w-full h-1 accent-orange-500"/></div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="fixed bottom-4 left-4 z-[100] bg-slate-800 text-white p-4 rounded-xl shadow-2xl opacity-95 border border-slate-600 w-72 max-h-[85vh] overflow-y-auto no-scrollbar">
-      <div className="flex justify-between items-center mb-4 border-b border-slate-600 pb-2 sticky top-0 bg-slate-800 z-10">
-        <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Dev Adjust</span>
-        <button onClick={() => setShowTempDev(!showTempDev)} className="text-xs bg-slate-600 hover:bg-slate-500 px-2 py-1 rounded transition-colors">Toggle</button>
-      </div>
-      {showTempDev && (
-        <div className="flex flex-col gap-5 mt-2">
-          <div className="text-[10px] text-orange-400 font-bold border-b border-slate-600 pb-1 -mb-3">REFLECTION PAGE (Layout & Box)</div>
-          <div className="flex flex-col gap-2">
-            {renderS1("Card Max Width", "refCardMaxWidth", "300", "1200", "10")}
-            {renderS1("Card Height", "refCardHeight", "0", "400", "10")}
-            {renderS1("Right Col Width", "refRightColWidth", "50", "300", "5")}
-            {renderS1("Card Padding", "refCardPadding", "0", "60", "2")}
-            {renderS1("Card Gap", "refCardGap", "0", "100", "2")}
-            {renderS1("Item Gap", "refItemGap", "0", "60", "1")}
-            {renderS1("Line Height", "refLineHeight", "1", "3", "0.1")}
-            {renderS1("Icons Base Size", "refIconSize", "10", "60", "1")}
-            {renderS1("Right Col Blur", "refRightColShadow", "0", "100", "1")}
-            {renderS1("Tag Blur", "refTagShadow", "0", "50", "1")}
-          </div>
-
-          <div className="text-[10px] text-orange-400 font-bold border-b border-slate-600 pb-1 -mb-3 mt-2">REFLECTION PAGE (Typography)</div>
-          <div className="flex flex-col gap-2">
-            {renderS3("Time (Left)", "refTimeSize", "refTimeX", "refTimeY")}
-            {renderS3("Question (Right)", "refQTextSize", "refQTextX", "refQTextY")}
-            {renderS3("Part Name", "refPartSize", "refPartX", "refPartY")}
-            {renderS3("Tags", "refTagSize", "refTagX", "refTagY", "8", "24")}
-            {renderS3("Note Editor", "refNoteSize", "refNoteX", "refNoteY", "8", "24")}
-            {renderS3("Asterisk Icon", "refAsteriskSize", "refAsteriskX", "refAsteriskY", "20", "120")}
-            {renderS3("Mark Text", "refMarkSize", "refMarkX", "refMarkY", "8", "24")}
-          </div>
-
-          <div className="w-full h-px bg-slate-600 mt-2"></div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-2">Growth Trend: Header</span>
-            {renderS2("Group Pos", "spMainTitleGrpX", "spMainTitleGrpY")}
-            {renderS1("Title Size", "spMainTitleSize", "10", "40")}
-            {renderS1("Sub Size", "spMainSubSize", "8", "30")}
-          </div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-2">Growth Trend: Insight</span>
-            {renderS1("Box Max Width", "spInsightW", "0", "1200", "10")}
-            {renderS1("Box Max Height", "spInsightH", "0", "800", "10")}
-            {renderS2("Position", "spInsightX", "spInsightY")}
-            {renderS2("Title Pos", "spInsightTitleX", "spInsightTitleY")}
-            {renderS1("Title Size", "spInsightTitleSize", "10", "40")}
-            {renderS2("Sub Pos", "spInsightSubX", "spInsightSubY")}
-            {renderS1("Sub Size", "spInsightSubSize", "8", "30")}
-            {renderS2("Cards Pos", "spInsightCardsX", "spInsightCardsY")}
-            {renderS1("Card Padding", "spInsightPadding", "10", "50")}
-            {renderS1("Label Size", "spInsightLabelSize", "8", "24")}
-            {renderS1("Value Size", "spInsightValSize", "20", "80")}
-            {renderS1("Unit Size", "spInsightUnitSize", "8", "24")}
-            {renderS1("Diff Size", "spInsightDiffSize", "8", "20")}
-          </div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-2">Growth Trend: Score Chart</span>
-            {renderS1("Box Max Width", "spTrendContainerW", "0", "1200", "10")}
-            {renderS1("Box Height", "spTrendContainerH", "0", "800", "10")}
-            {renderS2("Position", "spTrendX", "spTrendY")}
-            {renderS2("Title Pos", "spTrendTitleX", "spTrendTitleY")}
-            {renderS1("Title Size", "spTrendTitleSize", "10", "40")}
-            {renderS2("Sub Pos", "spTrendSubX", "spTrendSubY")}
-            {renderS1("Sub Size", "spTrendSubSize", "8", "30")}
-            {renderS2("Input Pos", "spTrendInputX", "spTrendInputY")}
-            {renderS2("SVG Pos", "spTrendSvgX", "spTrendSvgY")}
-            {renderS1("SVG Width", "spTrendWidth", "300", "1000", "10")}
-            {renderS1("SVG Height", "spTrendHeight", "100", "500", "10")}
-            {renderS1("Pad X", "spTrendPadX", "10", "100")}
-            {renderS1("Pad Y", "spTrendPadY", "10", "100")}
-            {renderS1("Line Stroke", "spTrendStroke", "1", "10", "0.5")}
-            {renderS1("Dot Radius", "spTrendDotR", "1", "15", "0.5")}
-            {renderS1("Value Text Size", "spTrendValSize", "8", "24")}
-            {renderS1("Label Text Size", "spTrendLblSize", "6", "20")}
-          </div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-2">Growth Trend: Bar Chart</span>
-            {renderS1("Box Max Width", "spBarContainerW", "0", "1200", "10")}
-            {renderS1("Box Height", "spBarContainerH", "0", "800", "10")}
-            {renderS2("Position", "spBarX", "spBarY")}
-            {renderS2("Title Pos", "spBarTitleX", "spBarTitleY")}
-            {renderS1("Title Size", "spBarTitleSize", "10", "40")}
-            {renderS2("Sub Pos", "spBarSubX", "spBarSubY")}
-            {renderS1("Sub Size", "spBarSubSize", "8", "30")}
-            {renderS2("SVG Pos", "spBarSvgX", "spBarSvgY")}
-            {renderS1("SVG Width", "spBarWidth", "300", "1000", "10")}
-            {renderS1("SVG Height", "spBarHeight", "100", "400", "10")}
-            {renderS1("Pad Left", "spBarPadLeft", "10", "150")}
-            {renderS1("Pad Right", "spBarPadRight", "10", "100")}
-            {renderS1("Pad Top", "spBarPadTop", "10", "100")}
-            {renderS1("Pad Bottom", "spBarPadBot", "10", "100")}
-            {renderS1("Bar Height", "spBarHeightVal", "5", "50")}
-            {renderS1("Label Size", "spBarLblSize", "8", "24")}
-            {renderS1("Value Size", "spBarValSize", "8", "24")}
-          </div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mt-2">Growth Trend: Heatmap</span>
-            {renderS1("Box Max Width", "spHeatContainerW", "0", "1200", "10")}
-            {renderS1("Box Height", "spHeatContainerH", "0", "800", "10")}
-            {renderS2("Position", "spHeatX", "spHeatY")}
-            {renderS2("Title Pos", "spHeatTitleX", "spHeatTitleY")}
-            {renderS1("Title Size", "spHeatTitleSize", "10", "40")}
-            {renderS2("Sub Pos", "spHeatSubX", "spHeatSubY")}
-            {renderS1("Sub Size", "spHeatSubSize", "8", "30")}
-            {renderS2("Legend Pos", "spHeatLegX", "spHeatLegY")}
-            {renderS2("SVG Pos", "spHeatSvgX", "spHeatSvgY")}
-            {renderS1("Box Height", "spHeatBoxH", "10", "80")}
-            {renderS1("Label Width", "spHeatLblW", "50", "200")}
-            {renderS1("Label Size", "spHeatLblSize", "6", "20")}
-            {renderS1("Value Size", "spHeatValSize", "6", "20")}
-          </div>
-
-          <div className="w-full h-px bg-slate-600 mt-2"></div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dropdown Focus</span>
-            {renderS1("Corner Radius", "dropRadius", "0", "40")}
-            {renderS1("Shadow Blur", "dropShadowBlur", "0", "40")}
-            {renderS1("Shadow Spread", "dropShadowSpread", "-10", "20")}
-          </div>
-
-          <div className="w-full h-px bg-slate-600"></div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">UI Positions (Scale / X / Y)</span>
-            {renderS3("Dial Panel (Left)", "leftPanelScale", "leftPanelX", "leftPanelY", "0.5", "2", "0.05")}
-            {renderS3("Play Controls", "controlPanelScale", "controlPanelX", "controlPanelY", "0.5", "2", "0.05")}
-            {renderS3("Setting Button", "settingBtnScale", "settingBtnX", "settingBtnY", "0.5", "2", "0.05")}
-            {renderS3("Game Button", "gameBtnScale", "gameBtnX", "gameBtnY", "0.5", "2", "0.05")}
-            {renderS3("Reflection Button", "refBtnScale", "refBtnX", "refBtnY", "0.5", "2", "0.05")}
-            {renderS3("Tech Button", "techBtnScale", "techBtnX", "techBtnY", "0.5", "2", "0.05")}
-            {renderS3("Header Text", "headerScale", "headerX", "headerY", "0.5", "2", "0.05")}
-          </div>
-
-          <div className="w-full h-px bg-slate-600"></div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">LCD & Track Color</span>
-            <div><label className="text-[10px] flex justify-between font-mono"><span>LCD Hue</span><span>{lcdHue}°</span></label><input type="range" min="0" max="360" value={lcdHue} onChange={(e) => setLcdHue(e.target.value)} className="w-full h-1 accent-emerald-500" /></div>
-            <div><label className="text-[10px] flex justify-between font-mono"><span>Track Hue</span><span>{trackHue}°</span></label><input type="range" min="0" max="360" value={trackHue} onChange={(e) => setTrackHue(e.target.value)} className="w-full h-1 accent-emerald-500" /></div>
-            <div><label className="text-[10px] flex justify-between font-mono"><span>Brightness</span><span>{Math.round(lcdBrightness * 100)}%</span></label><input type="range" min="0.5" max="2" step="0.1" value={lcdBrightness} onChange={(e) => setLcdBrightness(e.target.value)} className="w-full h-1 accent-emerald-500" /></div>
-            <div><label className="text-[10px] flex justify-between font-mono"><span>Scroll Speed</span><span>{lcdScrollSpeed}s</span></label><input type="range" min="1" max="100" step="0.5" value={lcdScrollSpeed} onChange={(e) => setLcdScrollSpeed(e.target.value)} className="w-full h-1 accent-emerald-500" /></div>
-            <div><label className="text-[10px] flex justify-between font-mono"><span>Scroll Gap</span><span>{lcdScrollGap}px</span></label><input type="range" min="-1000" max="1000" step="10" value={lcdScrollGap} onChange={(e) => setLcdScrollGap(e.target.value)} className="w-full h-1 accent-emerald-500" /></div>
-          </div>
-
-          <div className="w-full h-px bg-slate-600"></div>
-          <div className="flex flex-col gap-2"><span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Game Boy Elements</span>
-            {renderS3("Game Boy Console", "gameboyScale", "gameboyX", "gameboyY", "0.5", "2", "0.05")}
-            {renderS1("Bezel Height", "gbBezelHeight", "100", "400")}
-            {renderS1("Screen Width", "gbScreenWidth", "100", "300")}
-            {renderS1("Screen Height", "gbScreenHeight", "50", "400")}
-            {renderS1("Body Width", "gbBodyWidth", "200", "600")}
-            {renderS1("Body Height", "gbBodyHeight", "300", "1000")}
-            {renderS3("D-Pad", "gbDpadScale", "gbDpadX", "gbDpadY", "0.5", "2", "0.05")}
-            {renderS3("A/B Buttons", "gbActionBtnScale", "gbActionBtnX", "gbActionBtnY", "0.5", "2", "0.05")}
-            {renderS3("Select/Start", "gbSystemBtnScale", "gbSystemBtnX", "gbSystemBtnY", "0.5", "2", "0.05")}
-            {renderS3("Speaker", "gbSpeakerScale", "gbSpeakerX", "gbSpeakerY", "0.5", "2", "0.05")}
-            {renderS3("Logo", "gbLogoScale", "gbLogoX", "gbLogoY", "0.5", "2", "0.05")}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+  refCardMaxWidth: 540, refCardHeight: 0, refRightColWidth: 155, refCardPadding: 24, refCardGap: 12, refItemGap: 11, refLineHeight: 1.1, refIconSize: 17,
+  refRightColShadow: 50, refTagShadow: 0,
+  refTimeSize: 24, refTimeX: 0, refTimeY: 0,
+  refQTextSize: 24, refQTextX: 0, refQTextY: 0,
+  refPartSize: 18, refPartX: 0, refPartY: 0,
+  refTagSize: 13, refTagX: 0, refTagY: 0,
+  refNoteSize: 14, refNoteX: 0, refNoteY: 0,
+  refAsteriskSize: 89, refAsteriskX: 0, refAsteriskY: 7,
+  refMarkSize: 15, refMarkX: 0, refMarkY: -12,
+  
+  spMainTitleGrpX: 0, spMainTitleGrpY: 0, spMainTitleSize: 20, spMainSubSize: 12,
+  spInsightTitleX: 0, spInsightTitleY: 0, spInsightTitleSize: 24, spInsightSubX: 0, spInsightSubY: 0, spInsightSubSize: 14, spInsightCardsX: 0, spInsightCardsY: 0,
+  spTrendTitleX: 0, spTrendTitleY: 0, spTrendTitleSize: 18, spTrendSubX: 0, spTrendSubY: 0, spTrendSubSize: 11, spTrendInputX: 0, spTrendInputY: 0, spTrendSvgX: 0, spTrendSvgY: 0,
+  spBarTitleX: 0, spBarTitleY: 0, spBarTitleSize: 18, spBarSubX: 0, spBarSubY: 0, spBarSubSize: 11, spBarSvgX: 0, spBarSvgY: 0,
+  spHeatTitleX: 0, spHeatTitleY: 0, spHeatTitleSize: 18, spHeatSubX: 0, spHeatSubY: 0, spHeatSubSize: 11, spHeatLegX: 0, spHeatLegY: 0, spHeatSvgX: 0, spHeatSvgY: 0,
+  
+  spInsightW: 0, spInsightH: 0, spInsightX: 0, spInsightY: 0,
+  spInsightPadding: 24, spInsightLabelSize: 13, spInsightValSize: 48, spInsightUnitSize: 14, spInsightDiffSize: 12,
+  spTrendContainerW: 0, spTrendContainerH: 0, spTrendX: 0, spTrendY: 0,
+  spTrendWidth: 600, spTrendHeight: 240, spTrendPadX: 50, spTrendPadY: 40, spTrendStroke: 3, spTrendDotR: 5, spTrendValSize: 11, spTrendLblSize: 9,
+  spBarContainerW: 0, spBarContainerH: 0, spBarX: 0, spBarY: 0,
+  spBarWidth: 500, spBarHeight: 140, spBarPadLeft: 75, spBarPadRight: 50, spBarPadTop: 25, spBarPadBot: 15, spBarHeightVal: 22, spBarLblSize: 11, spBarValSize: 11,
+  spHeatContainerW: 0, spHeatContainerH: 0, spHeatX: 0, spHeatY: 0,
+  spHeatBoxH: 40, spHeatLblW: 110, spHeatLblSize: 10, spHeatValSize: 11,
+};
 
 export default function App() {
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Prompt:wght@200;300;400;500;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-50%, 0, 0); } }
+      .animate-marquee { animation: marquee linear infinite; will-change: transform; width: max-content; }
+      .gb-font { font-family: 'Press Start 2P', monospace; }
+      @keyframes rgbLoop { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
+      .rgb-loop-anim { animation: rgbLoop 8s linear infinite; }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Synchronous Lazy Initialization
@@ -2423,7 +2289,7 @@ export default function App() {
     return {};
   }, []);
 
-  const [examCounter, setExamCounter] = useState(savedState.examCounter || MOCK_HISTORY.length);
+  const [examCounter, setExamCounter] = useState(savedState.examCounter || 0);
 
   const [mode, setMode] = useState(savedState.mode || 'full');
   const [timeLeft, setTimeLeft] = useState(savedState.timeLeft ?? 90 * 60); 
@@ -2432,13 +2298,11 @@ export default function App() {
   const [speed, setSpeed] = useState(1);
   const [marks, setMarks] = useState(savedState.marks || []);
   
-  const [reflectionHistory, setReflectionHistory] = useState(savedState.reflectionHistory?.length > 0 ? savedState.reflectionHistory : MOCK_HISTORY);
+  const [reflectionHistory, setReflectionHistory] = useState(savedState.reflectionHistory?.length > 0 ? savedState.reflectionHistory : []);
   const [activeSessionId, setActiveSessionId] = useState(null);
   
   // สถานะสำหรับ Draft Session (ข้อมูลที่เพิ่งกรอกเสร็จ แต่ยังไม่กดเซฟลง Lobby)
   const [draftSession, setDraftSession] = useState(null);
-
-  const [showTempDev, setShowTempDev] = useState(true);
 
   const [countdown, setCountdown] = useState(null);
   const [finishTime, setFinishTime] = useState(null);
@@ -2446,10 +2310,6 @@ export default function App() {
   const [lcdHue, setLcdHue] = useState(0);
   const [trackHue, setTrackHue] = useState(0);
   const [isAutoTrackHue, setIsAutoTrackHue] = useState(false);
-  
-  const [lcdBrightness, setLcdBrightness] = useState(1.1);
-  const [lcdScrollSpeed, setLcdScrollSpeed] = useState(60.5);
-  const [lcdScrollGap, setLcdScrollGap] = useState(80);
 
   const [currentView, setCurrentView] = useState('timer'); // 'timer' | 'tictactoe' | 'skill_profile' | 'reflection_lobby' | 'reflection' | 'reflection_draft' | 'score_edit' | 'technique_hub' | 'technique_detail'
   
@@ -2468,55 +2328,8 @@ export default function App() {
   const [activeTechniqueId, setActiveTechniqueId] = useState(null);
   const [techniquePrevView, setTechniquePrevView] = useState('timer');
 
-  const [cfg, setCfg] = useState({
-    scale: 1, trackRadius: 129, trackStroke: 14, bgTrackStroke: 26,
-    depthOuter: 18, depthTrench: 9, depthCap: 9, depthDimple: 3, dimpleSize: 47,
-    timeFontSize: 4.6, timeY: 5, labelFontSize: 14, labelY: 6,
-    lcdWidth: 304, lcdBezelPadding: 9, lcdHeight: 72, lcdRadiusInner: 20, lcdFontSize: 41,
-    btnHeight: 120, btnRadius: 24, btnIconSize: 64, btnFontSize: 13, btnSlopeBlur: 30, btnEdgeBlur: 0,   
-    settingBtnScale: 0.5, settingBtnX: -305, settingBtnY: 236,
-    gameBtnScale: 0.5, gameBtnX: 1194, gameBtnY: 236,
-    refBtnScale: 0.5, refBtnX: 1194, refBtnY: 90,
-    techBtnScale: 0.5, techBtnX: -305, techBtnY: 90,
-    leftPanelScale: 0.8, leftPanelX: 67, leftPanelY: -41,
-    controlPanelScale: 1.05, controlPanelX: 197, controlPanelY: -19,
-    rightPanelScale: 0.85, rightPanelX: -112, rightPanelY: -116,
-    headerScale: 1, headerX: -269, headerY: 257,
-    gameboyScale: 0.75, gameboyX: -17, gameboyY: 130,
-    gbBodyWidth: 321, gbBodyHeight: 665, gbBezelHeight: 358, gbScreenWidth: 255, gbScreenHeight: 300,
-    gbDpadScale: 1.15, gbDpadX: 6, gbDpadY: 42, gbActionBtnScale: 0.85, gbActionBtnX: 0, gbActionBtnY: -65,
-    gbSystemBtnScale: 0.7, gbSystemBtnX: -120, gbSystemBtnY: -200, gbSpeakerScale: 0.75, gbSpeakerX: -25, gbSpeakerY: 11,
-    gbLogoScale: 1, gbLogoX: 0, gbLogoY: 0,
-    dropRadius: 11, dropShadowBlur: 11, dropShadowSpread: -10,
-    
-    refCardMaxWidth: 540, refCardHeight: 0, refRightColWidth: 155, refCardPadding: 24, refCardGap: 12, refItemGap: 11, refLineHeight: 1.1, refIconSize: 17,
-    refRightColShadow: 50, refTagShadow: 0,
-    refTimeSize: 24, refTimeX: 0, refTimeY: 0,
-    refQTextSize: 24, refQTextX: 0, refQTextY: 0,
-    refPartSize: 18, refPartX: 0, refPartY: 0,
-    refTagSize: 13, refTagX: 0, refTagY: 0,
-    refNoteSize: 14, refNoteX: 0, refNoteY: 0,
-    refAsteriskSize: 89, refAsteriskX: 0, refAsteriskY: 7,
-    refMarkSize: 15, refMarkX: 0, refMarkY: -12,
-    
-    spMainTitleGrpX: 0, spMainTitleGrpY: 0, spMainTitleSize: 20, spMainSubSize: 12,
-    spInsightTitleX: 0, spInsightTitleY: 0, spInsightTitleSize: 24, spInsightSubX: 0, spInsightSubY: 0, spInsightSubSize: 14, spInsightCardsX: 0, spInsightCardsY: 0,
-    spTrendTitleX: 0, spTrendTitleY: 0, spTrendTitleSize: 18, spTrendSubX: 0, spTrendSubY: 0, spTrendSubSize: 11, spTrendInputX: 0, spTrendInputY: 0, spTrendSvgX: 0, spTrendSvgY: 0,
-    spBarTitleX: 0, spBarTitleY: 0, spBarTitleSize: 18, spBarSubX: 0, spBarSubY: 0, spBarSubSize: 11, spBarSvgX: 0, spBarSvgY: 0,
-    spHeatTitleX: 0, spHeatTitleY: 0, spHeatTitleSize: 18, spHeatSubX: 0, spHeatSubY: 0, spHeatSubSize: 11, spHeatLegX: 0, spHeatLegY: 0, spHeatSvgX: 0, spHeatSvgY: 0,
-    
-    spInsightW: 0, spInsightH: 0, spInsightX: 0, spInsightY: 0,
-    spInsightPadding: 24, spInsightLabelSize: 13, spInsightValSize: 48, spInsightUnitSize: 14, spInsightDiffSize: 12,
-    spTrendContainerW: 0, spTrendContainerH: 0, spTrendX: 0, spTrendY: 0,
-    spTrendWidth: 600, spTrendHeight: 240, spTrendPadX: 50, spTrendPadY: 40, spTrendStroke: 3, spTrendDotR: 5, spTrendValSize: 11, spTrendLblSize: 9,
-    spBarContainerW: 0, spBarContainerH: 0, spBarX: 0, spBarY: 0,
-    spBarWidth: 500, spBarHeight: 140, spBarPadLeft: 75, spBarPadRight: 50, spBarPadTop: 25, spBarPadBot: 15, spBarHeightVal: 22, spBarLblSize: 11, spBarValSize: 11,
-    spHeatContainerW: 0, spHeatContainerH: 0, spHeatX: 0, spHeatY: 0,
-    spHeatBoxH: 40, spHeatLblW: 110, spHeatLblSize: 10, spHeatValSize: 11,
-  });
+  const cfg = UI_CFG;
 
-  const updateCfg = useCallback((key, val) => setCfg(p => ({ ...p, [key]: Number(val) })), []);
-  
   useExamAudio({
     timeLeft,
     totalTime: totalTime.current,
@@ -2551,10 +2364,10 @@ export default function App() {
     prevTimeRef.current = timeLeft;
   }, [timeLeft]);
 
-  const progressState = useMemo(() => calculateProgressState(timeLeft, totalTime.current, examSequence, mode), [timeLeft, examSequence, mode]);
+  const timelineData = useMemo(() => buildExamTimeline(examSequence, mode), [examSequence, mode]);
+  const progressState = useMemo(() => calculateProgressState(timeLeft, totalTime.current, timelineData, mode), [timeLeft, timelineData, mode]);
 
   const timeLeftRef = useRef(timeLeft);
-  // Animation loop for Auto Track Hue removed; handled entirely by CSS class "rgb-loop-anim"
   useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
 
   const isRunningRef = useRef(isRunning);
@@ -2658,6 +2471,14 @@ export default function App() {
     });
   }, []);
 
+  const handleFinishClick = useCallback(() => {
+    if (!finishTime) {
+      setFinishTime(totalTime.current - timeLeftRef.current);
+    } else {
+      setTimeLeft(0);
+    }
+  }, [finishTime]);
+
   const handleFinishExam = useCallback((finalScore, scores) => {
     const newExamNum = examCounter + 1;
     setExamCounter(newExamNum);
@@ -2672,7 +2493,7 @@ export default function App() {
       finishTime: finishTime,
       finalScore: finalScore,
       scores: scores || { s1: '', s2: '', s3: '', s4: '', s5: '', s6: '', s7: '', s8: '', s9: '' },
-      pointsData: generateReflectionPoints(marks, totalTime.current, examSequence, mode)
+      pointsData: generateReflectionPoints(marks, totalTime.current, timelineData, mode)
     };
     
     setDraftSession(newSession);
@@ -2683,7 +2504,7 @@ export default function App() {
     setTimeLeft(totalTime.current);
     setMarks([]);
     setFinishTime(null);
-  }, [marks, mode, examSequence, examCounter, finishTime]);
+  }, [marks, mode, examCounter, finishTime, timelineData]);
 
   const activeSession = useMemo(() => reflectionHistory.find(s => s.id === activeSessionId), [reflectionHistory, activeSessionId]);
 
@@ -2696,7 +2517,6 @@ export default function App() {
   }, [draftSession]);
 
   const updateSessionPoint = useCallback((sessionId, pointId, field, value) => {
-    // รวมตรรกะการอัปเดตให้อยู่ในฟังก์ชันเดียว ตัดปัญหา React สับสนเงื่อนไข Draft
     setDraftSession(prevDraft => {
       if (prevDraft && prevDraft.id === sessionId) {
         const updatedPoints = prevDraft.pointsData.map(p => p.id === pointId ? { ...p, [field]: value } : p);
@@ -2731,20 +2551,6 @@ export default function App() {
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
-      <div dangerouslySetInnerHTML={{ __html: `
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=Prompt:wght@200;300;400;500;600&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-          .no-scrollbar::-webkit-scrollbar { display: none; }
-          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-          @keyframes marquee { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-50%, 0, 0); } }
-          .animate-marquee { animation: marquee linear infinite; will-change: transform; width: max-content; }
-          .gb-font { font-family: 'Press Start 2P', monospace; }
-          @keyframes rgbLoop { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(360deg); } }
-          .rgb-loop-anim { animation: rgbLoop 8s linear infinite; }
-        </style>
-      `}} />
       
       {currentView === 'timer' && (
         <TopBarWidget cfg={cfg} themeVals={themeVals} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} mode={mode} handleModeSelect={handleModeSelect} isTimerStarted={isRunning && timeLeft < totalTime.current} isRunning={isRunning} />
@@ -2811,7 +2617,26 @@ export default function App() {
             <TimerDashboard cfg={cfg} themeVals={themeVals} timeLeft={timeLeft} totalTime={totalTime.current} isRunning={isRunning} speed={speed} marks={marks} ambientOn={ambientOn} toggleAmbient={toggleAmbient} toggleTimer={toggleTimer} skipTime={skipTime} resetTimer={resetTimer} trackHue={trackHue} countdown={countdown} isAutoTrackHue={isAutoTrackHue} mode={mode} />
           </div>
 
-          <RightPanelWidget cfg={cfg} themeVals={themeVals} progressState={progressState} lcdHue={lcdHue} setLcdHue={setLcdHue} trackHue={trackHue} setTrackHue={setTrackHue} isAutoTrackHue={isAutoTrackHue} setIsAutoTrackHue={setIsAutoTrackHue} lcdBrightness={lcdBrightness} setLcdBrightness={setLcdBrightness} lcdScrollSpeed={lcdScrollSpeed} setLcdScrollSpeed={setLcdScrollSpeed} lcdScrollGap={lcdScrollGap} setLcdScrollGap={setLcdScrollGap} addMark={addMark} isRunning={isRunning} timeLeft={timeLeft} totalTime={totalTime.current} finishTime={finishTime} setFinishTime={setFinishTime} setTimeLeft={setTimeLeft} />
+          <RightPanelWidget 
+            cfg={cfg} 
+            themeVals={themeVals} 
+            part={progressState.part} 
+            subPart={progressState.subPart} 
+            qText={progressState.qText} 
+            lcdHue={lcdHue} 
+            setLcdHue={setLcdHue} 
+            trackHue={trackHue} 
+            setTrackHue={setTrackHue} 
+            isAutoTrackHue={isAutoTrackHue} 
+            setIsAutoTrackHue={setIsAutoTrackHue} 
+            lcdBrightness={1.1} 
+            lcdScrollSpeed={60.5} 
+            lcdScrollGap={80} 
+            addMark={addMark} 
+            isRunning={isRunning} 
+            finishTime={finishTime} 
+            onFinishClick={handleFinishClick} 
+          />
         </div>
       )}
 
@@ -2890,10 +2715,6 @@ export default function App() {
           onCancel={() => setCurrentView(draftSession ? 'reflection_draft' : 'reflection')} 
           cfg={cfg} 
         />
-      )}
-
-      {(currentView.includes('reflection') || currentView === 'timer' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail') && (
-        <DevAdjustPanel cfg={cfg} updateCfg={updateCfg} showTempDev={showTempDev} setShowTempDev={setShowTempDev} lcdHue={lcdHue} setLcdHue={setLcdHue} trackHue={trackHue} setTrackHue={setTrackHue} lcdBrightness={lcdBrightness} setLcdBrightness={setLcdBrightness} lcdScrollSpeed={lcdScrollSpeed} setLcdScrollSpeed={setLcdScrollSpeed} lcdScrollGap={lcdScrollGap} setLcdScrollGap={setLcdScrollGap} />
       )}
 
       {isSettingOpen && (
