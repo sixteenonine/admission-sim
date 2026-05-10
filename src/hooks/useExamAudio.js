@@ -8,7 +8,7 @@ const sfxFiles = [
   '/sounds/pendrop.mp3'
 ];
 
-export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn, mode }) {
+export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn, mode, sfxEnabled }) {
   const flags = useRef({ start: false, thirty: false, fiveMin: false, finished: false });
   const soundsRef = useRef({});
 
@@ -43,10 +43,12 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
 
   // 2. หยุดทุกเสียงทันทีเมื่อปิดปุ่ม Ambient หรือหยุดเวลา
   useEffect(() => {
-    if (!ambientOn || !isRunning || mode !== 'full') {
+    if (!ambientOn || mode !== 'full') {
+      Howler.stop();
+    } else if (!isRunning && timeLeft > 0) {
       Howler.stop();
     }
-  }, [ambientOn, isRunning, mode]);
+  }, [ambientOn, isRunning, mode, timeLeft]);
 
   // 3. รีเซ็ตสถานะเสียงเมื่อเริ่มสอบใหม่
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
     let timeoutId;
 
     const playRandomSfx = () => {
-      if (!ambientOn || !isRunning || mode !== 'full') return;
+      if (!ambientOn || !sfxEnabled || !isRunning || mode !== 'full') return;
 
       const randomFile = sfxFiles[Math.floor(Math.random() * sfxFiles.length)];
       soundsRef.current[randomFile]?.play();
@@ -101,5 +103,10 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
     }
 
     return () => clearTimeout(timeoutId);
-  }, [ambientOn, isRunning, mode]);
+  }, [ambientOn, isRunning, mode, sfxEnabled]);
+  useEffect(() => {
+    if (!sfxEnabled) {
+      sfxFiles.forEach(file => soundsRef.current[file]?.stop());
+    }
+  }, [sfxEnabled]);
 }

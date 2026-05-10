@@ -749,7 +749,7 @@ const SortableItem = memo(({ item, index, isEditable, isDraggingItem, isAnimatin
   );
 });
 
-const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, setExamSequence, customPresets, setCustomPresets, activePresetId, setActivePresetId, editingPresetId, setEditingPresetId }) => {
+const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, setExamSequence, customPresets, setCustomPresets, activePresetId, setActivePresetId, editingPresetId, setEditingPresetId, sfxEnabled, setSfxEnabled }) => {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap } = themeVals;
 
   const isMounted = useRef(true);
@@ -949,6 +949,15 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
                   <div className={`w-2 h-2 rounded-full shrink-0 transition-opacity ${activePresetId === preset.id ? 'bg-blue-400 opacity-100 shadow-[0_0_8px_#60a5fa]' : 'bg-transparent opacity-0'}`} />
                 </div>
               ))}
+              <div className="w-full px-5 pt-4 pb-2 mt-2 border-t border-white/5 flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: theme.textMain }}>SFX Sounds</span>
+                  <span className="text-[9px] opacity-60" style={{ color: theme.textSub }}>เสียงกระดาษ/เก้าอี้</span>
+                </div>
+                <button onClick={() => setSfxEnabled(!sfxEnabled)} className={`w-8 h-4 rounded-full transition-colors relative ${sfxEnabled ? 'bg-emerald-500' : 'bg-black/20 dark:bg-white/10'}`}>
+                   <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${sfxEnabled ? 'left-[18px]' : 'left-1'}`} />
+                </button>
+              </div>
             </div>
             <div className="w-full md:w-2/3 flex flex-col h-full">
               <div className="mb-2 flex items-center justify-between px-6">
@@ -2297,6 +2306,7 @@ export default function App() {
   const [ambientOn, setAmbientOn] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [marks, setMarks] = useState(savedState.marks || []);
+  const [sfxEnabled, setSfxEnabled] = useState(savedState.sfxEnabled ?? true);
   
   const [reflectionHistory, setReflectionHistory] = useState(savedState.reflectionHistory?.length > 0 ? savedState.reflectionHistory : []);
   const [activeSessionId, setActiveSessionId] = useState(null);
@@ -2335,7 +2345,8 @@ export default function App() {
     totalTime: totalTime.current,
     isRunning,
     ambientOn,
-    mode
+    mode,
+    sfxEnabled
   });
 
   useEffect(() => {
@@ -2345,7 +2356,7 @@ export default function App() {
         // จำกัดประวัติไว้ที่ 30 รอบล่าสุด ป้องกัน LocalStorage ล้นจนแอปแครชจอขาว
         const trimmedHistory = reflectionHistory.slice(0, 30);
         const stateToSave = { 
-          examCounter, timeLeft, mode, examSequence, customPresets, activePresetId, marks, totalTime: totalTime.current, customTags, reflectionHistory: trimmedHistory, targetScore 
+          examCounter, timeLeft, mode, examSequence, customPresets, activePresetId, marks, totalTime: totalTime.current, customTags, reflectionHistory: trimmedHistory, targetScore, sfxEnabled 
         };
         localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
       } catch (e) {
@@ -2718,7 +2729,7 @@ export default function App() {
       )}
 
       {isSettingOpen && (
-        <SettingsModal cfg={cfg} themeVals={themeVals} setIsSettingOpen={setIsSettingOpen} examSequence={examSequence} setExamSequence={setExamSequence} customPresets={customPresets} setCustomPresets={setCustomPresets} activePresetId={activePresetId} setActivePresetId={setActivePresetId} editingPresetId={editingPresetId} setEditingPresetId={setEditingPresetId} />
+        <SettingsModal cfg={cfg} themeVals={themeVals} setIsSettingOpen={setIsSettingOpen} examSequence={examSequence} setExamSequence={setExamSequence} customPresets={customPresets} setCustomPresets={setCustomPresets} activePresetId={activePresetId} setActivePresetId={setActivePresetId} editingPresetId={editingPresetId} setEditingPresetId={setEditingPresetId} sfxEnabled={sfxEnabled} setSfxEnabled={setSfxEnabled} />
       )}
 
       {isScoreModalOpen && (
