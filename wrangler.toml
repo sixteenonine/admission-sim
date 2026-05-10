@@ -1,0 +1,7 @@
+name = "admission-sim"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "admission-sim-db"
+database_id = "2154b60b-9bf5-4ba1-b0be-8e1c902cd3ab"
