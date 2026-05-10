@@ -2301,11 +2301,12 @@ export default function App() {
   const [examCounter, setExamCounter] = useState(savedState.examCounter || 0);
 
   const [mode, setMode] = useState(savedState.mode || 'full');
-  const [timeLeft, setTimeLeft] = useState(savedState.timeLeft ?? 90 * 60); 
+  const initialTime = MODES[savedState.mode || 'full'].time;
+  const [timeLeft, setTimeLeft] = useState(initialTime);
   const [isRunning, setIsRunning] = useState(false);
   const [ambientOn, setAmbientOn] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [marks, setMarks] = useState(savedState.marks || []);
+  const [marks, setMarks] = useState([]);
   const [sfxEnabled, setSfxEnabled] = useState(savedState.sfxEnabled ?? true);
   
   const [reflectionHistory, setReflectionHistory] = useState(savedState.reflectionHistory?.length > 0 ? savedState.reflectionHistory : []);
@@ -2329,7 +2330,7 @@ export default function App() {
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
 
-  const totalTime = useRef(savedState.totalTime ?? 90 * 60);
+  const totalTime = useRef(initialTime);
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   
   const [customTags, setCustomTags] = useState(savedState.customTags || ['#ลังเลศัพท์', '#ทำไม่ทัน', '#เดา']);
@@ -2356,7 +2357,7 @@ export default function App() {
         // จำกัดประวัติไว้ที่ 30 รอบล่าสุด ป้องกัน LocalStorage ล้นจนแอปแครชจอขาว
         const trimmedHistory = reflectionHistory.slice(0, 30);
         const stateToSave = { 
-          examCounter, timeLeft, mode, examSequence, customPresets, activePresetId, marks, totalTime: totalTime.current, customTags, reflectionHistory: trimmedHistory, targetScore, sfxEnabled 
+          examCounter, mode, examSequence, customPresets, activePresetId, customTags, reflectionHistory: trimmedHistory, targetScore, sfxEnabled 
         };
         localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
       } catch (e) {
@@ -2364,7 +2365,7 @@ export default function App() {
       }
     }, 1500);
     return () => clearTimeout(timer);
-  }, [examCounter, timeLeft, mode, examSequence, customPresets, activePresetId, marks, customTags, reflectionHistory, targetScore]);
+  }, [examCounter, mode, examSequence, customPresets, activePresetId, customTags, reflectionHistory, targetScore, sfxEnabled]);
 
   const prevTimeRef = useRef(timeLeft);
   useEffect(() => {

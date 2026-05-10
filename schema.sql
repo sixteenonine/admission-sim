@@ -1,0 +1,19 @@
+DROP TABLE IF EXISTS users;
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TABLE IF EXISTS exam_history;
+CREATE TABLE exam_history (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    reflection_data TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
