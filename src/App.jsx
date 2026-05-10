@@ -2361,6 +2361,7 @@ export default function App() {
     }
   }, [currentUser?.id]);
 
+
   const totalTime = useRef(initialTime);
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   
