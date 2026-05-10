@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
+import { UserCircle2 } from 'lucide-react';
+import AuthModal from './components/AuthModal';
 import useExamAudio from './hooks/useExamAudio';
 // --- Constants & Helpers ---
 const MODES = {
@@ -2329,6 +2331,35 @@ export default function App() {
   const [activePresetId, setActivePresetId] = useState(savedState.activePresetId || 'recommend');
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('sim_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    localStorage.setItem('sim_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('sim_user');
+    setReflectionHistory([]);
+  };
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetch(`/api/history?userId=${currentUser.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            setReflectionHistory(data.data);
+          }
+        })
+        .catch(err => console.error("Failed to fetch history:", err));
+    }
+  }, [currentUser?.id]);
 
   const totalTime = useRef(initialTime);
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
@@ -2543,13 +2574,31 @@ export default function App() {
     }));
   }, []);
 
-  const handleSaveDraft = useCallback(() => {
+  const handleSaveDraft = useCallback(async () => {
     if (draftSession) {
       setReflectionHistory(prev => [draftSession, ...prev]);
+      
+      if (currentUser) {
+        try {
+          await fetch('/api/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              mode: draftSession.mode,
+              score: draftSession.finalScore,
+              reflectionData: draftSession
+            })
+          });
+        } catch (error) {
+          console.error("Failed to save history:", error);
+        }
+      }
+
       setDraftSession(null);
       setCurrentView('reflection_lobby');
     }
-  }, [draftSession]);
+  }, [draftSession, currentUser]);
 
   const handleDiscardDraft = useCallback(() => {
     setDraftSession(null);
@@ -2563,7 +2612,31 @@ export default function App() {
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
-      
+      {/* User Login Button (Top Right) */}
+      <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
+        {currentUser ? (
+          <div className="flex items-center gap-3 bg-black/10 dark:bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 dark:border-white/10">
+            <span className="text-sm font-bold" style={{ color: themeVals.theme.textMain }}>{currentUser.displayName}</span>
+            <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-400 font-bold">Logout</button>
+          </div>
+        ) : (
+          <button 
+            onClick={() => setIsAuthModalOpen(true)}
+            className="p-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 backdrop-blur-md rounded-full border border-black/5 dark:border-white/10 transition-all active:scale-90"
+            style={{ color: themeVals.theme.textMain }}
+          >
+            <UserCircle2 size={28} />
+          </button>
+        )}
+      </div>
+
+      <AuthModal 
+        isOpen={isAuthModalOpen} 
+        onClose={() => setIsAuthModalOpen(false)} 
+        onLoginSuccess={handleLoginSuccess}
+        themeVals={themeVals}
+      />
+
       {currentView === 'timer' && (
         <TopBarWidget cfg={cfg} themeVals={themeVals} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} mode={mode} handleModeSelect={handleModeSelect} isTimerStarted={isRunning && timeLeft < totalTime.current} isRunning={isRunning} />
       )}
