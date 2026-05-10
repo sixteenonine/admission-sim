@@ -2630,6 +2630,7 @@ export default function App() {
           </button>
         )}
       </div>
+      
 
       <AuthModal 
         isOpen={isAuthModalOpen} 
