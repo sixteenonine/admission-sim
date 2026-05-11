@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
-import { UserCircle2 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown, Settings, LogOut, CreditCard, UserCircle2 } from 'lucide-react';
 import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
 import useExamAudio from './hooks/useExamAudio';
 // --- Constants & Helpers ---
+const AVATARS = [
+  { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
+  { id: 3, color: '#8b5cf6' }, { id: 4, color: '#f43f5e' }, 
+  { id: 5, color: '#f97316' }, { id: 6, color: '#14b8a6' }
+];
 const MODES = {
   full: { label: 'ALL PARTS (90m)', time: 90 * 60, partPrefix: 'all' },
   part1: { label: 'LISTENING (14m)', time: 14 * 60, partPrefix: 'I. Listening & Speaking' },
@@ -2335,6 +2339,7 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('sim_user');
     return saved ? JSON.parse(saved) : null;
@@ -2619,11 +2624,71 @@ export default function App() {
       {/* User Login Button (Top Right) */}
       <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
         {currentUser ? (
-          <div className="flex items-center gap-3 bg-black/10 dark:bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 dark:border-white/10">
-            <span className="text-sm font-bold" style={{ color: themeVals.theme.textMain }}>{currentUser.displayName}</span>
-            <button onClick={() => setIsProfileModalOpen(true)} className="text-xs text-blue-500 hover:text-blue-400 font-bold transition-colors">Profile</button>
-            <div className="w-[1px] h-3 bg-current opacity-20"></div>
-            <button onClick={() => setIsLogoutModalOpen(true)} className="text-xs text-red-500 hover:text-red-400 font-bold">Logout</button>
+          <div className="relative">
+            {isProfileDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)}></div>}
+            
+            {/* ปุ่ม Avatar มุมขวาบน */}
+            <button 
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="w-[44px] h-[44px] rounded-full border-[2.5px] transition-transform active:scale-95 flex items-center justify-center overflow-hidden z-50 relative"
+              style={{ 
+                backgroundColor: AVATARS.find(a => a.id === (currentUser.avatar_id || 1))?.color || '#3b82f6', 
+                borderColor: themeVals.theme.bg,
+                boxShadow: themeVals.shadowPlateau
+              }}
+            >
+               <UserCircle2 size={26} color="#ffffff" className="opacity-80" />
+            </button>
+  
+            {/* Dropdown Menu */}
+            <div 
+              className={`absolute right-0 top-full mt-3 w-[260px] rounded-[1.5rem] p-2.5 border border-white/20 transition-all duration-300 origin-top-right z-50 flex flex-col gap-1
+                ${isProfileDropdownOpen ? 'opacity-100 scale-100 pointer-events-auto translate-y-0' : 'opacity-0 scale-95 pointer-events-none -translate-y-2'}`}
+              style={{ boxShadow: themeVals.shadowPlateau, background: themeVals.raisedGradient }}
+            >
+               {/* ส่วนหัวข้อมูลโปรไฟล์ */}
+               <div className="px-3 pt-3 pb-4 flex items-center justify-between mb-1 border-b border-white/5">
+                  <div className="flex flex-col truncate pr-2">
+                     <span className="text-[16px] font-bold truncate" style={{ color: themeVals.theme.textMain }}>{currentUser.displayName}</span>
+                     <span className="text-[12px] opacity-60 truncate mt-0.5" style={{ color: themeVals.theme.textSub }}>@{currentUser.username}</span>
+                  </div>
+                  <div className="w-12 h-12 rounded-full border-[3px] flex items-center justify-center shrink-0" style={{ backgroundColor: AVATARS.find(a => a.id === (currentUser.avatar_id || 1))?.color || '#3b82f6', borderColor: themeVals.theme.bg, boxShadow: themeVals.shadowDeepInset }}>
+                     <UserCircle2 size={24} color="#ffffff" className="opacity-80" />
+                  </div>
+               </div>
+               
+               {/* ตัวเลือกในเมนู */}
+               <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3.5 text-[14px] font-semibold transition-all flex items-center gap-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 mt-1" style={{ color: themeVals.theme.textMain }}>
+                 <UserCircle2 size={18} className="opacity-70" />
+                 <span>Profile</span>
+               </button>
+  
+               {/* ปุ่ม Dummy ที่ทำไว้รอฟังก์ชัน */}
+               <button onClick={() => { setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3.5 text-[14px] font-semibold transition-all flex items-center justify-between rounded-xl hover:bg-black/5 dark:hover:bg-white/5" style={{ color: themeVals.theme.textMain }}>
+                 <div className="flex items-center gap-3">
+                   <CreditCard size={18} className="opacity-70" />
+                   <span>Subscription</span>
+                 </div>
+                 <span className="text-[10px] font-black bg-green-500/20 text-green-500 px-2 py-1 rounded-md tracking-widest">PRO</span>
+               </button>
+  
+               <button onClick={() => { setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3.5 text-[14px] font-semibold transition-all flex items-center gap-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5" style={{ color: themeVals.theme.textMain }}>
+                 <Settings size={18} className="opacity-70" />
+                 <span>Settings</span>
+               </button>
+               
+               <div className="w-full h-[1px] my-1 opacity-10" style={{ background: themeVals.theme.textMain }}></div>
+  
+               <button onClick={() => { setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3.5 text-[14px] font-semibold transition-all flex items-center gap-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5" style={{ color: themeVals.theme.textMain }}>
+                 <MessageSquare size={18} className="opacity-70" />
+                 <span>Contact</span>
+               </button>
+  
+               <button onClick={() => { setIsLogoutModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3.5 text-[14px] font-semibold transition-all flex items-center gap-3 rounded-xl hover:bg-red-500/10 text-red-500" >
+                 <LogOut size={18} className="opacity-80" />
+                 <span>Sign out</span>
+               </button>
+            </div>
           </div>
         ) : (
           <button 
