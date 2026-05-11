@@ -5,6 +5,9 @@ CREATE TABLE users (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     display_name TEXT NOT NULL,
+    avatar_id INTEGER DEFAULT 1,
+    security_question_id INTEGER,
+    security_answer_hash TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
