@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from '
 import { Play, Pause, Volume2, VolumeX, RefreshCcw, ChevronDown, Sun, Moon, Asterisk, ChevronUp, ChevronLeft, ChevronRight, GripVertical, X, Plus, Trash2, Edit, Gamepad2, ArrowLeft, FastForward, Award, Tag, MessageSquare, Clock, History, CalendarDays, CheckCircle, TrendingUp, Activity, BookOpen, AlertTriangle, TrendingDown } from 'lucide-react';
 import { UserCircle2 } from 'lucide-react';
 import AuthModal from './components/AuthModal';
+import ProfileModal from './components/ProfileModal';
 import useExamAudio from './hooks/useExamAudio';
 // --- Constants & Helpers ---
 const MODES = {
@@ -2333,6 +2334,7 @@ export default function App() {
   const [isSettingOpen, setIsSettingOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('sim_user');
     return saved ? JSON.parse(saved) : null;
@@ -2619,6 +2621,8 @@ export default function App() {
         {currentUser ? (
           <div className="flex items-center gap-3 bg-black/10 dark:bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 dark:border-white/10">
             <span className="text-sm font-bold" style={{ color: themeVals.theme.textMain }}>{currentUser.displayName}</span>
+            <button onClick={() => setIsProfileModalOpen(true)} className="text-xs text-blue-500 hover:text-blue-400 font-bold transition-colors">Profile</button>
+            <div className="w-[1px] h-3 bg-current opacity-20"></div>
             <button onClick={() => setIsLogoutModalOpen(true)} className="text-xs text-red-500 hover:text-red-400 font-bold">Logout</button>
           </div>
         ) : (
@@ -2637,6 +2641,12 @@ export default function App() {
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
         onLoginSuccess={handleLoginSuccess}
+        themeVals={themeVals}
+      />
+      <ProfileModal 
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        user={currentUser}
         themeVals={themeVals}
       />
 

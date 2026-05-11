@@ -1,7 +1,7 @@
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    const { userId, currentPassword, newUsername, newPassword, securityQuestionId, securityAnswer } = await context.request.json();
+    const { userId, currentPassword, newUsername, newPassword, securityQuestionId, securityAnswer, avatarId } = await context.request.json();
 
     if (!userId || !currentPassword) {
       return new Response(JSON.stringify({ status: "error", message: "กรุณากรอกรหัสผ่านปัจจุบันเพื่อยืนยันตัวตน" }), { 
@@ -46,7 +46,13 @@ export async function onRequestPost(context) {
        values.push(securityAnswer);
     }
 
-    // 5. บันทึกลงฐานข้อมูล
+    // 5. เช็กและอัปเดต Avatar
+    if (avatarId) {
+       updates.push("avatar_id = ?");
+       values.push(avatarId);
+    }
+
+    // 6. บันทึกลงฐานข้อมูล
     if (updates.length > 0) {
        values.push(userId);
        const query = `UPDATE users SET ${updates.join(", ")} WHERE id = ?`;
