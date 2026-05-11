@@ -97,8 +97,8 @@ const ForgotPassword = ({ onBack, themeVals }) => {
       
       <style>{`
         @keyframes slideFade {
-          0% { opacity: 0; transform: translateX(10px); }
-          100% { opacity: 1; transform: translateX(0); }
+          0% { opacity: 0; }
+          100% { opacity: 1; }
         }
         .step-transition {
           animation: slideFade 0.3s ease-out forwards;
