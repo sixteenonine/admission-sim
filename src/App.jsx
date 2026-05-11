@@ -2332,6 +2332,7 @@ export default function App() {
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('sim_user');
     return saved ? JSON.parse(saved) : null;
@@ -2618,7 +2619,7 @@ export default function App() {
         {currentUser ? (
           <div className="flex items-center gap-3 bg-black/10 dark:bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 dark:border-white/10">
             <span className="text-sm font-bold" style={{ color: themeVals.theme.textMain }}>{currentUser.displayName}</span>
-            <button onClick={handleLogout} className="text-xs text-red-500 hover:text-red-400 font-bold">Logout</button>
+            <button onClick={() => setIsLogoutModalOpen(true)} className="text-xs text-red-500 hover:text-red-400 font-bold">Logout</button>
           </div>
         ) : (
           <button 
@@ -2810,6 +2811,34 @@ export default function App() {
 
       {isScoreModalOpen && (
         <ScoreModal themeVals={themeVals} setIsScoreModalOpen={setIsScoreModalOpen} handleFinishExam={handleFinishExam} resetTimer={resetTimer} />
+      )}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/20 backdrop-blur-sm px-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-sm p-8 rounded-[2.5rem] text-center border border-white/10" style={{ background: themeVals.theme.bg, boxShadow: themeVals.shadowOuter }}>
+            <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-full bg-red-500/10 text-red-500">
+              <AlertTriangle size={40} />
+            </div>
+            <h3 className="text-xl font-bold mb-2" style={{ color: themeVals.theme.textMain }}>Log Out?</h3>
+            <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.theme.textSub }}>คุณต้องการออกจากระบบใช่หรือไม่?<br/>ข้อมูลที่ยังไม่ได้บันทึกอาจสูญหาย</p>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest transition-all active:scale-95"
+                style={{ background: themeVals.indentedGradient, color: themeVals.theme.textMain, boxShadow: themeVals.shadowDeepInset }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => { handleLogout(); setIsLogoutModalOpen(false); }}
+                className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg"
+                style={{ background: 'linear-gradient(145deg, #ef4444, #dc2626)' }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {countdown !== null && countdown > 0 && (
