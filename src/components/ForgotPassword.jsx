@@ -95,6 +95,16 @@ const ForgotPassword = ({ onBack, themeVals }) => {
   return (
     <div className="w-full flex flex-col gap-5 relative">
       
+      <style>{`
+        @keyframes slideFade {
+          0% { opacity: 0; transform: translateX(10px); }
+          100% { opacity: 1; transform: translateX(0); }
+        }
+        .step-transition {
+          animation: slideFade 0.3s ease-out forwards;
+        }
+      `}</style>
+
       {/* Header กลับ */}
       {step < 4 && (
         <button onClick={step === 1 ? onBack : () => { setStep(step - 1); setError(''); }} className="flex items-center text-[14px] font-medium opacity-60 hover:opacity-100 transition-opacity w-fit -ml-2 p-2" style={{ color: theme.textMain }}>
@@ -110,7 +120,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
       {/* Step 1: Username */}
       {step === 1 && (
-        <form onSubmit={handleCheckUsername} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <form onSubmit={handleCheckUsername} className="flex flex-col gap-6 step-transition">
           <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่าน</h2>
           <div className="flex flex-col gap-2">
             <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>

@@ -79,14 +79,23 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
   return (
     <div className="fixed inset-0 z-[500] w-full h-full flex flex-col items-center justify-center transition-colors duration-300" style={{ background: bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
       
+      <style>{`
+        @keyframes smoothFade {
+          0% { opacity: 0; transform: translateY(10px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .view-transition {
+          animation: smoothFade 0.4s ease-out forwards;
+        }
+      `}</style>
+
       <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full opacity-50 hover:opacity-100 transition-opacity z-50" style={{ color: theme.textMain }}>
         <X size={24} />
       </button>
 
       <div className="w-full max-w-[460px] flex flex-col px-6">
-        {/* ใช้ key ช่วยให้ React รีเรนเดอร์และแสดงเอฟเฟกต์ Fade-in ใหม่ทุกครั้งที่เปลี่ยนหน้า */}
-        <div key={view} className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
+        {/* ใส่คลาส view-transition แทนที่ animate-in เดิม */}
+        <div key={view} className="flex flex-col gap-5 view-transition">
           {view === 'forgot' && (
             <ForgotPassword onBack={() => handleSwitchView('login')} themeVals={themeVals} />
           )}
