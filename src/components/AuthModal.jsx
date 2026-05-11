@@ -50,9 +50,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-300 font-medium" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
-      
-      {/* Outer Container (เหมือนหน้า Settings) */}
+<div className="fixed inset-0 z-[300] flex items-center justify-center px-4 animate-in fade-in duration-300 font-medium" style={{ background: bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>      {/* Outer Container (เหมือนหน้า Settings) */}
       <div className="w-full max-w-sm rounded-[2.5rem] border border-white/20 transition-all relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         
         {/* Inner Container */}

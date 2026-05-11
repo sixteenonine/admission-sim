@@ -10,7 +10,7 @@ export async function onRequestPost(context) {
     }
 
     // เช็กว่ามี Username นี้หรือยัง
-    const existingUser = await db.prepare("SELECT id FROM users WHERE username = ?").bind(username).first();
+    const existingUser = await db.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?)").bind(username).first();
     if (existingUser) {
       return new Response(JSON.stringify({ status: "error", message: "มี Username นี้ในระบบแล้ว" }), { 
         status: 400, headers: { "Content-Type": "application/json" } 

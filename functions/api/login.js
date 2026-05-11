@@ -11,7 +11,7 @@ export async function onRequestPost(context) {
 
     // ค้นหาผู้ใช้จาก Username
     const user = await db.prepare(
-      "SELECT id, username, display_name as displayName, password_hash FROM users WHERE username = ?"
+      "SELECT id, username, display_name as displayName, password_hash FROM users WHERE LOWER(username) = LOWER(?)"
     ).bind(username).first();
 
     // ตรวจสอบรหัสผ่าน
