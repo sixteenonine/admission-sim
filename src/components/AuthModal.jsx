@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
-import { X, User, Lock, UserCircle, Loader2, Asterisk } from 'lucide-react';
-import ForgotPassword from './ForgotPassword'; // นำเข้า Component ใหม่
+import { X, Eye, EyeOff, Loader2, Check } from 'lucide-react';
+import ForgotPassword from './ForgotPassword';
 
 const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState('login'); // 'login' | 'register' | 'register_success' | 'forgot'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showForgot, setShowForgot] = useState(false); // เพิ่ม State สำหรับควบคุมหน้าลืมรหัสผ่าน
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    displayName: ''
+    confirmPassword: '',
+    displayName: '' 
   });
 
-  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, indentedGradient } = themeVals;
+  const { bg, theme, shadowPlateau, raisedGradient, shadowDeepInset, indentedGradient } = themeVals;
 
   if (!isOpen) return null;
 
@@ -23,24 +25,38 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
     setLoading(true);
     setError('');
 
-    const endpoint = isLogin ? '/api/login' : '/api/register';
-    
+    if (view === 'register') {
+      if (formData.password.length < 8) {
+        setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
+        setLoading(false);
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError('รหัสผ่านไม่ตรงกัน');
+        setLoading(false);
+        return;
+      }
+    }
+
+    const endpoint = view === 'login' ? '/api/login' : '/api/register';
+    const payload = view === 'login' 
+      ? { username: formData.username, password: formData.password }
+      : { username: formData.username, password: formData.password, displayName: formData.username };
+
     try {
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
-
       const data = await res.json();
 
       if (data.status === 'success') {
-        if (isLogin) {
+        if (view === 'login') {
           onLoginSuccess(data.user);
           onClose();
         } else {
-          setIsLogin(true);
-          setError('สมัครสมาชิกสำเร็จ! กรุณาเข้าสู่ระบบ');
+          setView('register_success');
         }
       } else {
         setError(data.message);
@@ -52,129 +68,155 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
     }
   };
 
+  const handleSwitchView = (newView) => {
+    setError('');
+    setFormData({ username: '', password: '', confirmPassword: '', displayName: '' });
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setView(newView);
+  };
+
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center px-4 animate-in fade-in duration-300 font-medium" style={{ background: bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
-      {/* Outer Container */}
-      <div className="w-full max-w-sm rounded-[2.5rem] border border-white/20 transition-all relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
-        
-        {/* Inner Container */}
-        <div className="w-full rounded-[2rem] p-8 flex flex-col gap-6 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
+    <div className="fixed inset-0 z-[500] w-full h-full flex flex-col items-center justify-center transition-colors duration-300" style={{ background: bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
+      
+      <button onClick={onClose} className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full opacity-50 hover:opacity-100 transition-opacity z-50" style={{ color: theme.textMain }}>
+        <X size={24} />
+      </button>
+
+      <div className="w-full max-w-[460px] flex flex-col px-6">
+        {/* ใช้ key ช่วยให้ React รีเรนเดอร์และแสดงเอฟเฟกต์ Fade-in ใหม่ทุกครั้งที่เปลี่ยนหน้า */}
+        <div key={view} className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
           
-          {/* เงื่อนไขแสดงหน้า Forgot Password หรือ หน้า Login/Register เดิม */}
-          {showForgot ? (
-            <div className="-m-2">
-               <ForgotPassword onBack={() => setShowForgot(false)} themeVals={themeVals} />
+          {view === 'forgot' && (
+            <ForgotPassword onBack={() => handleSwitchView('login')} themeVals={themeVals} />
+          )}
+
+          {view === 'register_success' && (
+            <div className="flex flex-col items-center text-center py-8">
+              <div className="w-20 h-20 rounded-full border-[3px] border-green-600 text-green-600 flex items-center justify-center mb-6">
+                <Check size={40} strokeWidth={3} />
+              </div>
+              <h1 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>ยินดีต้อนรับ</h1>
+              <h2 className="text-[24px] font-medium uppercase mb-6" style={{ color: theme.textMain }}>{formData.username}</h2>
+              <p className="text-[15px] font-medium opacity-80 mb-8" style={{ color: theme.textMain }}>สร้างบัญชีสำเร็จ</p>
+              
+              <button
+                onClick={() => handleSwitchView('login')}
+                className="w-full h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center border border-white/10"
+                style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}
+              >
+                Home
+              </button>
             </div>
-          ) : (
+          )}
+
+          {(view === 'login' || view === 'register') && (
             <>
-              {/* Header */}
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
-                    <UserCircle size={20} className="text-blue-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold tracking-wide" style={{ color: theme.textMain }}>
-                      {isLogin ? 'Welcome Back' : 'Create Account'}
-                    </h3>
-                    <p className="text-[11px] font-bold opacity-60 uppercase tracking-wider" style={{ color: theme.textSub }}>
-                      {isLogin ? 'เข้าสู่ระบบเพื่อซิงค์ประวัติ' : 'สมัครสมาชิกใหม่'}
-                    </p>
-                  </div>
-                </div>
-                <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}>
-                  <X size={14} />
-                </button>
+              <div className="flex flex-col items-start text-left mb-2 w-full">
+                <h1 className="text-[32px] font-light tracking-wide" style={{ color: theme.textMain }}>
+                  {view === 'login' ? 'ยินดีต้อนรับ' : 'สร้างบัญชี'}
+                </h1>
+                {view === 'login' && (
+                  <h2 className="text-[25px] font-medium italic opacity-100 -mt-1" style={{ color: theme.textMain }}>DEK70</h2>
+                )}
               </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                
-                {/* Error / Success Message */}
-                {error && (
-                  <div className={`p-4 text-[12px] font-bold rounded-2xl flex items-center justify-center text-center border ${error.includes('สำเร็จ') ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' : 'border-red-500/30 text-red-500 bg-red-500/10'}`}>
-                    {error}
-                  </div>
-                )}
+              {error && (
+                <div className="p-3 text-[13px] font-bold rounded-md border border-red-500/30 text-red-500 bg-red-500/10 text-center">
+                  {error}
+                </div>
+              )}
 
-                {/* Input Fields */}
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center px-5 py-4 rounded-[1.5rem] border border-white/5 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                    <User className="mr-3 opacity-40 shrink-0" size={18} style={{ color: theme.textMain }} />
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                {/* Username */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
+                  <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                     <input
-                      type="text"
-                      required
-                      className="w-full bg-transparent outline-none text-[14px] font-bold placeholder:opacity-30 transition-colors focus:text-blue-500"
-                      placeholder="Username"
+                      type="text" required
+                      className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
                       value={formData.username}
                       onChange={(e) => setFormData({...formData, username: e.target.value})}
                       style={{ color: theme.textMain }}
                     />
                   </div>
+                </div>
 
-                  {!isLogin && (
-                    <div className="flex items-center px-5 py-4 rounded-[1.5rem] border border-white/5 transition-all animate-in fade-in slide-in-from-top-2" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                      <Asterisk className="mr-3 opacity-40 shrink-0 text-orange-500" size={18} />
-                      <input
-                        type="text"
-                        required
-                        className="w-full bg-transparent outline-none text-[14px] font-bold placeholder:opacity-30 transition-colors focus:text-orange-500"
-                        placeholder="Display Name (ชื่อที่จะแสดง)"
-                        value={formData.displayName}
-                        onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-                        style={{ color: theme.textMain }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex items-center px-5 py-4 rounded-[1.5rem] border border-white/5 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                    <Lock className="mr-3 opacity-40 shrink-0" size={18} style={{ color: theme.textMain }} />
+                {/* Password */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
+                  <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                     <input
-                      type="password"
-                      required
-                      className="w-full bg-transparent outline-none text-[14px] font-bold placeholder:opacity-30 transition-colors focus:text-blue-500"
-                      placeholder="Password"
+                      type={showPassword ? "text" : "password"} required
+                      className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                       style={{ color: theme.textMain }}
                     />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="ml-2 opacity-40 hover:opacity-100 transition-opacity" style={{ color: theme.textMain }}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                   </div>
                 </div>
 
-                {/* Submit Button */}
+                {/* Confirm Password (สำหรับ Register) */}
+                {view === 'register' && (
+                  <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
+                    <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
+                    <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                      <input
+                        type={showConfirmPassword ? "text" : "password"} required
+                        className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                        style={{ color: theme.textMain }}
+                      />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="ml-2 opacity-40 hover:opacity-100 transition-opacity" style={{ color: theme.textMain }}>
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <p className="text-[12px] font-medium italic opacity-70 mt-1" style={{ color: theme.textMain }}>(ต้องมีไม่ต่ำกว่า 8 ตัวอักษร)</p>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-2 py-4 rounded-[1.25rem] font-bold tracking-widest text-[13px] uppercase transition-all active:scale-[0.98] border border-white/10 shadow-lg flex items-center justify-center gap-2"
-                  style={{ background: 'linear-gradient(145deg, #3b82f6, #2563eb)', color: '#ffffff', boxShadow: shadowPlateau }}
+                  className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
+                  style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : null}
-                  {isLogin ? 'Sign In' : 'Sign Up'}
+                  {view === 'login' ? 'Sign in' : 'Create Account'}
                 </button>
-
-                {/* Switch Mode Button */}
-                <button
-                  type="button"
-                  onClick={() => { setIsLogin(!isLogin); setError(''); setFormData({username: '', password: '', displayName: ''}); }}
-                  className="w-full text-[11px] font-bold uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity mt-1"
-                  style={{ color: theme.textSub }}
-                >
-                  {isLogin ? 'Don\'t have an account? Sign up' : 'Already have an account? Sign in'}
-                </button>
-
-                {/* Forgot Password Button */}
-                {isLogin && (
-                  <button
-                    type="button"
-                    onClick={() => { setShowForgot(true); setError(''); }}
-                    className="w-full text-[11px] font-bold uppercase tracking-widest text-blue-500 opacity-70 hover:opacity-100 transition-opacity"
-                  >
-                    ลืมรหัสผ่าน? (Forgot Password)
-                  </button>
-                )}
-
               </form>
+
+              {view === 'login' && (
+                <div className="text-center mt-1">
+                  <button onClick={() => handleSwitchView('forgot')} type="button" className="text-[14px] font-medium opacity-80 hover:opacity-100 transition-opacity" style={{ color: theme.textMain }}>
+                    ลืมรหัสผ่าน?
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 my-2">
+                <div className="flex-1 h-[1px] opacity-20" style={{ background: theme.textMain }}></div>
+                <span className="text-[13px] font-medium opacity-80" style={{ color: theme.textMain }}>
+                  {view === 'login' ? 'หรือ' : 'มีบัญชีอยู่แล้ว?'}
+                </span>
+                <div className="flex-1 h-[1px] opacity-20" style={{ background: theme.textMain }}></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleSwitchView(view === 'login' ? 'register' : 'login')}
+                className="w-full h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] border border-white/5"
+                style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}
+              >
+                {view === 'login' ? 'สร้างบัญชี' : 'Sign in'}
+              </button>
             </>
           )}
+
         </div>
       </div>
     </div>

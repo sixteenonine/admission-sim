@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, User, HelpCircle, Lock, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2, Check, Eye, EyeOff } from 'lucide-react';
 
 const SECURITY_QUESTIONS = {
   1: "สัตว์เลี้ยงตัวแรกของคุณชื่ออะไร?",
@@ -9,22 +9,25 @@ const SECURITY_QUESTIONS = {
 };
 
 const ForgotPassword = ({ onBack, themeVals }) => {
-  const [step, setStep] = useState(1); // 1: Username, 2: Answer, 3: Success
+  const [step, setStep] = useState(1); // 1: User, 2: Answer, 3: New Pass, 4: Success
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     username: "",
     securityQuestionId: null,
     securityAnswer: "",
-    newPassword: ""
+    newPassword: "",
+    confirmNewPassword: ""
   });
 
-  // Step 1: ตรวจสอบ Username และดึงคำถาม
+  const { theme, shadowPlateau, indentedGradient, shadowDeepInset } = themeVals;
+
   const handleCheckUsername = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     try {
       const res = await fetch('/api/auth/recover', {
         method: 'POST',
@@ -44,11 +47,28 @@ const ForgotPassword = ({ onBack, themeVals }) => {
     }
   };
 
-  // Step 2: ตรวจคำตอบและเปลี่ยนรหัสผ่าน
+  const handleAnswerSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.securityAnswer.trim()) {
+      setError("กรุณากรอกคำตอบ");
+      return;
+    }
+    setError("");
+    setStep(3);
+  };
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
+    if (formData.newPassword.length < 8) {
+      setError("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+      return;
+    }
+    if (formData.newPassword !== formData.confirmNewPassword) {
+      setError("รหัสผ่านไม่ตรงกัน");
+      return;
+    }
+
+    setLoading(true); setError("");
     try {
       const res = await fetch('/api/auth/recover', {
         method: 'POST',
@@ -61,7 +81,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
       });
       const data = await res.json();
       if (data.status === 'success') {
-        setStep(3);
+        setStep(4);
       } else {
         setError(data.message);
       }
@@ -73,90 +93,126 @@ const ForgotPassword = ({ onBack, themeVals }) => {
   };
 
   return (
-    <div className="p-6">
-      <button onClick={onBack} className="flex items-center text-sm opacity-60 mb-6 hover:opacity-100">
-        <ArrowLeft size={16} className="mr-2" /> กลับไปหน้าเข้าสู่ระบบ
-      </button>
+    <div className="w-full flex flex-col gap-5 relative">
+      
+      {/* Header กลับ */}
+      {step < 4 && (
+        <button onClick={step === 1 ? onBack : () => { setStep(step - 1); setError(''); }} className="flex items-center text-[14px] font-medium opacity-60 hover:opacity-100 transition-opacity w-fit -ml-2 p-2" style={{ color: theme.textMain }}>
+          <ArrowLeft size={18} className="mr-1.5" /> กลับ
+        </button>
+      )}
 
-      <h2 className="text-2xl font-bold mb-2">กู้คืนรหัสผ่าน</h2>
-      <p className="text-sm opacity-70 mb-6">ยืนยันตัวตนผ่านคำถามความปลอดภัย</p>
+      {error && (
+        <div className="p-3 text-[13px] font-bold rounded-md border border-red-500/30 text-red-500 bg-red-500/10 text-center mb-2">
+          {error}
+        </div>
+      )}
 
-      {error && <div className="p-3 mb-4 bg-red-500/10 text-red-500 text-sm rounded-lg border border-red-500/20">{error}</div>}
-
+      {/* Step 1: Username */}
       {step === 1 && (
-        <form onSubmit={handleCheckUsername} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-2">Username ของคุณ</label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 opacity-40" size={18} />
+        <form onSubmit={handleCheckUsername} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่าน</h2>
+          <div className="flex flex-col gap-2">
+            <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
+            <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
-                className="w-full pl-10 pr-4 py-2 rounded-xl border bg-transparent"
-                style={{ borderColor: themeVals.theme.border }}
+                className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
                 value={formData.username}
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
+                style={{ color: theme.textMain }}
               />
             </div>
           </div>
-          <button disabled={loading} className="w-full py-3 rounded-xl font-bold bg-blue-600 text-white">
-            {loading ? "กำลังตรวจสอบ..." : "ถัดไป"}
+          <button disabled={loading} className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+            {loading ? <Loader2 className="animate-spin" size={18} /> : null} Next
           </button>
         </form>
       )}
 
+      {/* Step 2: Security Question */}
       {step === 2 && (
-        <form onSubmit={handleResetPassword} className="space-y-4">
-          <div className="p-4 rounded-xl mb-2" style={{ backgroundColor: themeVals.theme.bgSecondary }}>
-            <p className="text-xs opacity-50 mb-1">คำถามความปลอดภัยของคุณ:</p>
-            <p className="font-medium text-blue-400">{SECURITY_QUESTIONS[formData.securityQuestionId]}</p>
+        <form onSubmit={handleAnswerSubmit} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex flex-col">
+            <h2 className="text-[18px] font-medium opacity-80 mb-2" style={{ color: theme.textMain }}>คำถามความปลอดภัยของคุณ</h2>
+            <h3 className="text-[32px] font-light tracking-wide leading-tight" style={{ color: theme.textMain }}>{SECURITY_QUESTIONS[formData.securityQuestionId]}</h3>
           </div>
-          
-          <div>
-            <label className="block text-sm mb-2">คำตอบของคุณ</label>
-            <div className="relative">
-              <HelpCircle className="absolute left-3 top-3 opacity-40" size={18} />
+          <div className="flex flex-col gap-2 mt-2">
+            <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
-                className="w-full pl-10 pr-4 py-2 rounded-xl border bg-transparent"
-                style={{ borderColor: themeVals.theme.border }}
+                className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
                 value={formData.securityAnswer}
                 onChange={(e) => setFormData({...formData, securityAnswer: e.target.value})}
+                style={{ color: theme.textMain }}
               />
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm mb-2">รหัสผ่านใหม่</label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-3 opacity-40" size={18} />
-              <input 
-                type="password" required minLength={6}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border bg-transparent"
-                style={{ borderColor: themeVals.theme.border }}
-                value={formData.newPassword}
-                onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
-              />
-            </div>
-          </div>
-
-          <button disabled={loading} className="w-full py-3 rounded-xl font-bold bg-green-600 text-white">
-            {loading ? "กำลังบันทึก..." : "ยืนยันการเปลี่ยนรหัสผ่าน"}
+          <button className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+            Next
           </button>
         </form>
       )}
 
+      {/* Step 3: New Password */}
       {step === 3 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <KeyRound size={32} />
+        <form onSubmit={handleResetPassword} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>ตั้งรหัสผ่านใหม่</h2>
+          
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
+              <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                <input 
+                  type={showPassword ? "text" : "password"} required
+                  className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
+                  value={formData.newPassword}
+                  onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                  style={{ color: theme.textMain }}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="ml-2 opacity-40 hover:opacity-100 transition-opacity" style={{ color: theme.textMain }}>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
+              <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                <input 
+                  type={showConfirmPassword ? "text" : "password"} required
+                  className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
+                  value={formData.confirmNewPassword}
+                  onChange={(e) => setFormData({...formData, confirmNewPassword: e.target.value})}
+                  style={{ color: theme.textMain }}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="ml-2 opacity-40 hover:opacity-100 transition-opacity" style={{ color: theme.textMain }}>
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
           </div>
-          <h3 className="text-xl font-bold mb-2">เปลี่ยนรหัสผ่านสำเร็จ!</h3>
-          <p className="text-sm opacity-70 mb-6">คุณสามารถใช้รหัสผ่านใหม่เข้าสู่ระบบได้ทันที</p>
-          <button onClick={onBack} className="w-full py-3 rounded-xl font-bold bg-blue-600 text-white">
-            กลับไปหน้า Login
+
+          <button disabled={loading} className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+            {loading ? <Loader2 className="animate-spin" size={18} /> : null} Next
+          </button>
+        </form>
+      )}
+
+      {/* Step 4: Success */}
+      {step === 4 && (
+        <div className="flex flex-col items-center text-center py-8 animate-in zoom-in-95 duration-500">
+          <div className="w-20 h-20 rounded-full border-[3px] border-green-600 text-green-600 flex items-center justify-center mb-6">
+            <Check size={40} strokeWidth={3} />
+          </div>
+          <h2 className="text-[32px] font-light tracking-wide mb-4" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่านสำเร็จ</h2>
+          <p className="text-[15px] font-medium opacity-80 mb-8" style={{ color: theme.textMain }}>คุณสามารถใช้รหัสผ่านใหม่เข้าสู่ระบบได้ทันที</p>
+          <button onClick={onBack} className="w-full h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center border border-white/10" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+            Next
           </button>
         </div>
       )}
+
     </div>
   );
 };
