@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS exam_history;
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
     id TEXT PRIMARY KEY,
@@ -7,7 +8,7 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS exam_history;
+
 CREATE TABLE exam_history (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

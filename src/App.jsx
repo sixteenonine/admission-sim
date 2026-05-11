@@ -2819,7 +2819,7 @@ export default function App() {
               <AlertTriangle size={40} />
             </div>
             <h3 className="text-xl font-bold mb-2" style={{ color: themeVals.theme.textMain }}>Log Out?</h3>
-            <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.theme.textSub }}>คุณต้องการออกจากระบบใช่หรือไม่?<br/>ข้อมูลที่ยังไม่ได้บันทึกอาจสูญหาย</p>
+            <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.theme.textSub }}>หนูต้องการออกจากระบบใช่หรือไม่?</p>
             
             <div className="grid grid-cols-2 gap-4">
               <button 
