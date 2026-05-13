@@ -282,10 +282,8 @@ const TopBarWidget = memo(({ cfg, themeVals, isDarkMode, setIsDarkMode, mode, ha
   const { theme, bg, shadowOuter, raisedGradient, shadowPlateau, shadowDeepInset } = themeVals;
 
   return (
-    <div className="absolute top-8 w-full max-w-5xl flex justify-between items-center px-8 z-20">
-      <h1 className="text-xl font-bold tracking-[0.2em]" style={{ color: theme.textMain }}>A-LEVEL</h1>
-      
-      <div className="flex gap-4 items-center">
+    <div className="fixed top-6 right-[70px] sm:right-[90px] flex items-center z-[90]">
+      <div className="flex gap-3 sm:gap-4 items-center">
         <button 
           onClick={() => { if (!isRunning) setIsDarkMode(!isDarkMode); }} 
           disabled={isRunning}
@@ -2621,6 +2619,11 @@ export default function App() {
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
+      {/* Top Mask Bar (พรางตาเพื่อบังเนื้อหาที่ Scroll ขึ้นมา) */}
+      <div className="fixed top-0 left-0 right-0 h-[80px] z-[80] pointer-events-none" style={{ backgroundColor: themeVals.bg }}></div>
+      {/* (Floating Top Left) */}
+      <h1 className="fixed top-8 left-8 z-[100] text-xl font-bold tracking-[0.2em] hidden sm:block pointer-events-none" style={{ color: themeVals.theme.textMain }}>ADMiSSIM</h1>
+
       {/* User Login Button (Top Right) */}
       <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
         {currentUser ? (
