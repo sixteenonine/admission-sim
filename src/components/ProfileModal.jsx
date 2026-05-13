@@ -112,14 +112,14 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
                     </div>
 
                     {/* Data List (คลิกแก้ไขได้, ไม่มีเส้นคั่น, ระยะชิดกันขึ้น) */}
-                    <div className="flex flex-col gap-1 mt-2">
+                    <div className="flex flex-col gap-0 mt-2">
                       {[
                         { key: 'newUsername', label: 'Username' },
                         { key: 'generation', label: 'รุ่น' },
                         { key: 'targetUni', label: 'มหาวิทยาลัยที่อยากเข้า' },
                         { key: 'targetFac', label: 'คณะที่อยากเข้า' }
                       ].map((field) => (
-                        <div key={field.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 group">
+                        <div key={field.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1 group">
                           <label className="text-[15px] font-medium opacity-90 pl-2" style={{ color: theme.textMain }}>{field.label}</label>
                           
                           {editingField === field.key ? (
