@@ -147,7 +147,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
           <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่าน</h2>
           <div className="flex flex-col gap-2">
             <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
-            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isUserInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isUserInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80 focus-within:border-[#007bff] focus-within:shadow-[0_0_8px_rgba(0,123,255,0.2)]'}`} style={{ background: '#d3d7da50', boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
                 className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -171,7 +171,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
             <h3 className="text-[32px] font-light tracking-wide leading-tight" style={{ color: theme.textMain }}>{SECURITY_QUESTIONS[formData.securityQuestionId]}</h3>
           </div>
           <div className="flex flex-col gap-2 mt-2">
-            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isAnswerInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isAnswerInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80 focus-within:border-[#007bff] focus-within:shadow-[0_0_8px_rgba(0,123,255,0.2)]'}`} style={{ background: '#d3d7da50', boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
                 className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -195,7 +195,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>New Password</label>
-              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80 focus-within:border-[#007bff] focus-within:shadow-[0_0_8px_rgba(0,123,255,0.2)]'}`} style={{ background: '#d3d7da50', boxShadow: shadowDeepInset }}>
                 <input 
                   type={showPassword ? "text" : "password"} required
                   className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -212,7 +212,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
             <div className="flex flex-col gap-2">
               <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
-              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80 focus-within:border-[#007bff] focus-within:shadow-[0_0_8px_rgba(0,123,255,0.2)]'}`} style={{ background: '#d3d7da50', boxShadow: shadowDeepInset }}>
                 <input 
                   type={showConfirmPassword ? "text" : "password"} required
                   className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
