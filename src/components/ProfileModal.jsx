@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, User, Save, Loader2, Shield, Camera, Award, Calendar } from 'lucide-react';
+import { X, Lock, User, Save, Loader2 } from 'lucide-react';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -13,13 +13,13 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
+  // ลบ currentPassword ออกจากระบบ
   const [formData, setFormData] = useState({
-    currentPassword: '',
     newUsername: user?.username || '',
     newPassword: '',
+    generation: user?.generation || 'DEK70',
     targetUni: user?.target_uni || 'จุฬาลงกรณ์มหาวิทยาลัย',
     targetFac: user?.target_fac || 'ศึกษาศาสตร์',
-    generation: user?.generation || 'DEK70',
     avatarId: user?.avatar_id || 1
   });
 
@@ -50,21 +50,21 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
     }
   };
 
+  // เส้นคั่นบางๆ แบบ Responsive กับ ธีมมืด/สว่าง
+  const dividerColor = theme.bg === "#1e2229" ? 'border-white/5' : 'border-black/5';
+
   return (
     <div className="fixed inset-0 z-[350] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-300">
       
-      {/* กรอบนอกแบบเดียวกับ Settings (Padding 9px + shadowPlateau) */}
+      {/* กรอบนอก */}
       <div className="w-full max-w-4xl rounded-[2.5rem] border border-white/30 relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         
-        {/* กรอบในแบบเดียวกับ Settings (shadowOuter) */}
-        <div className="w-full rounded-[2rem] p-6 sm:p-8 flex flex-col gap-6 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
+        {/* กรอบใน */}
+        <div className="w-full rounded-[2rem] p-6 sm:p-8 flex flex-col gap-8 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
           
-          {/* Header สไตล์ Settings */}
+          {/* Header */}
           <div className="flex justify-between items-center px-2">
-            <div>
-              <h3 className="text-xl font-bold tracking-wide" style={{ color: theme.textMain }}>Account Profile</h3>
-              <p className="text-xs font-medium opacity-60" style={{ color: theme.textSub }}>Manage your personal information and security</p>
-            </div>
+            <h3 className="text-2xl font-bold tracking-wide" style={{ color: theme.textMain }}>Account Settings</h3>
             <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}>
               <X size={18} />
             </button>
@@ -73,77 +73,103 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
           <div className="flex flex-col md:flex-row gap-8 min-h-[450px]">
             
             {/* Sidebar Left */}
-            <div className="w-full md:w-60 flex flex-col gap-3 shrink-0">
+            <div className="w-full md:w-64 flex flex-col gap-3 shrink-0">
               <button 
-                onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-4 w-full px-5 py-4 rounded-2xl text-[14px] font-bold transition-all duration-300 border border-white/5`}
+                onClick={() => { setActiveTab('profile'); setError(''); setSuccess(''); }}
+                className={`flex items-center gap-4 w-full px-5 py-4 rounded-[1.25rem] text-[15px] font-bold transition-all duration-300 border border-white/5`}
                 style={activeTab === 'profile' ? { background: indentedGradient, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent' }}
               >
-                <User size={18} /> Profile
+                <User size={18} /> Profile Settings
               </button>
               <button 
-                onClick={() => setActiveTab('security')}
-                className={`flex items-center gap-4 w-full px-5 py-4 rounded-2xl text-[14px] font-bold transition-all duration-300 border border-white/5`}
+                onClick={() => { setActiveTab('security'); setError(''); setSuccess(''); }}
+                className={`flex items-center gap-4 w-full px-5 py-4 rounded-[1.25rem] text-[15px] font-bold transition-all duration-300 border border-white/5`}
                 style={activeTab === 'security' ? { background: indentedGradient, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent' }}
               >
-                <Lock size={18} /> Security
+                <Lock size={18} /> Password & Security
               </button>
             </div>
 
             {/* Content Right */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col pl-0 md:pl-4">
               <form onSubmit={handleSubmit} className="flex flex-col h-full">
                 
-                {error && <div className="p-3 mb-6 text-xs text-red-500 bg-red-500/10 rounded-xl border border-red-500/20 text-center font-bold">{error}</div>}
-                {success && <div className="p-3 mb-6 text-xs text-emerald-500 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center font-bold">{success}</div>}
+                {error && <div className="p-3 mb-6 text-[13px] text-red-500 bg-red-500/10 rounded-xl border border-red-500/20 text-center font-bold">{error}</div>}
+                {success && <div className="p-3 mb-6 text-[13px] text-emerald-500 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center font-bold">{success}</div>}
 
                 {activeTab === 'profile' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in duration-300 flex-1">
+                  <div className="flex flex-col animate-in fade-in duration-300 flex-1">
                     
-                    {/* Avatar & Basic Info */}
-                    <div className="flex items-center gap-6 pb-6 border-b border-white/5">
-                      <div className="w-20 h-20 rounded-full border-[4px] flex items-center justify-center overflow-hidden shrink-0" 
+                    {/* Avatar & Info */}
+                    <div className="flex items-center gap-6 pb-8">
+                      <div className="w-[100px] h-[100px] rounded-full border-[4px] flex items-center justify-center overflow-hidden shrink-0" 
                            style={{ backgroundColor: AVATARS.find(a => a.id === formData.avatarId)?.color || '#3b82f6', borderColor: theme.bg, boxShadow: shadowDeepInset }}>
-                        <User size={32} color="#ffffff" className="opacity-80" />
+                        <User size={44} color="#ffffff" className="opacity-80" />
                       </div>
                       <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-xl font-bold" style={{ color: theme.textMain }}>{user?.displayName}</h4>
-                          <span className="bg-green-500/20 text-green-500 text-[10px] font-black px-2 py-0.5 rounded-md tracking-widest">PRO</span>
+                        <div className="flex items-center gap-3">
+                          <h4 className="text-[26px] font-bold tracking-tight" style={{ color: theme.textMain }}>{user?.displayName || 'Sixteenonine1'}</h4>
+                          <span className="bg-blue-600 text-white text-[11px] font-black px-2 py-0.5 rounded-md tracking-widest shadow-sm">PRO</span>
                         </div>
-                        <p className="text-xs opacity-50 font-bold uppercase tracking-wider" style={{ color: theme.textSub }}>@{user?.username}</p>
-                      </div>
-                    </div>
-
-                    {/* Inputs */}
-                    <div className="flex flex-col gap-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-black uppercase tracking-widest opacity-60" style={{ color: theme.textSub }}>มหาลัยที่อยากเข้า</label>
-                        <div className="w-full h-12 px-5 rounded-xl border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                          <input type="text" className="w-full bg-transparent outline-none text-sm font-bold" value={formData.targetUni} onChange={e => setFormData({...formData, targetUni: e.target.value})} style={{ color: theme.textMain }} />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-black uppercase tracking-widest opacity-60" style={{ color: theme.textSub }}>คณะที่อยากเข้า</label>
-                        <div className="w-full h-12 px-5 rounded-xl border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                          <input type="text" className="w-full bg-transparent outline-none text-sm font-bold" value={formData.targetFac} onChange={e => setFormData({...formData, targetFac: e.target.value})} style={{ color: theme.textMain }} />
+                        <div className="flex flex-col mt-1.5 opacity-70 text-[14px] font-medium" style={{ color: theme.textMain }}>
+                          <span>เข้าร่วมเมื่อ 01/11/26</span>
+                          <span>วันหมดอายุสมาชิก 05/12/26</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-auto pt-6 flex justify-end">
-                      <button type="submit" disabled={loading} className="px-10 py-4 rounded-2xl font-black text-[12px] uppercase tracking-widest text-white shadow-lg transition-all active:scale-95 flex items-center gap-2" style={{ background: 'linear-gradient(145deg, #3b82f6, #2563eb)' }}>
-                        {loading ? <Loader2 className="animate-spin" size={16} /> : <><Save size={16} /> Save Changes</>}
+                    {/* Data List (จัดเรียงตามภาพ) */}
+                    <div className="flex flex-col mt-2">
+                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
+                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
+                        <span className="text-[16px] font-medium opacity-60 text-left sm:text-right" style={{ color: theme.textMain }}>{user?.username || 'Sixteenonine1'}</span>
+                      </div>
+
+                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
+                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>รุ่น</label>
+                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
+                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.generation} onChange={e => setFormData({...formData, generation: e.target.value})} style={{ color: theme.textMain }} />
+                        </div>
+                      </div>
+
+                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
+                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>มหาวิทยาลัยที่อยากเข้า</label>
+                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
+                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.targetUni} onChange={e => setFormData({...formData, targetUni: e.target.value})} style={{ color: theme.textMain }} />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5">
+                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>คณะที่อยากเข้า</label>
+                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
+                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.targetFac} onChange={e => setFormData({...formData, targetFac: e.target.value})} style={{ color: theme.textMain }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ปุ่ม Save Changes ไม่มีรหัสผ่าน */}
+                    <div className="mt-auto pt-8 flex justify-end">
+                      <button type="submit" disabled={loading} className="w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-[13px] uppercase tracking-widest text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(145deg, #3b82f6, #2563eb)' }}>
+                        {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Save Changes</>}
                       </button>
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'security' && (
-                  <div className="flex flex-col gap-6 animate-in fade-in duration-300 flex-1">
-                    <p className="text-sm font-bold opacity-70" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่านหรือตั้งคำถามความปลอดภัยใหม่</p>
-                    {/* Add Security fields here similar to Settings layout if needed */}
+                  <div className="flex flex-col animate-in fade-in duration-300 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5">
+                      <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>ตั้งรหัสผ่านใหม่</label>
+                      <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
+                        <input type="password" placeholder="เว้นว่างได้ถ้าไม่เปลี่ยน" className="w-full bg-transparent outline-none text-[14px] text-left sm:text-right" value={formData.newPassword} onChange={e => setFormData({...formData, newPassword: e.target.value})} style={{ color: theme.textMain }} />
+                      </div>
+                    </div>
+
+                    <div className="mt-auto pt-8 flex justify-end">
+                      <button type="submit" disabled={loading} className="w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-[13px] uppercase tracking-widest text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(145deg, #3b82f6, #2563eb)' }}>
+                        {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Update Password</>}
+                      </button>
+                    </div>
                   </div>
                 )}
 
