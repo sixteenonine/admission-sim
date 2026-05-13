@@ -207,7 +207,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              <p className={`text-[12px] font-light -mt-0.5 transition-colors duration-300 ${isPassInvalid ? 'text-red-500 font-medium' : ''}`} style={{ fontFamily: "'Prompt', sans-serif", color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.6 }}>* ต้องมีไม่ต่ำกว่า 8 ตัวอักษร</p>
+              <p className={`text-[12px] font-light mt-1.5 transition-colors duration-300 ${isPassInvalid ? 'text-red-500 font-medium' : ''}`} style={{ fontFamily: "'Prompt', sans-serif", color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.6 }}>* ต้องมีไม่ต่ำกว่า 8 ตัวอักษร</p>
             </div>
 
             <div className="flex flex-col gap-2">
