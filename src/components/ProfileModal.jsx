@@ -125,31 +125,31 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
                     </div>
                   </div>
 
-                  {/* Info Grid (สไตล์แบบสากล) */}
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-2">
+                  {/* Info Grid (เพิ่มเส้นคั่นและระยะห่างบรรทัด) */}
+                  <div className="flex flex-col gap-9">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 pb-8 border-b border-white/5">
                       <label className="text-[15px] font-bold opacity-80" style={{ color: theme.textMain }}>Username</label>
-                      <span className="text-[15px] opacity-60" style={{ color: theme.textMain }}>{user?.username || 'Sixteenonine'}</span>
+                      <span className="text-[15px] font-bold opacity-40" style={{ color: theme.textMain }}>{user?.username || 'Sixteenonine'}</span>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 pb-8 border-b border-white/5">
                       <label className="text-[15px] font-bold opacity-80" style={{ color: theme.textMain }}>รุ่น</label>
-                      <div className="w-full sm:w-72 h-11 px-5 rounded-2xl border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                        <input type="text" className="w-full bg-transparent outline-none text-[14px] font-bold" value={formData.generation} onChange={e => setFormData({...formData, generation: e.target.value})} style={{ color: theme.textMain }} />
+                      <div className="w-full sm:w-80 h-[56px] px-6 rounded-[1.5rem] border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                        <input type="text" className="w-full bg-transparent outline-none text-[15px] font-bold" value={formData.generation} onChange={e => setFormData({...formData, generation: e.target.value})} style={{ color: theme.textMain }} />
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2 pb-8 border-b border-white/5">
                       <label className="text-[15px] font-bold opacity-80" style={{ color: theme.textMain }}>มหาวิทยาลัยที่อยากเข้า</label>
-                      <div className="w-full sm:w-72 h-11 px-5 rounded-2xl border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                        <input type="text" className="w-full bg-transparent outline-none text-[14px] font-bold" value={formData.targetUni} onChange={e => setFormData({...formData, targetUni: e.target.value})} style={{ color: theme.textMain }} />
+                      <div className="w-full sm:w-80 h-[56px] px-6 rounded-[1.5rem] border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                        <input type="text" className="w-full bg-transparent outline-none text-[15px] font-bold" value={formData.targetUni} onChange={e => setFormData({...formData, targetUni: e.target.value})} style={{ color: theme.textMain }} />
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
                       <label className="text-[15px] font-bold opacity-80" style={{ color: theme.textMain }}>คณะที่อยากเข้า</label>
-                      <div className="w-full sm:w-72 h-11 px-5 rounded-2xl border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
-                        <input type="text" className="w-full bg-transparent outline-none text-[14px] font-bold" value={formData.targetFac} onChange={e => setFormData({...formData, targetFac: e.target.value})} style={{ color: theme.textMain }} />
+                      <div className="w-full sm:w-80 h-[56px] px-6 rounded-[1.5rem] border border-white/5 flex items-center" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                        <input type="text" className="w-full bg-transparent outline-none text-[15px] font-bold" value={formData.targetFac} onChange={e => setFormData({...formData, targetFac: e.target.value})} style={{ color: theme.textMain }} />
                       </div>
                     </div>
                   </div>
