@@ -29,7 +29,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
 
   if (!isOpen) return null;
   
-  const isPassInvalid = formData.password.length > 0 && formData.password.length < 8;
+  const isPassInvalid = view === 'register' && formData.password.length > 0 && formData.password.length < 8;
   const isConfirmInvalid = view === 'register' && formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
   const isUserInvalid = error.includes('Username') || error.includes('ระบบแล้ว') || error.includes('ไม่ถูกต้อง');
   const isPassError = error.includes('Password ไม่ถูกต้อง');
@@ -46,7 +46,6 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
     setError('');
 
     if (regStep === 1) {
-      // ตรวจสอบข้อมูลขั้นแรก
       if (formData.password.length < 8) {
         setError('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร');
         return;
@@ -55,7 +54,26 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
         setError('รหัสผ่านไม่ตรงกัน');
         return;
       }
-      setRegStep(2); // ไปหน้าตั้งคำถาม
+      
+      setLoading(true);
+      try {
+        const res = await fetch('/api/auth/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: formData.username })
+        });
+        const data = await res.json();
+        if (data.status === 'error') {
+           setError(data.message);
+           return;
+        }
+        setRegStep(2);
+      } catch (err) {
+        setError('เกิดข้อผิดพลาดในการตรวจสอบ Username');
+        return;
+      } finally {
+        setLoading(false);
+      }
     } else {
       // ส่งข้อมูลสมัครสมาชิกจริง
       if (!formData.securityAnswer.trim()) {
@@ -203,13 +221,13 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                         {showConfirmPassword ? <EyeOff key="hide-conf" size={18} /> : <Eye key="show-conf" size={18} />}
                       </button>
                     </div>
-                    <p className="text-[12px] font-medium italic mt-1 transition-colors" style={{ color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.7 }}>(ต้องมีไม่ต่ำกว่า 8 ตัวอักษร)</p>
+                    <p className={`text-[12px] font-light mt-1.5 transition-colors duration-300 ${isPassInvalid ? 'text-red-500 font-medium' : ''}`} style={{ fontFamily: "'Prompt', sans-serif", color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.6 }}>* ต้องมีไม่ต่ำกว่า 8 ตัวอักษร</p>
                   </div>
                 )}
 
                 {/* หน้า Register Step 2 เท่านั้น (Security Questions) */}
                 {view === 'register' && regStep === 2 && (
-                  <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-right-4">
+                  <div className="flex flex-col gap-5">
                     <div className="flex flex-col gap-2">
                       <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Question</label>
                       <div className="relative flex items-center px-4 h-[52px] rounded-md border border-gray-500 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>

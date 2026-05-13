@@ -119,12 +119,12 @@ const ForgotPassword = ({ onBack, themeVals }) => {
     <div className="w-full flex flex-col gap-5 relative">
       
       <style>{`
-        @keyframes slideFade {
+        @keyframes pureFade {
           0% { opacity: 0; }
           100% { opacity: 1; }
         }
-        .step-transition {
-          animation: slideFade 0.3s ease-out forwards;
+        .fade-transition {
+          animation: pureFade 0.4s ease-out forwards;
         }
       `}</style>
 
@@ -143,7 +143,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
       {/* Step 1: Username */}
       {step === 1 && (
-        <form onSubmit={handleCheckUsername} className="flex flex-col gap-6 step-transition">
+        <form onSubmit={handleCheckUsername} className="flex flex-col gap-6 fade-transition">
           <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่าน</h2>
           <div className="flex flex-col gap-2">
             <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
@@ -165,7 +165,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
       {/* Step 2: Security Question */}
       {step === 2 && (
-        <form onSubmit={handleAnswerSubmit} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <form onSubmit={handleAnswerSubmit} className="flex flex-col gap-6 fade-transition">
           <div className="flex flex-col">
             <h2 className="text-[18px] font-medium opacity-80 mb-2" style={{ color: theme.textMain }}>คำถามความปลอดภัยของคุณ</h2>
             <h3 className="text-[32px] font-light tracking-wide leading-tight" style={{ color: theme.textMain }}>{SECURITY_QUESTIONS[formData.securityQuestionId]}</h3>
@@ -189,12 +189,12 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
       {/* Step 3: New Password */}
       {step === 3 && (
-        <form onSubmit={handleResetPassword} className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <form onSubmit={handleResetPassword} className="flex flex-col gap-6 fade-transition">
           <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>ตั้งรหัสผ่านใหม่</h2>
           
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
+              <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>New Password</label>
               <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                 <input 
                   type={showPassword ? "text" : "password"} required
@@ -207,6 +207,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              <p className={`text-[12px] font-light -mt-0.5 transition-colors duration-300 ${isPassInvalid ? 'text-red-500 font-medium' : ''}`} style={{ fontFamily: "'Prompt', sans-serif", color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.6 }}>* ต้องมีไม่ต่ำกว่า 8 ตัวอักษร</p>
             </div>
 
             <div className="flex flex-col gap-2">
