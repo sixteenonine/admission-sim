@@ -8,12 +8,12 @@ const AVATARS = [
 ];
 
 const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
+  const [activeTab, setActiveTab] = useState('profile');
   const [editingField, setEditingField] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // ลบ currentPassword ออกจากระบบ
   const [formData, setFormData] = useState({
     newUsername: user?.username || '',
     newPassword: '',
@@ -50,19 +50,13 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
     }
   };
 
-  // เส้นคั่นบางๆ แบบ Responsive กับ ธีมมืด/สว่าง
-  const dividerColor = theme.bg === "#1e2229" ? 'border-white/5' : 'border-black/5';
-
   return (
     <div className="fixed inset-0 z-[350] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-300">
       
-      {/* กรอบนอก */}
       <div className="w-full max-w-4xl rounded-[2.5rem] border border-white/30 relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         
-        {/* กรอบใน */}
         <div className="w-full rounded-[2rem] p-6 sm:p-8 flex flex-col gap-8 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
           
-          {/* Header */}
           <div className="flex justify-between items-center px-2">
             <h3 className="text-2xl font-bold tracking-wide" style={{ color: theme.textMain }}>Account Settings</h3>
             <button onClick={onClose} className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textMain }}>
@@ -72,7 +66,7 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
 
           <div className="flex flex-col md:flex-row gap-8 min-h-[450px]">
             
-            {/* Sidebar Left (ปรับปุ่มให้เป็นหลุมตื้นแบบเดียวกับกล่องข้อความ) */}
+            {/* Sidebar Left (ปรับปุ่มให้เป็นหลุมตื้น) */}
             <div className="w-full md:w-64 flex flex-col gap-2 shrink-0">
               <button 
                 onClick={() => { setActiveTab('profile'); setError(''); setSuccess(''); }}
@@ -100,7 +94,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
                 {activeTab === 'profile' && (
                   <div className="flex flex-col animate-in fade-in duration-300 flex-1">
                     
-                    {/* Avatar & Info */}
                     <div className="flex items-center gap-6 pb-8">
                       <div className="w-[100px] h-[100px] rounded-full border-[4px] flex items-center justify-center overflow-hidden shrink-0" 
                            style={{ backgroundColor: AVATARS.find(a => a.id === formData.avatarId)?.color || '#3b82f6', borderColor: theme.bg, boxShadow: shadowDeepInset }}>
@@ -157,7 +150,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
                       ))}
                     </div>
 
-                    {/* ปุ่ม Save Changes ไม่มีรหัสผ่าน */}
                     <div className="mt-auto pt-8 flex justify-end">
                       <button type="submit" disabled={loading} className="w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-[13px] uppercase tracking-widest text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2" style={{ background: 'linear-gradient(145deg, #3b82f6, #2563eb)' }}>
                         {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Save Changes</>}
