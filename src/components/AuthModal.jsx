@@ -28,6 +28,13 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
   const { bg, theme, shadowPlateau, raisedGradient, shadowDeepInset, indentedGradient } = themeVals;
 
   if (!isOpen) return null;
+  const isSubmitDisabled = loading || 
+    (view === 'login' && (!formData.username || !formData.password)) ||
+    (view === 'register' && regStep === 1 && (!formData.username || !formData.password || !formData.confirmPassword)) ||
+    (view === 'register' && regStep === 2 && (!formData.securityQuestionId || !formData.securityAnswer));
+
+  const isPassInvalid = view === 'register' && formData.password.length > 0 && formData.password.length < 8;
+  const isConfirmInvalid = view === 'register' && formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
 
   // จัดการการกดปุ่มในหน้า Register
   const handleRegisterFlow = async (e) => {
@@ -172,9 +179,11 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
-                      <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-500 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                      <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                         <input type={showPassword ? "text" : "password"} required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{ color: theme.textMain }} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="ml-2 opacity-40 hover:opacity-100"><Eye size={18} /></button>
+                        <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} className="ml-2 opacity-40 hover:opacity-100 transition-opacity">
+                          {showPassword ? <EyeOff key="hide" size={18} /> : <Eye key="show" size={18} />}
+                        </button>
                       </div>
                     </div>
                   </>
@@ -184,11 +193,13 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                 {view === 'register' && regStep === 1 && (
                   <div className="flex flex-col gap-2">
                     <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
-                    <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-500 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                    <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                       <input type={showConfirmPassword ? "text" : "password"} required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} style={{ color: theme.textMain }} />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="ml-2 opacity-40 hover:opacity-100"><Eye size={18} /></button>
+                      <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setShowConfirmPassword(!showConfirmPassword); }} className="ml-2 opacity-40 hover:opacity-100 transition-opacity">
+                        {showConfirmPassword ? <EyeOff key="hide-conf" size={18} /> : <Eye key="show-conf" size={18} />}
+                      </button>
                     </div>
-                    <p className="text-[12px] font-medium italic opacity-70 mt-1" style={{ color: theme.textMain }}>(ต้องมีไม่ต่ำกว่า 8 ตัวอักษร)</p>
+                    <p className="text-[12px] font-medium italic mt-1 transition-colors" style={{ color: isPassInvalid ? '#ef4444' : theme.textMain, opacity: isPassInvalid ? 1 : 0.7 }}>(ต้องมีไม่ต่ำกว่า 8 ตัวอักษร)</p>
                   </div>
                 )}
 
@@ -213,7 +224,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                   </div>
                 )}
 
-                <button type="submit" disabled={loading} className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+                <button type="submit" disabled={isSubmitDisabled} className={`w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all flex items-center justify-center gap-2 border border-white/10 ${isSubmitDisabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
                   {loading && <Loader2 className="animate-spin" size={18} />}
                   {view === 'login' ? 'Sign in' : (regStep === 1 ? 'Next' : 'Create Account')}
                 </button>
