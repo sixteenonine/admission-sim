@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, User, Save, Loader2 } from 'lucide-react';
+import { X, Lock, User, Save, Loader2, Edit3 } from 'lucide-react';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -8,7 +8,7 @@ const AVATARS = [
 ];
 
 const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [editingField, setEditingField] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -72,19 +72,19 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
 
           <div className="flex flex-col md:flex-row gap-8 min-h-[450px]">
             
-            {/* Sidebar Left */}
-            <div className="w-full md:w-64 flex flex-col gap-3 shrink-0">
+            {/* Sidebar Left (ปรับปุ่มให้เป็นหลุมตื้นแบบเดียวกับกล่องข้อความ) */}
+            <div className="w-full md:w-64 flex flex-col gap-2 shrink-0">
               <button 
                 onClick={() => { setActiveTab('profile'); setError(''); setSuccess(''); }}
-                className={`flex items-center gap-4 w-full px-5 py-4 rounded-[1.25rem] text-[15px] font-bold transition-all duration-300 border border-white/5`}
-                style={activeTab === 'profile' ? { background: indentedGradient, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent' }}
+                className={`flex items-center gap-4 w-full px-5 h-[52px] rounded-[11px] text-[15px] font-bold transition-all duration-300 border border-white/5`}
+                style={activeTab === 'profile' ? { background: bg, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent', borderColor: 'transparent' }}
               >
                 <User size={18} /> Profile Settings
               </button>
               <button 
                 onClick={() => { setActiveTab('security'); setError(''); setSuccess(''); }}
-                className={`flex items-center gap-4 w-full px-5 py-4 rounded-[1.25rem] text-[15px] font-bold transition-all duration-300 border border-white/5`}
-                style={activeTab === 'security' ? { background: indentedGradient, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent' }}
+                className={`flex items-center gap-4 w-full px-5 h-[52px] rounded-[11px] text-[15px] font-bold transition-all duration-300 border border-white/5`}
+                style={activeTab === 'security' ? { background: bg, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent', borderColor: 'transparent' }}
               >
                 <Lock size={18} /> Password & Security
               </button>
@@ -118,33 +118,43 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
                       </div>
                     </div>
 
-                    {/* Data List (จัดเรียงตามภาพ) */}
-                    <div className="flex flex-col mt-2">
-                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
-                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
-                        <span className="text-[16px] font-medium opacity-60 text-left sm:text-right" style={{ color: theme.textMain }}>{user?.username || 'Sixteenonine1'}</span>
-                      </div>
-
-                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
-                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>รุ่น</label>
-                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
-                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.generation} onChange={e => setFormData({...formData, generation: e.target.value})} style={{ color: theme.textMain }} />
+                    {/* Data List (คลิกแก้ไขได้, ไม่มีเส้นคั่น, ระยะชิดกันขึ้น) */}
+                    <div className="flex flex-col gap-1 mt-2">
+                      {[
+                        { key: 'newUsername', label: 'Username' },
+                        { key: 'generation', label: 'รุ่น' },
+                        { key: 'targetUni', label: 'มหาวิทยาลัยที่อยากเข้า' },
+                        { key: 'targetFac', label: 'คณะที่อยากเข้า' }
+                      ].map((field) => (
+                        <div key={field.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-3 group">
+                          <label className="text-[15px] font-medium opacity-90 pl-2" style={{ color: theme.textMain }}>{field.label}</label>
+                          
+                          {editingField === field.key ? (
+                            <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
+                              <input 
+                                autoFocus
+                                type="text" 
+                                className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" 
+                                value={formData[field.key]} 
+                                onChange={e => setFormData({...formData, [field.key]: e.target.value})}
+                                onBlur={() => setEditingField(null)}
+                                onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                                style={{ color: theme.textMain }} 
+                              />
+                            </div>
+                          ) : (
+                            <div 
+                              className="w-full sm:w-[280px] h-[52px] px-2 flex items-center justify-start sm:justify-end gap-3 cursor-pointer"
+                              onClick={() => setEditingField(field.key)}
+                            >
+                              <span className="text-[15px] font-medium opacity-60 transition-opacity group-hover:opacity-100" style={{ color: theme.textMain }}>
+                                {formData[field.key] || '-'}
+                              </span>
+                              <Edit3 size={14} className="opacity-0 group-hover:opacity-40 transition-opacity" style={{ color: theme.textMain }} />
+                            </div>
+                          )}
                         </div>
-                      </div>
-
-                      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5 border-b ${dividerColor}`}>
-                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>มหาวิทยาลัยที่อยากเข้า</label>
-                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
-                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.targetUni} onChange={e => setFormData({...formData, targetUni: e.target.value})} style={{ color: theme.textMain }} />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-5">
-                        <label className="text-[16px] font-medium opacity-90" style={{ color: theme.textMain }}>คณะที่อยากเข้า</label>
-                        <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
-                          <input type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData.targetFac} onChange={e => setFormData({...formData, targetFac: e.target.value})} style={{ color: theme.textMain }} />
-                        </div>
-                      </div>
+                      ))}
                     </div>
 
                     {/* ปุ่ม Save Changes ไม่มีรหัสผ่าน */}
