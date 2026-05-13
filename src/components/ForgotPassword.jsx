@@ -24,6 +24,14 @@ const ForgotPassword = ({ onBack, themeVals }) => {
   });
 
   const { theme, shadowPlateau, indentedGradient, shadowDeepInset } = themeVals;
+  const isPassInvalid = formData.newPassword.length > 0 && formData.newPassword.length < 8;
+  const isConfirmInvalid = formData.confirmNewPassword.length > 0 && formData.newPassword !== formData.confirmNewPassword;
+  const isUserInvalid = error.includes('ผู้ใช้งาน') || error.includes('Username');
+  const isAnswerInvalid = error.includes('คำตอบ');
+
+  const isStep1Disabled = loading || !formData.username.trim();
+  const isStep2Disabled = loading || !formData.securityAnswer.trim();
+  const isStep3Disabled = loading || !formData.newPassword || !formData.confirmNewPassword || isPassInvalid || isConfirmInvalid;
 
   const handleCheckUsername = async (e) => {
     e.preventDefault();
@@ -47,14 +55,29 @@ const ForgotPassword = ({ onBack, themeVals }) => {
     }
   };
 
-  const handleAnswerSubmit = (e) => {
+  const handleAnswerSubmit = async (e) => {
     e.preventDefault();
     if (!formData.securityAnswer.trim()) {
       setError("กรุณากรอกคำตอบ");
       return;
     }
-    setError("");
-    setStep(3);
+    setLoading(true); setError("");
+    try {
+      const res = await fetch('/api/auth/recover', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'verify_answer', username: formData.username, securityAnswer: formData.securityAnswer })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setStep(3);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("การเชื่อมต่อล้มเหลว");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleResetPassword = async (e) => {
@@ -124,7 +147,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
           <h2 className="text-[32px] font-light tracking-wide mb-2" style={{ color: theme.textMain }}>เปลี่ยนรหัสผ่าน</h2>
           <div className="flex flex-col gap-2">
             <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
-            <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isUserInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
                 className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -134,7 +157,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
               />
             </div>
           </div>
-          <button disabled={loading} className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+          <button disabled={isStep1Disabled} className={`w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all flex items-center justify-center gap-2 border border-white/10 ${isStep1Disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
             {loading ? <Loader2 className="animate-spin" size={18} /> : null} Next
           </button>
         </form>
@@ -148,7 +171,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
             <h3 className="text-[32px] font-light tracking-wide leading-tight" style={{ color: theme.textMain }}>{SECURITY_QUESTIONS[formData.securityQuestionId]}</h3>
           </div>
           <div className="flex flex-col gap-2 mt-2">
-            <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+            <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isAnswerInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <input 
                 type="text" required
                 className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -158,8 +181,8 @@ const ForgotPassword = ({ onBack, themeVals }) => {
               />
             </div>
           </div>
-          <button className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
-            Next
+          <button disabled={isStep2Disabled} className={`w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all flex items-center justify-center gap-2 border border-white/10 ${isStep2Disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+            {loading ? <Loader2 className="animate-spin" size={18} /> : null} Next
           </button>
         </form>
       )}
@@ -172,7 +195,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
-              <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                 <input 
                   type={showPassword ? "text" : "password"} required
                   className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -188,7 +211,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
 
             <div className="flex flex-col gap-2">
               <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
-              <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-400/80 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+              <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-400/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                 <input 
                   type={showConfirmPassword ? "text" : "password"} required
                   className="w-full bg-transparent outline-none text-[15px] font-medium focus:text-blue-600"
@@ -203,7 +226,7 @@ const ForgotPassword = ({ onBack, themeVals }) => {
             </div>
           </div>
 
-          <button disabled={loading} className="w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
+          <button disabled={isStep3Disabled} className={`w-full mt-2 h-[54px] rounded-md font-bold text-[15px] transition-all flex items-center justify-center gap-2 border border-white/10 ${isStep3Disabled ? 'opacity-50 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: '#007bff', color: '#ffffff', boxShadow: shadowPlateau }}>
             {loading ? <Loader2 className="animate-spin" size={18} /> : null} Next
           </button>
         </form>

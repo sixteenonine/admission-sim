@@ -34,6 +34,16 @@ export async function onRequestPost(context) {
           securityQuestionId: user.security_question_id 
         }), { headers: { "Content-Type": "application/json" } });
     }
+    // Step 1.5: ตรวจคำตอบก่อนให้ตั้งรหัสผ่านใหม่
+    if (action === "verify_answer") {
+        if (!securityAnswer) {
+          return new Response(JSON.stringify({ status: "error", message: "กรุณากรอกคำตอบ" }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+        if (user.security_answer_hash.toLowerCase() !== securityAnswer.toLowerCase()) {
+            return new Response(JSON.stringify({ status: "error", message: "คำตอบความปลอดภัยไม่ถูกต้อง" }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ status: "success", message: "คำตอบถูกต้อง" }), { headers: { "Content-Type": "application/json" } });
+    }
 
     // Step 2: ตรวจคำตอบและเปลี่ยนรหัสผ่าน
     if (action === "reset_password") {
@@ -43,7 +53,7 @@ export async function onRequestPost(context) {
           });
         }
 
-        if (user.security_answer_hash !== securityAnswer) {
+        if (user.security_answer_hash.toLowerCase() !== securityAnswer.toLowerCase()) {
             return new Response(JSON.stringify({ status: "error", message: "คำตอบความปลอดภัยไม่ถูกต้อง" }), { 
               status: 400, headers: { "Content-Type": "application/json" } 
             });

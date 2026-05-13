@@ -28,15 +28,19 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
   const { bg, theme, shadowPlateau, raisedGradient, shadowDeepInset, indentedGradient } = themeVals;
 
   if (!isOpen) return null;
-  const isSubmitDisabled = loading || 
-    (view === 'login' && (!formData.username || !formData.password)) ||
-    (view === 'register' && regStep === 1 && (!formData.username || !formData.password || !formData.confirmPassword)) ||
-    (view === 'register' && regStep === 2 && (!formData.securityQuestionId || !formData.securityAnswer));
-
-  const isPassInvalid = view === 'register' && formData.password.length > 0 && formData.password.length < 8;
+  
+  const isPassInvalid = formData.password.length > 0 && formData.password.length < 8;
   const isConfirmInvalid = view === 'register' && formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
+  const isUserInvalid = error.includes('Username') || error.includes('ระบบแล้ว') || error.includes('ไม่ถูกต้อง');
+  const isPassError = error.includes('Password ไม่ถูกต้อง');
+  const isAnswerInvalid = error.includes('คำตอบ');
 
-  // จัดการการกดปุ่มในหน้า Register
+  const isSubmitDisabled = loading || 
+    (view === 'login' && (!formData.username.trim() || !formData.password)) ||
+    (view === 'register' && regStep === 1 && (!formData.username.trim() || !formData.password || !formData.confirmPassword || isPassInvalid || isConfirmInvalid)) ||
+    (view === 'register' && regStep === 2 && (!formData.securityQuestionId || !formData.securityAnswer.trim()));
+  
+    // จัดการการกดปุ่มในหน้า Register
   const handleRegisterFlow = async (e) => {
     e.preventDefault();
     setError('');
@@ -173,13 +177,13 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                   <>
                     <div className="flex flex-col gap-2">
                       <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Username</label>
-                      <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-500 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                      <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isUserInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                         <input type="text" required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} style={{ color: theme.textMain }} />
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Password</label>
-                      <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isPassInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                      <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${(isPassInvalid || isPassError) ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                         <input type={showPassword ? "text" : "password"} required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} style={{ color: theme.textMain }} />
                         <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} className="ml-2 opacity-40 hover:opacity-100 transition-opacity">
                           {showPassword ? <EyeOff key="hide" size={18} /> : <Eye key="show" size={18} />}
@@ -193,7 +197,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                 {view === 'register' && regStep === 1 && (
                   <div className="flex flex-col gap-2">
                     <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Confirm Password</label>
-                    <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                    <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isConfirmInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                       <input type={showConfirmPassword ? "text" : "password"} required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.confirmPassword} onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} style={{ color: theme.textMain }} />
                       <button type="button" onPointerDown={(e) => e.preventDefault()} onClick={(e) => { e.preventDefault(); setShowConfirmPassword(!showConfirmPassword); }} className="ml-2 opacity-40 hover:opacity-100 transition-opacity">
                         {showConfirmPassword ? <EyeOff key="hide-conf" size={18} /> : <Eye key="show-conf" size={18} />}
@@ -217,7 +221,7 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess, themeVals }) => {
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-[14px] font-medium opacity-90" style={{ color: theme.textMain }}>Answer</label>
-                      <div className="flex items-center px-4 h-[52px] rounded-md border border-gray-500 transition-all" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
+                      <div className={`flex items-center px-4 h-[52px] rounded-md border transition-all ${isAnswerInvalid ? 'border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'border-gray-500/80'}`} style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
                         <input type="text" required className="w-full bg-transparent outline-none text-[15px] font-medium" value={formData.securityAnswer} onChange={(e) => setFormData({...formData, securityAnswer: e.target.value})} style={{ color: theme.textMain }} />
                       </div>
                     </div>
