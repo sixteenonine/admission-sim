@@ -2,7 +2,10 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import HubLayout from './components/layout/HubLayout.jsx';
 import { HubHome, HubFlashcards, HubSpeedRead } from './pages/hub/HubViews.jsx';
+import FlashcardPlayer from './pages/hub/FlashcardPlayer.jsx';
 import Simulator from './Simulator.jsx';
+import SpeedReadLobby from './pages/hub/SpeedReadLobby.jsx';
+import SpeedRead from './pages/hub/SpeedRead.jsx';
 
 export default function App() {
   return (
@@ -12,7 +15,11 @@ export default function App() {
       <Route element={<HubLayout />}>
         <Route path="/home" element={<HubHome />} />
         <Route path="/vocab" element={<HubFlashcards />} />
+        {/* เพิ่มหน้าเล่น Flashcard เข้าไปในระบบ */}
+        <Route path="/vocab/play" element={<FlashcardPlayer />} />
         <Route path="/hub" element={<HubSpeedRead />} />
+        <Route path="speedread" element={<SpeedReadLobby />} />
+        <Route path="speedread/play" element={<SpeedRead />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />

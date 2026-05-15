@@ -11,7 +11,6 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-
 CREATE TABLE exam_history (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
