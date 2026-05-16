@@ -9,6 +9,7 @@ import SpeedRead from './pages/hub/SpeedRead.jsx';
 import Subscription from './pages/hub/Subscription.jsx';
 import StoryLobby from './pages/hub/StoryLobby.jsx';
 import StoryReader from './pages/hub/StoryReader.jsx';
+import StoryAdmin from './pages/admin/StoryAdmin.jsx';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/storydiary" element={<StoryLobby />} />
         <Route path="/storydiary/play" element={<StoryReader />} />
+        <Route path="/admin/storydiary" element={<StoryAdmin />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />
