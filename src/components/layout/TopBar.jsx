@@ -93,7 +93,11 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
                 boxShadow: themeVals.shadowOuter 
               }}
             >
-               <UserCircle2 size={26} color="#ffffff" className="opacity-80" />
+               {currentUser?.avatar_url ? (
+                <img src={currentUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle2 size={26} color="#ffffff" className="opacity-80" />
+              )}
             </button>
 
             <div 
@@ -106,8 +110,12 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
                      <span className="text-[16px] font-bold truncate" style={{ color: themeVals.textMain }}>{currentUser.displayName}</span>
                      <span className="text-[12px] opacity-60 truncate" style={{ color: themeVals.textSub }}>@{currentUser.username}</span>
                   </div>
-                  <div className="w-12 h-12 rounded-full border-[3px] flex items-center justify-center shrink-0" style={{ backgroundColor: AVATARS.find(a => a.id === (currentUser.avatar_id || 1))?.color || '#3b82f6', borderColor: themeVals.bg }}>
-                     <UserCircle2 size={24} color="#ffffff" />
+                  <div className="w-12 h-12 rounded-full border-[3px] flex items-center justify-center shrink-0 overflow-hidden" style={{ backgroundColor: AVATARS.find(a => a.id === (currentUser.avatar_id || 1))?.color || '#3b82f6', borderColor: themeVals.bg }}>
+                     {currentUser?.avatar_url ? (
+                       <img src={currentUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                     ) : (
+                       <UserCircle2 size={24} color="#ffffff" />
+                     )}
                   </div>
                </div>
                <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>

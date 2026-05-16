@@ -16,6 +16,7 @@ export async function onRequestPost(context) {
         email: user.email, 
         displayName: user.display_name, 
         avatar_id: user.avatar_id,
+        avatar_url: user.avatar_url,
         plan_tier: user.plan_tier,
         plan_expire_at: user.plan_expire_at,
         generation: user.generation,

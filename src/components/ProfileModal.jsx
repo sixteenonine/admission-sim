@@ -96,7 +96,11 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
                 <form onSubmit={handleSubmitProfile} className="flex flex-col animate-in fade-in duration-300 flex-1">
                   <div className="flex items-center gap-6 pb-8">
                     <div className="w-[100px] h-[100px] rounded-full border-[4px] flex items-center justify-center overflow-hidden shrink-0" style={{ backgroundColor: AVATARS.find(a => a.id === formData.avatarId)?.color || '#3b82f6', borderColor: theme.bg, boxShadow: shadowDeepInset }}>
-                      <User size={44} color="#ffffff" className="opacity-80" />
+                      {user?.avatar_url ? (
+                        <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={44} color="#ffffff" className="opacity-80" />
+                      )}
                     </div>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-3">
@@ -124,7 +128,31 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
                         <label className="text-[15px] font-medium opacity-90 pl-2" style={{ color: theme.textMain }}>{field.label}</label>
                         {editingField === field.key ? (
                           <div className="w-full sm:w-[280px] h-[52px] px-5 rounded-[11px] border border-white/5 flex items-center transition-all focus-within:border-blue-500/30" style={{ background: bg, boxShadow: shadowDeepInset }}>
-                            <input autoFocus type="text" className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" value={formData[field.key]} onChange={e => setFormData({...formData, [field.key]: e.target.value})} onBlur={() => setEditingField(null)} onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)} style={{ color: theme.textMain }} />
+                            {field.key === 'generation' ? (
+                              <select 
+                                autoFocus
+                                className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right cursor-pointer" 
+                                value={formData[field.key]} 
+                                onChange={e => setFormData({...formData, [field.key]: e.target.value})}
+                                onBlur={() => setEditingField(null)}
+                                style={{ color: theme.textMain }}
+                              >
+                                <option value="" className="text-gray-400" disabled>ระบุรุ่น</option>
+                                <option value="DEK70">DEK70</option>
+                                <option value="เด็กซิ่ว">เด็กซิ่ว</option>
+                              </select>
+                            ) : (
+                              <input 
+                                autoFocus 
+                                type="text" 
+                                className="w-full bg-transparent outline-none text-[15px] font-medium text-left sm:text-right" 
+                                value={formData[field.key]} 
+                                onChange={e => setFormData({...formData, [field.key]: e.target.value})} 
+                                onBlur={() => setEditingField(null)} 
+                                onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)} 
+                                style={{ color: theme.textMain }} 
+                              />
+                            )}
                           </div>
                         ) : (
                           <div className="w-full sm:w-[280px] h-[52px] px-2 flex items-center justify-start sm:justify-end gap-3 cursor-pointer" onClick={() => setEditingField(field.key)}>
