@@ -14,11 +14,7 @@ import StoryAdmin from './pages/admin/StoryAdmin.jsx';
 export default function App() {
   return (
     <Routes>
-      {/* Admin Route ต้องอยู่บนสุดเพื่อให้ Priority สูงสุด */}
       <Route path="/admin/storydiary" element={<StoryAdmin />} />
-
-      <Route path="/" element={<HubLayout />}/>
-        <Route index element={<HubHome />} />
       <Route path="/" element={<Navigate to="/home" replace />} />
       
       <Route element={<HubLayout />}>
