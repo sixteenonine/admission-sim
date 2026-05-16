@@ -6,6 +6,7 @@ import FlashcardPlayer from './pages/hub/FlashcardPlayer.jsx';
 import Simulator from './Simulator.jsx';
 import SpeedReadLobby from './pages/hub/SpeedReadLobby.jsx';
 import SpeedRead from './pages/hub/SpeedRead.jsx';
+import Subscription from './pages/hub/Subscription.jsx';
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/hub" element={<HubSpeedRead />} />
         <Route path="speedread" element={<SpeedReadLobby />} />
         <Route path="speedread/play" element={<SpeedRead />} />
+        <Route path="/subscription" element={<Subscription />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />

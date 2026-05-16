@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { UserCircle2, LogOut, Settings, Sun, Moon, ChevronDown } from 'lucide-react';
+import { UserCircle2, LogOut, Settings, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -113,6 +113,14 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
                <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>
                  <UserCircle2 size={18} /> Profile
                </button>
+               <Link 
+                 to="/subscription" 
+                 onClick={() => setIsProfileDropdownOpen(false)} 
+                 className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-black/5 transition-colors" 
+                 style={{ color: themeVals.textMain }}
+               >
+                 <CreditCard size={18} /> Subscription
+               </Link>
                <button onClick={() => { setIsLogoutModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-red-500/10 text-red-500 transition-colors">
                  <LogOut size={18} /> Sign out
                </button>

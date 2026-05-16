@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Save, Loader2, Edit3, CreditCard, RefreshCw } from 'lucide-react';
+import { X, User, Save, Loader2, Edit3 } from 'lucide-react';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -11,7 +11,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editingField, setEditingField] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [qrLoading, setQrLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
@@ -22,15 +21,9 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
     avatarId: user?.avatar_id || 1
   });
 
-  const [qrData, setQrData] = useState(null); // เก็บข้อมูลรูป QR Code
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset } = themeVals;
 
   if (!isOpen) return null;
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('th-TH', { year: '2-digit', month: '2-digit', day: '2-digit' });
-  };
 
   const getTierColor = (tier) => {
     if(tier === 'premium') return 'bg-[#8b5cf6]';
@@ -39,7 +32,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
     return 'bg-gray-400';
   };
 
-  // ฟังก์ชันอัปเดตข้อมูลส่วนตัว (เรียก API เดิมของคุณ)
   const handleSubmitProfile = async (e) => {
     e.preventDefault();
     setLoading(true); setError(''); setSuccess('');
@@ -52,6 +44,7 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
       const data = await res.json();
       if (data.status === 'success') {
         setSuccess('อัปเดตข้อมูลสำเร็จ!');
+        if (onRefreshUser) await onRefreshUser();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         setError(data.message || 'เกิดข้อผิดพลาด');
@@ -63,71 +56,8 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
     }
   };
 
-  // ฟังก์ชันสร้าง QR Code
-  const handleCreatePayment = async (tier, amount) => {
-    setQrLoading(true); setError('');
-    try {
-      const res = await fetch('/api/payment/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, amount, planTier: tier })
-      });
-      const data = await res.json();
-      if(data.status === 'success') {
-         setQrData({ image: data.qrImage, amount, tier });
-      } else {
-         setError(data.message || 'สร้างรายการชำระเงินไม่สำเร็จ');
-      }
-    } catch(err) {
-      setError('เชื่อมต่อระบบชำระเงินล้มเหลว');
-    } finally {
-      setQrLoading(false);
-    }
-  };
-
-  // ฟังก์ชันเช็คสถานะและดึงข้อมูลอัปเดตจาก Database ตรงๆ
-  const handleCheckStatus = async () => {
-     setQrLoading(true);
-     if (onRefreshUser) {
-        await onRefreshUser();
-        setQrData(null); // ปิดหน้าต่าง QR Code เมื่อเช็กเสร็จ
-        setSuccess('ตรวจสอบและอัปเดตสถานะสำเร็จ!');
-        setTimeout(() => setSuccess(''), 3000);
-     } else {
-        window.location.reload();
-     }
-     setQrLoading(false);
-  };
-
   return (
     <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/40 backdrop-blur-md px-4 animate-in fade-in duration-300">
-      
-      {/* ---------------- QR Code Overlay Pop-up ---------------- */}
-      {qrData && (
-        <div className="absolute inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm rounded-[2rem] p-8 flex flex-col items-center text-center relative border border-white/20 shadow-2xl" style={{ background: bg }}>
-            <button onClick={() => setQrData(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center bg-black/5 active:scale-95 transition-all" style={{ color: theme.textMain }}>
-              <X size={16} />
-            </button>
-            <h3 className="text-xl font-bold mb-1" style={{ color: theme.textMain }}>ชำระเงินผ่าน PromptPay</h3>
-            <p className="text-[13px] font-medium opacity-60 mb-6 uppercase tracking-widest" style={{ color: theme.textMain }}>แพ็กเกจ {qrData.tier}</p>
-            
-            <div className="w-48 h-48 bg-white p-2 rounded-xl mb-6 shadow-md border border-gray-200">
-              <img src={qrData.image} alt="PromptPay QR" className="w-full h-full object-contain" />
-            </div>
-
-            <div className="text-[14px] opacity-80 mb-1" style={{ color: theme.textMain }}>ยอดที่ต้องชำระ</div>
-            <div className="text-3xl font-black mb-8 text-[#3b82f6]">฿{qrData.amount}</div>
-
-            <button onClick={handleCheckStatus} className="w-full py-4 rounded-xl font-bold text-[14px] text-white shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all" style={{ background: '#10b981' }}>
-              <RefreshCw size={16} /> ตรวจสอบการชำระเงิน
-            </button>
-            <p className="text-[11px] opacity-50 mt-4" style={{ color: theme.textMain }}>*กรุณากดตรวจสอบหลังจากโอนเงินสำเร็จ</p>
-          </div>
-        </div>
-      )}
-      {/* -------------------------------------------------------- */}
-
       <div className="w-full max-w-4xl rounded-[2.5rem] border border-white/30 relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         <div className="w-full rounded-[2rem] p-6 sm:p-8 flex flex-col gap-8 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
           
@@ -149,13 +79,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
               >
                 <User size={18} /> Profile Settings
               </button>
-              <button 
-                onClick={() => { setActiveTab('subscription'); setError(''); setSuccess(''); }}
-                className={`flex items-center gap-4 w-full px-5 h-[52px] rounded-[11px] text-[15px] font-bold transition-all duration-300 border border-white/5`}
-                style={activeTab === 'subscription' ? { background: bg, boxShadow: shadowDeepInset, color: '#3b82f6' } : { color: theme.textMain, background: 'transparent', borderColor: 'transparent' }}
-              >
-                <CreditCard size={18} /> Subscription
-              </button>
             </div>
 
             {/* Content Right */}
@@ -164,7 +87,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
               {error && <div className="p-3 mb-6 text-[13px] text-red-500 bg-red-500/10 rounded-xl border border-red-500/20 text-center font-bold">{error}</div>}
               {success && <div className="p-3 mb-6 text-[13px] text-emerald-500 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-center font-bold">{success}</div>}
 
-              {/* ---------------- Profile Tab ---------------- */}
               {activeTab === 'profile' && (
                 <form onSubmit={handleSubmitProfile} className="flex flex-col animate-in fade-in duration-300 flex-1">
                   <div className="flex items-center gap-6 pb-8">
@@ -213,112 +135,6 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
                   </div>
                 </form>
               )}
-
-              {/* ---------------- Subscription Tab ---------------- */}
-              {activeTab === 'subscription' && (
-                <div className="flex flex-col animate-in fade-in duration-300 flex-1">
-                  
-                  {/* Status Banner */}
-                  <div className="p-6 rounded-[1.5rem] border border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6" style={{ background: bg, boxShadow: shadowDeepInset }}>
-                     <div>
-                        <div className="text-[13px] font-medium opacity-70 mb-1" style={{ color: theme.textMain }}>สถานะปัจจุบัน</div>
-                        <div className="flex items-center gap-3">
-                           <span className="text-xl font-bold uppercase" style={{ color: theme.textMain }}>{user?.plan_tier || 'COMMON'}</span>
-                           {user?.plan_tier !== 'common' && <span className={`text-white text-[10px] font-bold px-2 py-1 rounded uppercase ${getTierColor(user?.plan_tier)}`}>Active</span>}
-                        </div>
-                     </div>
-                     <div className="text-left sm:text-right">
-                        <div className="text-[13px] font-medium opacity-70 mb-1" style={{ color: theme.textMain }}>วันหมดอายุ</div>
-                        <div className="text-lg font-bold" style={{ color: theme.textMain }}>{user?.plan_expire_at ? formatDate(user.plan_expire_at) : '-'}</div>
-                     </div>
-                  </div>
-
-                  {/* Pricing Cards */}
-                  <h4 className="text-[15px] font-bold mb-4 ml-2" style={{ color: theme.textMain }}>เลือกแพ็กเกจ</h4>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                     
-                     <div className="rounded-[1.5rem] p-5 flex flex-col border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
-                        <div className="text-center mb-4">
-                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>99 บาท</div>
-                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿69</div>
-                           <div className="text-[13px] font-bold text-[#10b981] mb-1">1 เดือน</div>
-                        </div>
-                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
-                           <li>• FLASHCARD 500 VOCAB</li>
-                           <li>• ULTRASPEEDREAD 1 บทความ เพิ่มเองได้ 3 บทความ</li>
-                           <li>• STORYDIARY 5 เรื่อง</li>
-                           <li>• SIMULATOR</li>
-                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
-                           <li>• Spaced Repetition</li>
-                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง</li>
-                           <li>• Gamification ในโหมดต่างๆ</li>
-                           <li>• Simulator วิชาอื่นๆ</li>
-                           <li>• อื่นๆ</li>
-                        </ul>
-                        <button disabled={qrLoading} onClick={() => handleCreatePayment('standard', 69)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: '#10b981' }}>เลือกแพ็กเกจ</button>
-                     </div>
-
-                     <div className="rounded-[1.5rem] p-5 flex flex-col border-2 border-[#3b82f6] transition-transform hover:-translate-y-1 relative" style={{ background: bg, boxShadow: shadowOuter }}>
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#3b82f6] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-widest">POPULAR</div>
-                        <div className="text-center mb-4 mt-2">
-                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>399 บาท</div>
-                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿129</div>
-                           <div className="text-[13px] font-bold text-[#3b82f6] mb-1">3 เดือน</div>
-                           <div className="text-[11px] opacity-70" style={{ color: theme.textMain }}>ตกเดือนละ 43 บาท</div>
-                        </div>
-                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
-                           <li>• FLASHCARD 1,000 VOCAB</li>
-                           <li>• ULTRASPEEDREAD 5 บทความ เพิ่มเองได้ 5 บทความ</li>
-                           <li>• STORYDIARY 30 เรื่อง</li>
-                           <li>• SIMULATOR</li>
-                           <li>• Custom จอ LCD และ Timer : เปลี่ยนสี / ข้อความ</li>
-                           <li>• Custom Exam sequence</li>
-                           <li>• Gameboy</li>
-                           <li>• จับเวลาแยกพาร์ท</li>
-                           <li>• อื่นๆ</li>
-                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
-                           <li>• Spaced Repetition</li>
-                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง ผสมผสานศาสตร์ NLP</li>
-                           <li>• Mock exam</li>
-                           <li>• Gamification ในโหมดต่างๆ</li>
-                           <li>• Simulator วิชาอื่นๆ</li>
-                           <li>• อื่นๆ</li>
-                        </ul>
-                        <button disabled={qrLoading} onClick={() => handleCreatePayment('pro', 129)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white shadow-lg shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-50" style={{ background: '#3b82f6' }}>เลือกแพ็กเกจ</button>
-                     </div>
-
-                     <div className="rounded-[1.5rem] p-5 flex flex-col border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
-                        <div className="text-center mb-4">
-                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>620 บาท</div>
-                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿419</div>
-                           <div className="text-[13px] font-bold text-[#8b5cf6] mb-1">12+1 เดือน</div>
-                           <div className="text-[11px] opacity-70" style={{ color: theme.textMain }}>ตกเดือนละ 32 บาท</div>
-                        </div>
-                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
-                           <li>• FLASHCARD 10,000 VOCAB</li>
-                           <li>• ULTRASPEEDREAD 10 บทความ เพิ่มเองได้ 10 บทความ</li>
-                           <li>• STORYDIARY 150 เรื่อง</li>
-                           <li>• SIMULATOR</li>
-                           <li>• Custom จอ LCD และ Timer : เปลี่ยนสี / ข้อความ</li>
-                           <li>• Custom Exam sequence</li>
-                           <li>• Gameboy</li>
-                           <li>• จับเวลาแยกพาร์ท</li>
-                           <li>• อื่นๆ</li>
-                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
-                           <li>• Spaced Repetition</li>
-                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง ผสมผสานศาสตร์ NLP</li>
-                           <li>• Mock exam</li>
-                           <li>• Gamification ในโหมดต่างๆ</li>
-                           <li>• Simulator วิชาอื่นๆ</li>
-                           <li>• อื่นๆ</li>
-                        </ul>
-                        <button disabled={qrLoading} onClick={() => handleCreatePayment('premium', 419)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: '#8b5cf6' }}>เลือกแพ็กเกจ</button>
-                     </div>
-
-                  </div>
-                </div>
-              )}
-
             </div>
           </div>
         </div>
