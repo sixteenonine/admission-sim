@@ -14,7 +14,7 @@ export default function Subscription() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const { bg, theme, shadowPlateau, shadowOuter, shadowDeepInset } = themeVals;
+  const { bg, textMain, shadowPlateau, shadowOuter, shadowDeepInset } = themeVals;
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -76,17 +76,17 @@ export default function Subscription() {
       {qrData && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm rounded-[2rem] p-8 flex flex-col items-center text-center relative border border-white/20 shadow-2xl" style={{ background: bg }}>
-            <button onClick={() => setQrData(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center bg-black/5 active:scale-95 transition-all" style={{ color: theme.textMain }}>
+            <button onClick={() => setQrData(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center bg-black/5 active:scale-95 transition-all" style={{ color: textMain }}>
               <X size={16} />
             </button>
-            <h3 className="text-xl font-bold mb-1" style={{ color: theme.textMain }}>ชำระเงินผ่าน PromptPay</h3>
-            <p className="text-[13px] font-medium opacity-60 mb-6 uppercase tracking-widest" style={{ color: theme.textMain }}>แพ็กเกจ {qrData.tier}</p>
+            <h3 className="text-xl font-bold mb-1" style={{ color: textMain }}>ชำระเงินผ่าน PromptPay</h3>
+            <p className="text-[13px] font-medium opacity-60 mb-6 uppercase tracking-widest" style={{ color: textMain }}>แพ็กเกจ {qrData.tier}</p>
             
             <div className="w-48 h-48 bg-white p-2 rounded-xl mb-6 shadow-md border border-gray-200">
               <img src={qrData.image} alt="PromptPay QR" className="w-full h-full object-contain" />
             </div>
 
-            <div className="text-[14px] opacity-80 mb-1" style={{ color: theme.textMain }}>ยอดที่ต้องชำระ</div>
+            <div className="text-[14px] opacity-80 mb-1" style={{ color: textMain }}>ยอดที่ต้องชำระ</div>
             <div className="text-3xl font-black mb-8 text-[#3b82f6]">฿{qrData.amount}</div>
 
             <button onClick={handleCheckStatus} className="w-full py-4 rounded-xl font-bold text-[14px] text-white shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all" style={{ background: '#10b981' }}>
@@ -99,15 +99,15 @@ export default function Subscription() {
       {/* Header สถานะปัจจุบัน */}
       <div className="p-6 rounded-[2rem] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-6 mb-12" style={{ background: bg, boxShadow: shadowDeepInset }}>
         <div>
-          <span className="text-[12px] font-bold uppercase tracking-wider opacity-60 block mb-1" style={{ color: theme.textMain }}>สิทธิ์การใช้งานของคุณ</span>
+          <span className="text-[12px] font-bold uppercase tracking-wider opacity-60 block mb-1" style={{ color: textMain }}>สิทธิ์การใช้งานของคุณ</span>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-black uppercase" style={{ color: theme.textMain }}>{user?.plan_tier || 'COMMON'}</h2>
+            <h2 className="text-2xl font-black uppercase" style={{ color: textMain }}>{user?.plan_tier || 'COMMON'}</h2>
             {user?.plan_tier && user.plan_tier !== 'common' && <span className="bg-emerald-500 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Active</span>}
           </div>
         </div>
         <div className="text-left sm:text-right">
-          <span className="text-[12px] font-bold uppercase tracking-wider opacity-60 block mb-1" style={{ color: theme.textMain }}>วันหมดอายุสมาชิก</span>
-          <span className="text-lg font-bold" style={{ color: theme.textMain }}>{user?.plan_expire_at ? formatDate(user.plan_expire_at) : 'ไม่มีวันหมดอายุ (ใช้งานฟรี)'}</span>
+          <span className="text-[12px] font-bold uppercase tracking-wider opacity-60 block mb-1" style={{ color: textMain }}>วันหมดอายุสมาชิก</span>
+          <span className="text-lg font-bold" style={{ color: textMain }}>{user?.plan_expire_at ? formatDate(user.plan_expire_at) : 'ไม่มีวันหมดอายุ (ใช้งานฟรี)'}</span>
         </div>
       </div>
 
