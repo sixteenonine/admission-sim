@@ -31,6 +31,26 @@ export default function HubLayout() {
     setIsLogoutModalOpen(false);
   };
 
+  const handleRefreshUser = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await fetch('/api/user/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setCurrentUser(data.user);
+        localStorage.setItem('sim_user', JSON.stringify(data.user)); // อัปเดต Cache ใหม่
+        return true;
+      }
+    } catch (error) {
+      console.error("Refresh failed:", error);
+    }
+    return false;
+  };
+
   return (
     <div className="min-h-screen font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
       <TopBar 
@@ -66,6 +86,7 @@ export default function HubLayout() {
           setCurrentUser(updatedUser);
           localStorage.setItem('sim_user', JSON.stringify(updatedUser));
         }}
+        onRefreshUser={handleRefreshUser}
       />
 
       {isLogoutModalOpen && (

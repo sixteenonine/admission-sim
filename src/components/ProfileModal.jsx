@@ -7,7 +7,7 @@ const AVATARS = [
   { id: 5, color: '#f97316' }, { id: 6, color: '#14b8a6' }
 ];
 
-const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
+const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
   const [activeTab, setActiveTab] = useState('profile');
   const [editingField, setEditingField] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -85,9 +85,18 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals }) => {
     }
   };
 
-  // ฟังก์ชันเช็คสถานะหลังโอน (ใช้วิธีรีเฟรชหน้าเว็บให้ระบบดึงข้อมูล User ใหม่)
-  const handleCheckStatus = () => {
-     window.location.reload();
+  // ฟังก์ชันเช็คสถานะและดึงข้อมูลอัปเดตจาก Database ตรงๆ
+  const handleCheckStatus = async () => {
+     setQrLoading(true);
+     if (onRefreshUser) {
+        await onRefreshUser();
+        setQrData(null); // ปิดหน้าต่าง QR Code เมื่อเช็กเสร็จ
+        setSuccess('ตรวจสอบและอัปเดตสถานะสำเร็จ!');
+        setTimeout(() => setSuccess(''), 3000);
+     } else {
+        window.location.reload();
+     }
+     setQrLoading(false);
   };
 
   return (
