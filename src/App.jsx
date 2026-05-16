@@ -7,6 +7,8 @@ import Simulator from './Simulator.jsx';
 import SpeedReadLobby from './pages/hub/SpeedReadLobby.jsx';
 import SpeedRead from './pages/hub/SpeedRead.jsx';
 import Subscription from './pages/hub/Subscription.jsx';
+import StoryLobby from './pages/hub/StoryLobby.jsx';
+import StoryReader from './pages/hub/StoryReader.jsx';
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
         <Route path="speedread" element={<SpeedReadLobby />} />
         <Route path="speedread/play" element={<SpeedRead />} />
         <Route path="/subscription" element={<Subscription />} />
+        <Route path="/storydiary" element={<StoryLobby />} />
+        <Route path="/storydiary/play" element={<StoryReader />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />

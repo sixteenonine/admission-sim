@@ -27,12 +27,14 @@ export function HubHome() {
         </div>
         {/* กล่องที่ 3 (รวม 2 กล่องย่อยแนวตั้ง) */}
         <div className="w-full md:w-[25%] flex flex-col gap-6">
-          <Link to="/vocab" className="flex-1 rounded-[0.8rem] flex items-center justify-center transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/vocab" className="flex-1 rounded-[0.8rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>FLASHCARDS</span>
           </Link>
-          <div className="flex-1 rounded-[0.8rem] flex items-center justify-center cursor-pointer transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/storydiary" className="flex-1 rounded-[0.8rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>STORY DiARY</span>
-          </div>
+          </Link>
+          
+          
         </div>
       </div>
     </div>
