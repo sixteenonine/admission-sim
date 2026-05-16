@@ -63,7 +63,7 @@ export default function HubLayout() {
       />
       
       <main className="max-w-6xl mx-auto px-6 pt-32 pb-12 relative z-10">
-        <Outlet context={themeVals} />
+        <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
       </main>
 
       {/* ระบบ Authentication แบบเดียวกับหน้าจับเวลา */}

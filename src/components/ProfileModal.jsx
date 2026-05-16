@@ -45,7 +45,7 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
       if (data.status === 'success') {
         setSuccess('อัปเดตข้อมูลสำเร็จ!');
         if (onRefreshUser) await onRefreshUser();
-        setTimeout(() => setSuccess(''), 3000);
+        setTimeout(onClose, 2000);
       } else {
         setError(data.message || 'เกิดข้อผิดพลาด');
       }

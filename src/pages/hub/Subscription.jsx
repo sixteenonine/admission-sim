@@ -3,16 +3,12 @@ import { useOutletContext } from 'react-router-dom';
 import { Check, Plus, X, RefreshCw, Loader2 } from 'lucide-react';
 
 export default function Subscription() {
-  const themeVals = useOutletContext();
+  const contextVals = useOutletContext();
+  const { currentUser: user, handleRefreshUser, ...themeVals } = contextVals;
   const [qrLoading, setQrLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [qrData, setQrData] = useState(null);
-
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('sim_user');
-    return saved ? JSON.parse(saved) : null;
-  });
 
   const { bg, textMain, shadowPlateau, shadowOuter, shadowDeepInset } = themeVals;
 
@@ -49,22 +45,11 @@ export default function Subscription() {
   const handleCheckStatus = async () => {
     if (!user?.id) return;
     setQrLoading(true);
-    try {
-      const res = await fetch('/api/user/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setUser(data.user);
-        localStorage.setItem('sim_user', JSON.stringify(data.user));
-        setQrData(null);
-        setSuccess('อัปเดตสถานะสมาชิกเรียบร้อยแล้ว!');
-        setTimeout(() => setSuccess(''), 3000);
-      }
-    } catch (error) {
-      console.error(error);
+    const isSuccess = await handleRefreshUser();
+    if (isSuccess) {
+      setQrData(null);
+      setSuccess('อัปเดตสถานะสมาชิกเรียบร้อยแล้ว!');
+      setTimeout(() => setSuccess(''), 3000);
     }
     setQrLoading(false);
   };
