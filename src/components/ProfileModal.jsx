@@ -235,28 +235,84 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
 
                   {/* Pricing Cards */}
                   <h4 className="text-[15px] font-bold mb-4 ml-2" style={{ color: theme.textMain }}>เลือกแพ็กเกจ</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                      
-                     <div className="rounded-[1.5rem] p-5 flex flex-col items-center text-center border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
-                        <h4 className="text-[15px] font-bold tracking-widest mb-1 text-[#10b981]">STANDARD</h4>
-                        <p className="text-[12px] opacity-60 mb-4" style={{ color: theme.textMain }}>ใช้งาน 30 วัน</p>
-                        <div className="text-2xl font-black mb-6" style={{ color: theme.textMain }}>฿69</div>
+                     <div className="rounded-[1.5rem] p-5 flex flex-col border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
+                        <div className="text-center mb-4">
+                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>99 บาท</div>
+                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿69</div>
+                           <div className="text-[13px] font-bold text-[#10b981] mb-1">1 เดือน</div>
+                        </div>
+                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
+                           <li>• FLASHCARD 500 VOCAB</li>
+                           <li>• ULTRASPEEDREAD 1 บทความ เพิ่มเองได้ 3 บทความ</li>
+                           <li>• STORYDIARY 5 เรื่อง</li>
+                           <li>• SIMULATOR</li>
+                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
+                           <li>• Spaced Repetition</li>
+                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง</li>
+                           <li>• Gamification ในโหมดต่างๆ</li>
+                           <li>• Simulator วิชาอื่นๆ</li>
+                           <li>• อื่นๆ</li>
+                        </ul>
                         <button disabled={qrLoading} onClick={() => handleCreatePayment('standard', 69)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: '#10b981' }}>เลือกแพ็กเกจ</button>
                      </div>
 
-                     <div className="rounded-[1.5rem] p-5 flex flex-col items-center text-center border-2 border-[#3b82f6] transition-transform hover:-translate-y-1 relative" style={{ background: bg, boxShadow: shadowOuter }}>
-                        <div className="absolute -top-3 bg-[#3b82f6] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-widest">POPULAR</div>
-                        <h4 className="text-[15px] font-bold tracking-widest mb-1 mt-2 text-[#3b82f6]">PRO</h4>
-                        <p className="text-[12px] opacity-60 mb-4" style={{ color: theme.textMain }}>ใช้งาน 90 วัน</p>
-                        <div className="text-2xl font-black mb-6" style={{ color: theme.textMain }}>฿129</div>
+                     <div className="rounded-[1.5rem] p-5 flex flex-col border-2 border-[#3b82f6] transition-transform hover:-translate-y-1 relative" style={{ background: bg, boxShadow: shadowOuter }}>
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#3b82f6] text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-widest">POPULAR</div>
+                        <div className="text-center mb-4 mt-2">
+                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>399 บาท</div>
+                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿129</div>
+                           <div className="text-[13px] font-bold text-[#3b82f6] mb-1">3 เดือน</div>
+                           <div className="text-[11px] opacity-70" style={{ color: theme.textMain }}>ตกเดือนละ 43 บาท</div>
+                        </div>
+                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
+                           <li>• FLASHCARD 1,000 VOCAB</li>
+                           <li>• ULTRASPEEDREAD 5 บทความ เพิ่มเองได้ 5 บทความ</li>
+                           <li>• STORYDIARY 30 เรื่อง</li>
+                           <li>• SIMULATOR</li>
+                           <li>• Custom จอ LCD และ Timer : เปลี่ยนสี / ข้อความ</li>
+                           <li>• Custom Exam sequence</li>
+                           <li>• Gameboy</li>
+                           <li>• จับเวลาแยกพาร์ท</li>
+                           <li>• อื่นๆ</li>
+                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
+                           <li>• Spaced Repetition</li>
+                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง ผสมผสานศาสตร์ NLP</li>
+                           <li>• Mock exam</li>
+                           <li>• Gamification ในโหมดต่างๆ</li>
+                           <li>• Simulator วิชาอื่นๆ</li>
+                           <li>• อื่นๆ</li>
+                        </ul>
                         <button disabled={qrLoading} onClick={() => handleCreatePayment('pro', 129)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white shadow-lg shadow-blue-500/30 transition-all active:scale-95 disabled:opacity-50" style={{ background: '#3b82f6' }}>เลือกแพ็กเกจ</button>
                      </div>
 
-                     <div className="rounded-[1.5rem] p-5 flex flex-col items-center text-center border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
-                        <h4 className="text-[15px] font-bold tracking-widest mb-1 text-[#8b5cf6]">PREMIUM</h4>
-                        <p className="text-[12px] opacity-60 mb-4" style={{ color: theme.textMain }}>ใช้งาน 365 วัน</p>
-                        <div className="text-2xl font-black mb-6" style={{ color: theme.textMain }}>฿420</div>
-                        <button disabled={qrLoading} onClick={() => handleCreatePayment('premium', 420)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: '#8b5cf6' }}>เลือกแพ็กเกจ</button>
+                     <div className="rounded-[1.5rem] p-5 flex flex-col border border-white/5 transition-transform hover:-translate-y-1" style={{ background: bg, boxShadow: shadowPlateau }}>
+                        <div className="text-center mb-4">
+                           <div className="text-[12px] opacity-60 line-through decoration-red-500 mb-1" style={{ color: theme.textMain }}>620 บาท</div>
+                           <div className="text-3xl font-black mb-1" style={{ color: theme.textMain }}>฿419</div>
+                           <div className="text-[13px] font-bold text-[#8b5cf6] mb-1">12+1 เดือน</div>
+                           <div className="text-[11px] opacity-70" style={{ color: theme.textMain }}>ตกเดือนละ 32 บาท</div>
+                        </div>
+                        <ul className="text-[11px] space-y-2 mb-6 flex-1 font-medium" style={{ color: theme.textMain }}>
+                           <li>• FLASHCARD 10,000 VOCAB</li>
+                           <li>• ULTRASPEEDREAD 10 บทความ เพิ่มเองได้ 10 บทความ</li>
+                           <li>• STORYDIARY 150 เรื่อง</li>
+                           <li>• SIMULATOR</li>
+                           <li>• Custom จอ LCD และ Timer : เปลี่ยนสี / ข้อความ</li>
+                           <li>• Custom Exam sequence</li>
+                           <li>• Gameboy</li>
+                           <li>• จับเวลาแยกพาร์ท</li>
+                           <li>• อื่นๆ</li>
+                           <li className="pt-2 opacity-70 font-bold">ฟังก์ชันที่จะมาในอนาคต</li>
+                           <li>• Spaced Repetition</li>
+                           <li>• เครื่องมือแนะแนวให้รู้จักตัวเอง ผสมผสานศาสตร์ NLP</li>
+                           <li>• Mock exam</li>
+                           <li>• Gamification ในโหมดต่างๆ</li>
+                           <li>• Simulator วิชาอื่นๆ</li>
+                           <li>• อื่นๆ</li>
+                        </ul>
+                        <button disabled={qrLoading} onClick={() => handleCreatePayment('premium', 419)} className="w-full py-3 mt-auto rounded-xl font-bold text-[12px] text-white transition-all active:scale-95 disabled:opacity-50" style={{ background: '#8b5cf6' }}>เลือกแพ็กเกจ</button>
                      </div>
 
                   </div>
