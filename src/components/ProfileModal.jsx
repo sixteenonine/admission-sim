@@ -15,11 +15,16 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
   const [success, setSuccess] = useState('');
   
   const [formData, setFormData] = useState({
-    generation: user?.generation || 'DEK70',
-    targetUni: user?.target_uni || 'จุฬาลงกรณ์มหาวิทยาลัย',
-    targetFac: user?.target_fac || 'ศึกษาศาสตร์',
+    generation: user?.generation || '',
+    targetUni: user?.target_uni || '',
+    targetFac: user?.target_fac || '',
     avatarId: user?.avatar_id || 1
   });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('th-TH', { year: '2-digit', month: '2-digit', day: '2-digit' });
+  };
 
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset } = themeVals;
 
@@ -101,7 +106,10 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
                         </span>
                       </div>
                       <div className="flex flex-col mt-1.5 opacity-70 text-[14px] font-medium" style={{ color: theme.textMain }}>
-                        <span>อีเมล: {user?.email || '-'}</span>
+                        <span>เข้าร่วมเมื่อ {formatDate(user?.created_at)}</span>
+                        {user?.plan_tier && user.plan_tier !== 'common' && (
+                          <span>วันหมดอายุสมาชิก {formatDate(user?.plan_expire_at)}</span>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -17,7 +17,11 @@ export async function onRequestPost(context) {
         displayName: user.display_name, 
         avatar_id: user.avatar_id,
         plan_tier: user.plan_tier,
-        plan_expire_at: user.plan_expire_at
+        plan_expire_at: user.plan_expire_at,
+        generation: user.generation,
+        target_uni: user.target_uni,
+        target_fac: user.target_fac,
+        created_at: user.created_at
       } 
     }), { headers: { "Content-Type": "application/json" } });
 
