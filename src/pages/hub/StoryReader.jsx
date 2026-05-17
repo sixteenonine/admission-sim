@@ -155,7 +155,7 @@ export default function StoryReader() {
   if (error) return <div className="p-8 text-center text-red-500 bg-red-500/10 rounded-2xl font-bold max-w-md mx-auto mt-20">{error}</div>;
 
   return (
-    <div className="w-full min-h-[100dvh] flex flex-col relative overflow-hidden" style={{ background: bg }}>
+    <div className={`w-full min-h-[100dvh] flex flex-col relative ${isLandscapeMode ? 'overflow-hidden' : 'overflow-x-hidden'}`} style={{ background: bg }}>
       
       {/* Global Back Button */}
       <div className="fixed top-[20px] left-[20px] z-[1000]">
@@ -181,7 +181,7 @@ export default function StoryReader() {
               width: '1150px',
               gap: '25px',
               left: '50%',
-              top: '20%',
+              top: '30%',
               transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
