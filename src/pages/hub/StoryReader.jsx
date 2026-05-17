@@ -4,7 +4,7 @@ import { ChevronLeft, Volume2, Star, Languages, Layers, ZoomIn, ZoomOut, Loader2
 
 export default function StoryReader() {
   const contextVals = useOutletContext();
-  const { bg, textMain, shadowPlateau, shadowOuter, shadowDeepInset, raisedGradient } = contextVals;
+  const { bg, textMain } = contextVals;
   
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -16,13 +16,14 @@ export default function StoryReader() {
   
   const [level, setLevel] = useState('I');
   const [showThai, setShowThai] = useState(false);
-  const [isFav, setIsFav] = useState(false); // เตรียมไว้เชื่อม DB ในอนาคต
+  const [isFav, setIsFav] = useState(false);
   const [zoom, setZoom] = useState(1);
-  // Flashcard States
+  
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [flashcardList, setFlashcardList] = useState([]);
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+
   const [baseScale, setBaseScale] = useState(1);
   const [isLandscapeMode, setIsLandscapeMode] = useState(true);
 
@@ -37,21 +38,15 @@ export default function StoryReader() {
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
-          // สร้างกรอบสี่เหลี่ยมที่รัดพอดีกับ UI เป๊ะๆ (ลดความสูงลงเพื่อไม่ให้เหลือขอบบน)
-          const boxWidth = 1350;
-          const boxHeight = 650;
-          
-          // พื้นที่จริงของจอ ลบระยะปลอดภัย (Padding) เพื่อไม่ให้ชิดขอบจอเกินไป
-          const availableWidth = w - 40; 
-          const availableHeight = h - 100; // เผื่อความสูงของ Navbar ด้านบน
-          
-          // คำนวณสเกลที่ปลอดภัยที่สุด
-          const scale = Math.min(availableWidth / boxWidth, availableHeight / boxHeight);
-          setBaseScale(scale);
+          const targetWidth = 1180;
+          const targetHeight = 820;
+          const scaleX = (w / targetWidth) * 0.83;
+          const scaleY = (h / targetHeight) * 0.83;
+          setBaseScale(Math.min(scaleX, scaleY));
         } else {
           setBaseScale(1);
         }
-      }, 50);
+      }, 100);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -63,14 +58,12 @@ export default function StoryReader() {
 
   const handleOpenFlashcards = () => {
     if (!story?.vocab_levels) return alert("ไม่มีคำศัพท์สำหรับเรื่องนี้");
-    
     let cards = [];
     Object.values(story.vocab_levels).forEach(item => {
       if (item[level]) {
         cards.push({ eng: item[level], thai: item['thai_' + level] || item.thai, level: level });
       }
     });
-
     if (cards.length === 0) return alert("ไม่มีคำศัพท์สำหรับเรื่องนี้");
     
     cards = cards.sort(() => Math.random() - 0.5);
@@ -112,7 +105,6 @@ export default function StoryReader() {
     if (showThai) return alert("กรุณาสลับเป็นโหมดภาษาอังกฤษเพื่อฟังเสียงอ่าน");
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      // แปลงแท็กพิกัดอย่าง {1} ให้กลายเป็นคำศัพท์ของเลเวลปัจจุบันก่อนส่งไปอ่านออกเสียง
       const textToRead = story?.content?.replace(/\{(\d+)\}/g, (match, id) => {
         return story.vocab_levels?.[id]?.[level] || '';
       }) || '';
@@ -127,15 +119,11 @@ export default function StoryReader() {
 
   const renderContent = () => {
     if (!story) return null;
-
-    // จัดการโหมดแสดงคำแปลภาษาไทย
     if (showThai) {
       return <div className="font-sans leading-relaxed text-[1.05em] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
     }
-
     if (!story.content) return null;
 
-    // ระบบแกะรหัส {1} และสลับคำศัพท์ตาม Level
     const parts = story.content.split(/(\{\d+\})/g);
     const elements = parts.map((part, index) => {
       const match = part.match(/^\{(\d+)\}$/);
@@ -167,105 +155,106 @@ export default function StoryReader() {
   if (error) return <div className="p-8 text-center text-red-500 bg-red-500/10 rounded-2xl font-bold max-w-md mx-auto mt-20">{error}</div>;
 
   return (
-    <div className="w-full min-h-[100dvh] flex flex-col relative overflow-x-hidden" style={{ background: bg }}>
+    <div className="w-full min-h-[100dvh] flex flex-col relative overflow-hidden" style={{ background: bg }}>
       
+      {/* Global Back Button */}
+      <div className="fixed top-[20px] left-[20px] z-[1000]">
+        <button onClick={() => navigate('/storydiary')} className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 border border-black/10 bg-white/50 backdrop-blur-md shadow-sm hover:bg-white" style={{ color: textMain }}>
+          <ChevronLeft size={22} />
+        </button>
+      </div>
+
       {/* Zoom Controls (Desktop Only) */}
       {isLandscapeMode && (
-        <div className="fixed top-[85px] right-[20px] flex flex-col gap-[8px] z-[1000]">
+        <div className="fixed top-[20px] right-[20px] flex flex-col gap-[8px] z-[1000]">
           <button onClick={() => setZoom(z => Math.min(z + 0.05, 2.5))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomIn size={22} /></button>
           <button onClick={() => setZoom(z => Math.max(z - 0.05, 0.4))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomOut size={22} /></button>
         </div>
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Landscape: Absolute Bounding Box (ระบบกันครอป 100%) */
-        <div className="flex-1 w-full flex justify-center items-center min-h-[calc(100vh-80px)] overflow-hidden">
-          
-          {/* กล่องบรรจุ UI ทั้งหมด ขนาด 1350x650 (ตัวแปรเดียวที่ถูกย่อขยาย) */}
+        /* 💻 Desktop Legacy Layout (Absolute Centering - No Crop Guaranteed) */
+        <div className="flex-1 w-full relative">
           <div 
-            className="relative shrink-0"
+            className="absolute flex flex-row items-center justify-center"
             style={{
-              width: '1350px',
-              height: '650px',
-              transform: `scale(${baseScale * zoom})`,
+              width: '1150px',
+              gap: '25px',
+              left: '50%',
+              top: '50%',
+              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
             }}
           >
-              {/* เลนซ้าย: กล้องรูปภาพ (ล็อกพิกัดซ้าย) */}
-              <div className="absolute z-30" style={{ left: '40px', top: '90px', width: '310px' }}>
-                 <div className="absolute font-solway font-semibold text-[2.5rem] text-[#1d1d1f]" style={{ top: '-40px', left: '10px' }}>01</div>
+              {/* Left Column (Image) */}
+              <div className="relative flex justify-center items-center shrink-0" style={{ flex: '0 0 310px', transform: 'translate(-53px, 73px)' }}>
+                 <div className="absolute z-10 font-solway font-semibold text-[2.3rem] text-[#1d1d1f]" style={{ top: '-15px', left: '-15px', transform: 'translate(19px, 5px)' }}>
+                    01
+                 </div>
                  {story?.image_url ? (
-                   <img src={story.image_url} alt="Cover" className="w-full h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.2))' }} />
+                   <img src={story.image_url} alt="Cover" className="w-full max-w-[310px] h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))' }} />
                  ) : (
-                   <div className="w-full h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)]"><Layers size={48} /></div>
+                   <div className="w-full max-w-[310px] h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><Layers size={48} /></div>
                  )}
               </div>
 
-              {/* เลนกลาง: กระดาษเนื้อเรื่อง (ล็อกพิกัดกึ่งกลาง) */}
-              <div className="absolute z-20 flex flex-col" style={{ left: '50%', transform: 'translateX(-50%)', top: '10px', width: '800px' }}>
-                  
-                  {/* ปุ่มกดด้านบน */}
+              {/* Center Column (Paper) */}
+              <div className="flex flex-col shrink-0 z-10" style={{ flex: '1', minWidth: '0', maxWidth: '800px' }}>
                   <div className="flex justify-end items-center relative mb-[15px] pr-[20px]" style={{ gap: '20px' }}>
-                      <div className="absolute z-30 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translateX(-50%)' }}>
+                      <div className="absolute z-20 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translate(-50%, 31px) scale(1)', transformOrigin: 'center center' }}>
                           {['I', 'II', 'III'].map(lvl => (
                             <button 
                               key={lvl} onClick={() => { setLevel(lvl); setShowThai(false); }}
-                              className={`border-none rounded-[20px] px-[20px] py-[6px] font-solway text-[1rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-[1.05] shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'opacity-30 hover:opacity-80'}`}
+                              className={`border-none rounded-[20px] px-[18px] py-[4px] font-solway text-[0.95rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-[1.05] shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'opacity-30 hover:opacity-80'}`}
                               style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
                             >{lvl}</button>
                           ))}
                       </div>
-                      <label className="relative inline-block w-[46px] h-[26px] z-30 cursor-pointer">
+                      <label className="relative inline-block w-[44px] h-[24px] ml-[10px] z-20 cursor-pointer" style={{ transform: 'translate(-44px, 31px) scale(1)', transformOrigin: 'left center' }}>
                         <input type="checkbox" className="opacity-0 w-0 h-0 peer" checked={showThai} onChange={() => setShowThai(!showThai)} />
                         <span className="absolute inset-0 bg-[#e5e5ea] rounded-[24px] transition-all duration-300 peer-checked:bg-[#007AFF] shadow-inner border border-black/5"></span>
-                        <span className="absolute left-[3px] bottom-[3px] w-[20px] h-[20px] bg-white rounded-full transition-all duration-300 peer-checked:translate-x-[20px] shadow-[0_2px_4px_rgba(0,0,0,0.2)]"></span>
+                        <span className="absolute left-[3px] bottom-[3px] w-[18px] h-[18px] bg-white rounded-full transition-all duration-300 peer-checked:translate-x-[20px] shadow-[0_2px_4px_rgba(0,0,0,0.2)]"></span>
                       </label>
                   </div>
                   
-                  {/* ตัวกระดาษ */}
-                  <div className="notebook-paper-effect flex flex-col relative z-10 w-full h-[550px]" style={{ padding: '35px 60px' }}>
+                  <div className="notebook-paper-effect flex flex-col relative z-1" style={{ width: '100%', height: '550px', padding: '30px 60px', transform: 'translate(-59px, 27px) rotate(0deg)' }}>
                       <div className="flex justify-between items-center mb-[25px] shrink-0">
-                          <h2 className="font-solway font-extrabold text-[2.4rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.9', letterSpacing: '-0.5px' }}>{story?.title}</h2>
-                          <div className="flex gap-[10px]">
-                              <button onClick={handleReadAloud} className="w-[42px] h-[42px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]"><Volume2 size={22} /></button>
-                              <button onClick={() => setIsFav(!isFav)} className={`w-[42px] h-[42px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}><Star size={22} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} /></button>
+                          <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.5', letterSpacing: '-0.5px', transform: 'translate(0px, 5px)' }}>{story?.title}</h2>
+                          <div className="flex gap-[10px]" style={{ transform: 'translate(34px, 0px) scale(1)', transformOrigin: 'right center' }}>
+                              <button onClick={handleReadAloud} className="w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]"><Volume2 size={20} /></button>
+                              <button onClick={() => setIsFav(!isFav)} className={`w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}><Star size={20} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} /></button>
                           </div>
                       </div>
-                      <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1.05rem] leading-[1.5] text-[#1d1d1f] break-words">
+                      <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-[#1d1d1f] break-words">
                           {renderContent()}
                       </div>
                   </div>
               </div>
 
-              {/* เลนขวา: Flashcards (ล็อกพิกัดขวา) */}
-              <div className="absolute z-10" style={{ right: '50px', top: '150px', width: '150px' }}>
-                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[150px] h-[210px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF] cursor-pointer" style={{ transform: 'scale(1.3) rotate(6deg)' }}>
-                      <span className="z-10 text-[1.1rem]">Flashcards</span>
+              {/* Right Column (Flashcards) */}
+              <div className="flex items-center justify-center shrink-0" style={{ flex: '0 0 150px', transform: 'translate(10px, 52px) scale(1.6) rotate(6deg)' }}>
+                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF]">
+                      <span className="z-10">Flashcards</span>
                   </div>
               </div>
           </div>
         </div>
       ) : (
-        /* 📱 Mobile & Tablet Portrait Layout (Responsive Fallback) */
-        <div className="flex flex-col items-center justify-start w-full min-h-screen px-6 pt-[30px] pb-[120px]">
-            {/* Top Controls Mobile */}
+        /* 📱 Mobile & Tablet Portrait Layout */
+        <div className="flex flex-col items-center justify-start w-full min-h-screen px-6 pt-[80px] pb-[120px] overflow-y-auto">
             <div className="w-full flex justify-center items-center mb-6">
                 <div className="flex gap-2 items-center bg-white/50 backdrop-blur-md border border-black/10 px-3 py-2 rounded-full shadow-sm">
                     {['I', 'II', 'III'].map(lvl => (
                       <button 
-                        key={lvl}
-                        onClick={() => { setLevel(lvl); setShowThai(false); }}
+                        key={lvl} onClick={() => { setLevel(lvl); setShowThai(false); }}
                         className={`border-none rounded-full px-5 py-1.5 font-solway text-[0.95rem] font-bold text-white transition-all duration-200 ${level === lvl ? 'opacity-100 scale-105 shadow-md' : 'opacity-30'}`}
                         style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
-                      >
-                        {lvl}
-                      </button>
+                      >{lvl}</button>
                     ))}
                 </div>
             </div>
 
-            {/* Paper Mobile */}
             <div className="w-full flex flex-col relative z-10 max-w-[600px]">
                 <div className="font-solway text-[0.85rem] font-bold text-[#FF9500] tracking-[1.5px] uppercase mb-2">STORY 01</div>
                 <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] leading-[1.1] mb-6 text-left">{story?.title}</h2>
@@ -274,7 +263,6 @@ export default function StoryReader() {
                 </div>
             </div>
             
-            {/* Mobile Nav Bottom Pill */}
             <div className="fixed bottom-[30px] left-1/2 -translate-x-1/2 bg-[#1C1C1E] border border-white/10 rounded-[999px] p-2 gap-2 flex items-center shadow-[0_8px_30px_rgba(0,0,0,0.4)] z-[2000]">
                <button onClick={handleReadAloud} className="w-[44px] h-[44px] rounded-full flex justify-center items-center text-white transition-all active:scale-90 hover:bg-white/10"><Volume2 size={22} /></button>
                <button onClick={handleOpenFlashcards} className="h-[44px] px-[20px] rounded-full bg-[#2C2C2E] text-white font-semibold text-[0.95rem] transition-all active:scale-95 flex items-center gap-2 border border-white/5">Flashcards</button>
@@ -286,7 +274,7 @@ export default function StoryReader() {
 
       {/* 🃏 Flashcard Modal Overlay */}
       {showFlashcards && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm flex flex-col items-center">
             <div className="text-white/60 font-bold tracking-widest text-sm mb-6">
               {cardIndex + 1} / {flashcardList.length}
@@ -328,7 +316,6 @@ export default function StoryReader() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
