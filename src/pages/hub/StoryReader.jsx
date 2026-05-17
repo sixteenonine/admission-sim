@@ -51,8 +51,8 @@ export default function StoryReader() {
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
             // ปรับขนาดเริ่มต้นของ Tablet ที่ตัวคูณตรงนี้ (เช่น 0.85)
-            const scaleX = (w / targetWidth) * 0.75;
-            const scaleY = (h / targetHeight) * 0.75;
+            const scaleX = (w / targetWidth) * 0.5;
+            const scaleY = (h / targetHeight) * 0.5;
             setBaseScale(Math.min(scaleX, scaleY));
           }
         } else {
