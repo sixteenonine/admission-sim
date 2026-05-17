@@ -181,7 +181,7 @@ export default function StoryReader() {
               width: '1150px',
               gap: '25px',
               left: '50%',
-              top: '50%',
+              top: '20%',
               transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
