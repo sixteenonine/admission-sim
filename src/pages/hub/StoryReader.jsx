@@ -178,7 +178,7 @@ export default function StoryReader() {
     <div className={`w-full flex flex-col relative ${isLandscapeMode ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-x-hidden'}`} style={{ background: bg }}>
       
       {/* Global Back Button */}
-      <div className="fixed top-[30px] left-[30px] z-[1000]">
+      <div className="fixed top-[40px] left-[40px] z-[1000]">
         <button onClick={() => navigate('/storydiary')} className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 border border-black/10 bg-white/50 backdrop-blur-md shadow-sm hover:bg-white" style={{ color: textMain }}>
           <ChevronLeft size={22} />
         </button>
@@ -186,7 +186,7 @@ export default function StoryReader() {
 
       {/* Zoom Controls (Desktop Only) */}
       {isLandscapeMode && (
-        <div className="fixed top-[30px] right-[20px] flex flex-col gap-[8px] z-[1000]">
+        <div className="fixed top-[35px] right-[20px] flex flex-col gap-[8px] z-[1000]">
           <button onClick={() => setZoom(z => Math.min(z + 0.05, 2.5))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomIn size={22} /></button>
           <button onClick={() => setZoom(z => Math.max(z - 0.05, 0.4))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomOut size={22} /></button>
         </div>
