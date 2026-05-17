@@ -28,17 +28,14 @@ export default function StoryReader() {
     if (!story?.vocab_levels) return alert("ไม่มีคำศัพท์สำหรับเรื่องนี้");
     
     let cards = [];
-    ['I', 'II', 'III'].forEach(lvl => {
-      if (story.vocab_levels[lvl]) {
-        Object.entries(story.vocab_levels[lvl]).forEach(([eng, thai]) => {
-          cards.push({ eng, thai, level: lvl });
-        });
+    Object.values(story.vocab_levels).forEach(item => {
+      if (item[level]) {
+        cards.push({ eng: item[level], thai: item.thai, level: level });
       }
     });
 
     if (cards.length === 0) return alert("ไม่มีคำศัพท์สำหรับเรื่องนี้");
     
-    // สุ่มคำศัพท์ให้ไม่เรียงตามตัวอักษรเกินไป
     cards = cards.sort(() => Math.random() - 0.5);
     setFlashcardList(cards);
     setCardIndex(0);
@@ -74,48 +71,14 @@ export default function StoryReader() {
     fetchStory();
   }, [storyId]);
 
-  // ฟังก์ชันสกัดเนื้อหาและไฮไลต์คำศัพท์ (Regex System แปลงจาก Code.gs เดิม)
-  const renderContent = () => {
-    if (!story) return null;
-    if (showThai) {
-      return <div className="font-sans leading-relaxed text-[1.05em] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
-    }
-
-    let text = story.content || "";
-    // กำหนดสีตามระดับ Level I = ชมพูแดง, II = ส้ม, III = ฟ้า
-    const vocabColor = level === 'I' ? '#FD3259' : level === 'II' ? '#FF8A00' : '#007AFF';
-
-    if (story.vocab_levels && story.vocab_levels[level]) {
-      const vocabMap = story.vocab_levels[level];
-      // จัดเรียงคำที่ยาวกว่าขึ้นก่อน ป้องกันการจับคำซ้อนกัน (เช่น act กับ action)
-      const sortedKeys = Object.keys(vocabMap).sort((a, b) => b.length - a.length);
-
-      if (sortedKeys.length > 0) {
-        const regexParts = sortedKeys.map(k => {
-          const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          return /^[\w]+$/.test(k) ? `\\b${escaped}\\b` : escaped;
-        });
-        const regex = new RegExp(`(${regexParts.join('|')})`, 'gi');
-
-        text = text.replace(regex, (match) => {
-          const targetWord = vocabMap[match.toLowerCase()];
-          if (!targetWord) return match;
-          return `<strong class="cursor-pointer transition-opacity hover:opacity-80 drop-shadow-sm" style="color: ${vocabColor};">${targetWord}</strong>`;
-        });
-      }
-    }
-
-    // รองรับการใส่ ** ตัวหนา ** จากแอดมิน
-    text = text.replace(/\*\*([^*]+)\*\*/g, `<strong style="color: ${vocabColor};">$1</strong>`);
-    return <div className="font-serif leading-relaxed text-[1.05em] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: text }} />;
-  };
-
   const handleReadAloud = () => {
     if (showThai) return alert("กรุณาสลับเป็นโหมดภาษาอังกฤษเพื่อฟังเสียงอ่าน");
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      // ดึงเฉพาะ Text เพียวๆ ไม่เอา HTML Tags
-      const textToRead = story?.content?.replace(/<[^>]+>/g, '') || '';
+      // แปลงแท็กพิกัดอย่าง {1} ให้กลายเป็นคำศัพท์ของเลเวลปัจจุบันก่อนส่งไปอ่านออกเสียง
+      const textToRead = story?.content?.replace(/\{(\d+)\}/g, (match, id) => {
+        return story.vocab_levels?.[id]?.[level] || '';
+      }) || '';
       const utterance = new SpeechSynthesisUtterance(textToRead);
       utterance.lang = 'en-US';
       utterance.rate = 0.9;
@@ -123,6 +86,44 @@ export default function StoryReader() {
     } else {
       alert("เบราว์เซอร์ของคุณไม่รองรับระบบอ่านออกเสียง");
     }
+  };
+
+  const renderContent = () => {
+    if (!story) return null;
+
+    // จัดการโหมดแสดงคำแปลภาษาไทย
+    if (showThai) {
+      return <div className="font-sans leading-relaxed text-[1.05em] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
+    }
+
+    if (!story.content) return null;
+
+    // ระบบแกะรหัส {1} และสลับคำศัพท์ตาม Level
+    const parts = story.content.split(/(\{\d+\})/g);
+    const elements = parts.map((part, index) => {
+      const match = part.match(/^\{(\d+)\}$/);
+      if (match) {
+        const vocabId = match[1];
+        const vocabItem = story.vocab_levels?.[vocabId];
+        if (vocabItem) {
+          const word = vocabItem[level] || '';
+          const color = level === 'I' ? '#FD3259' : level === 'II' ? '#FF8A00' : '#007AFF';
+          return (
+            <span 
+              key={index} 
+              className="font-bold underline decoration-2 cursor-pointer transition-colors px-1 rounded hover:bg-black/5" 
+              style={{ color: color, borderColor: color }}
+              title={vocabItem.thai}
+            >
+              {word}
+            </span>
+          );
+        }
+      }
+      return <span key={index}>{part}</span>;
+    });
+
+    return <div className="font-serif leading-relaxed text-[1.05em] whitespace-pre-wrap">{elements}</div>;
   };
 
   if (loading) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3"><Loader2 className="animate-spin text-blue-500" size={32} /><span className="font-medium opacity-60" style={{ color: textMain }}>กำลังกางหน้ากระดาษ...</span></div>;

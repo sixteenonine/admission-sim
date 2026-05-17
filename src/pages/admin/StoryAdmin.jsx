@@ -3,7 +3,9 @@ import { Save, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function StoryAdmin() {
   const [formData, setFormData] = useState({ title: '', image_url: '', content: '', translation: '', is_premium: false });
-  const [vocab, setVocab] = useState({ I: '', II: '', III: '' });
+  const [vocabRows, setVocabRows] = useState(
+    Array.from({ length: 10 }, (_, i) => ({ id: i + 1, I: '', II: '', III: '', thai: '' }))
+  );
   const [status, setStatus] = useState({ type: '', msg: '' });
   const [loading, setLoading] = useState(false);
 
@@ -15,20 +17,17 @@ export default function StoryAdmin() {
     setLoading(true);
     setStatus({ type: '', msg: '' });
 
-    // แปลง Text (คำ=แปล) เป็น JSON Object
-    const parseVocab = (text) => {
-      const map = {};
-      text.split('\n').forEach(line => {
-        const parts = line.split('=');
-        if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
-          map[parts[0].trim().toLowerCase()] = parts[1].trim();
-        }
-      });
-      return Object.keys(map).length > 0 ? map : undefined;
-    };
-
-    const vocab_levels = { I: parseVocab(vocab.I), II: parseVocab(vocab.II), III: parseVocab(vocab.III) };
-    Object.keys(vocab_levels).forEach(k => !vocab_levels[k] && delete vocab_levels[k]); // ลบเลเวลที่ว่างทิ้ง
+    const vocab_levels = {};
+    vocabRows.forEach(row => {
+      if (row.I.trim()) {
+        vocab_levels[row.id] = {
+          I: row.I.trim(),
+          II: row.II.trim(),
+          III: row.III.trim(),
+          thai: row.thai.trim()
+        };
+      }
+    });
 
     try {
       const res = await fetch('/api/admin/stories/add', {
@@ -41,7 +40,7 @@ export default function StoryAdmin() {
       if (data.status === 'success') {
         setStatus({ type: 'success', msg: 'บันทึกเรื่องสั้นลงฐานข้อมูลเรียบร้อยแล้ว!' });
         setFormData({ title: '', image_url: '', content: '', translation: '', is_premium: false });
-        setVocab({ I: '', II: '', III: '' });
+        setVocabRows(Array.from({ length: 10 }, (_, i) => ({ id: i + 1, I: '', II: '', III: '', thai: '' })));
       } else {
         setStatus({ type: 'error', msg: data.message });
       }
@@ -94,21 +93,54 @@ export default function StoryAdmin() {
 
           <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
             <h3 className="font-bold text-gray-800 mb-4 uppercase">คลังคำศัพท์ (Vocabulary)</h3>
-            <p className="text-xs text-gray-500 mb-4 font-medium">รูปแบบการพิมพ์: <code className="bg-gray-200 px-2 py-0.5 rounded text-red-500">คำศัพท์ภาษาอังกฤษ=คำแปลภาษาไทย</code> (ขึ้นบรรทัดใหม่เพื่อเพิ่มคำต่อไป)</p>
+            <p className="text-xs text-gray-500 mb-4 font-medium">ระบุคำศัพท์ทั้ง 3 ระดับให้สอดคล้องกันตามหมายเลขพิกัดที่กรอกในเนื้อเรื่อง (เช่น ตัวอย่างข้อความ: Moving into this {`{1}`} cabin...)</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="font-bold text-rose-500 text-xs uppercase">Level I</label>
-                <textarea name="I" value={vocab.I} onChange={handleVocabChange} className="p-3 bg-white border border-gray-200 rounded-xl focus:outline-rose-500 text-sm min-h-[120px]" placeholder="cat=แมว&#10;dog=หมา"></textarea>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="font-bold text-orange-500 text-xs uppercase">Level II</label>
-                <textarea name="II" value={vocab.II} onChange={handleVocabChange} className="p-3 bg-white border border-gray-200 rounded-xl focus:outline-orange-500 text-sm min-h-[120px]" placeholder="investigate=สืบสวน"></textarea>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="font-bold text-blue-500 text-xs uppercase">Level III</label>
-                <textarea name="III" value={vocab.III} onChange={handleVocabChange} className="p-3 bg-white border border-gray-200 rounded-xl focus:outline-blue-500 text-sm min-h-[120px]" placeholder="clandestine=ลับๆ ล่อๆ"></textarea>
-              </div>
+            <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {vocabRows.map((row, idx) => (
+                <div key={row.id} className="grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-white rounded-xl border border-gray-200 items-center">
+                  <div className="font-black text-gray-400 text-center text-sm">#{row.id}</div>
+                  <input 
+                    placeholder="Level I (ง่าย)" 
+                    value={row.I} 
+                    onChange={(e) => {
+                      const newRows = [...vocabRows];
+                      newRows[idx].I = e.target.value;
+                      setVocabRows(newRows);
+                    }} 
+                    className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-rose-500"
+                  />
+                  <input 
+                    placeholder="Level II (ปานกลาง)" 
+                    value={row.II} 
+                    onChange={(e) => {
+                      const newRows = [...vocabRows];
+                      newRows[idx].II = e.target.value;
+                      setVocabRows(newRows);
+                    }} 
+                    className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-orange-500"
+                  />
+                  <input 
+                    placeholder="Level III (ยาก)" 
+                    value={row.III} 
+                    onChange={(e) => {
+                      const newRows = [...vocabRows];
+                      newRows[idx].III = e.target.value;
+                      setVocabRows(newRows);
+                    }} 
+                    className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-blue-500"
+                  />
+                  <input 
+                    placeholder="คำแปลภาษาไทย" 
+                    value={row.thai} 
+                    onChange={(e) => {
+                      const newRows = [...vocabRows];
+                      newRows[idx].thai = e.target.value;
+                      setVocabRows(newRows);
+                    }} 
+                    className="p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-gray-500"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
