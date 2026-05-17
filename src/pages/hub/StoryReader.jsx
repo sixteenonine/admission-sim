@@ -46,13 +46,13 @@ export default function StoryReader() {
           const targetHeight = 820;
           if (isDesktop) {
             // ปรับขนาดเริ่มต้นของ PC ที่ตัวคูณตรงนี้ (เช่น 0.92)
-            const scaleX = (w / targetWidth) * 0.92;
-            const scaleY = (h / targetHeight) * 0.92;
+            const scaleX = (w / targetWidth) * 0.95;
+            const scaleY = (h / targetHeight) * 0.95;
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
             // ปรับขนาดเริ่มต้นของ Tablet ที่ตัวคูณตรงนี้ (เช่น 0.85)
-            const scaleX = (w / targetWidth) * 0.85;
-            const scaleY = (h / targetHeight) * 0.85;
+            const scaleX = (w / targetWidth) * 0.75;
+            const scaleY = (h / targetHeight) * 0.75;
             setBaseScale(Math.min(scaleX, scaleY));
           }
         } else {
