@@ -23,6 +23,31 @@ export default function StoryReader() {
   const [flashcardList, setFlashcardList] = useState([]);
   const [cardIndex, setCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [baseScale, setBaseScale] = useState(1);
+
+  useEffect(() => {
+    let timeoutId;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (window.innerWidth > 1024) { 
+          const targetWidth = 1180;
+          const targetHeight = 820;
+          const scaleX = (window.innerWidth / targetWidth) * 0.83;
+          const scaleY = (window.innerHeight / targetHeight) * 0.83;
+          setBaseScale(Math.min(scaleX, scaleY));
+        } else {
+          setBaseScale(1);
+        }
+      }, 100);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const handleOpenFlashcards = () => {
     if (!story?.vocab_levels) return alert("ไม่มีคำศัพท์สำหรับเรื่องนี้");
@@ -130,98 +155,128 @@ export default function StoryReader() {
   if (error) return <div className="p-8 text-center text-red-500 bg-red-500/10 rounded-2xl font-bold max-w-md mx-auto mt-20">{error}</div>;
 
   return (
-    <div className="w-full max-w-[1240px] mx-auto animate-in fade-in duration-500 relative flex flex-col items-center">
+    <div className="w-full min-h-[100dvh] flex flex-col relative overflow-x-hidden" style={{ background: bg }}>
       
-      {/* Top Navigation */}
-      <div className="w-full flex items-center justify-between mb-6 px-4 z-20">
-        <button onClick={() => navigate('/storydiary')} className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/5" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: textMain }}>
-          <ChevronLeft size={22} />
-        </button>
-        <div className="flex gap-2">
-          <button onClick={() => setZoom(z => Math.min(z + 0.1, 1.5))} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 bg-white/10 backdrop-blur-md border border-white/20" style={{ color: textMain }}><ZoomIn size={18} /></button>
-          <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.7))} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 bg-white/10 backdrop-blur-md border border-white/20" style={{ color: textMain }}><ZoomOut size={18} /></button>
+      {/* Zoom Controls (Desktop Only) */}
+      <div className="hidden lg:flex fixed top-[85px] right-[20px] flex-col gap-[8px] z-[1000]">
+        <button onClick={() => setZoom(z => Math.min(z + 0.05, 2.5))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomIn size={22} /></button>
+        <button onClick={() => setZoom(z => Math.max(z - 0.05, 0.4))} className="w-[44px] h-[44px] rounded-[14px] bg-white/50 backdrop-blur-md border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 hover:bg-[#8E8E93] hover:text-white"><ZoomOut size={22} /></button>
+      </div>
+
+      {/* 💻 Desktop Legacy Layout (Perfectly Scaled & Positioned) */}
+      <div className="hidden lg:flex flex-1 w-full items-center justify-center pt-10 overflow-hidden">
+        <div 
+          className="relative flex flex-row items-center justify-center"
+          style={{
+            width: '1150px',
+            minWidth: '1150px',
+            gap: '25px',
+            transform: `scale(${baseScale * zoom})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.2s ease-out',
+            marginTop: '10px'
+          }}
+        >
+            {/* Left Column (Image) */}
+            <div className="relative flex justify-center items-center shrink-0" style={{ flex: '0 0 310px', transform: 'translate(-53px, 73px)' }}>
+               <div className="absolute z-10 font-solway font-semibold text-[2.3rem] text-[#1d1d1f]" style={{ top: '-15px', left: '-15px', transform: 'translate(19px, 5px)' }}>
+                  01
+               </div>
+               {story?.image_url ? (
+                 <img src={story.image_url} alt="Cover" className="w-full max-w-[310px] h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))' }} />
+               ) : (
+                 <div className="w-full max-w-[310px] h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><Layers size={48} /></div>
+               )}
+            </div>
+
+            {/* Center Column (Paper) */}
+            <div className="flex flex-col shrink-0 z-10" style={{ flex: '1', minWidth: '0', maxWidth: '800px' }}>
+                <div className="flex justify-end items-center relative mb-[15px] pr-[20px]" style={{ gap: '20px' }}>
+                    {/* Level buttons */}
+                    <div className="absolute z-20 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translate(-50%, 31px) scale(1)', transformOrigin: 'center center' }}>
+                        {['I', 'II', 'III'].map(lvl => (
+                          <button 
+                            key={lvl}
+                            onClick={() => { setLevel(lvl); setShowThai(false); }}
+                            className={`border-none rounded-[20px] px-[18px] py-[4px] font-solway text-[0.95rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-[1.05] shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'opacity-30 hover:opacity-80'}`}
+                            style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                    </div>
+                    {/* Toggle switch */}
+                    <label className="relative inline-block w-[44px] h-[24px] ml-[10px] z-20 cursor-pointer" style={{ transform: 'translate(-44px, 31px) scale(1)', transformOrigin: 'left center' }}>
+                      <input type="checkbox" className="opacity-0 w-0 h-0 peer" checked={showThai} onChange={() => setShowThai(!showThai)} />
+                      <span className="absolute inset-0 bg-[#e5e5ea] rounded-[24px] transition-all duration-300 peer-checked:bg-[#007AFF] shadow-inner border border-black/5"></span>
+                      <span className="absolute left-[3px] bottom-[3px] w-[18px] h-[18px] bg-white rounded-full transition-all duration-300 peer-checked:translate-x-[20px] shadow-[0_2px_4px_rgba(0,0,0,0.2)]"></span>
+                    </label>
+                </div>
+                
+                {/* The Paper */}
+                <div className="notebook-paper-effect flex flex-col relative z-1" style={{ width: '100%', height: '550px', padding: '30px 60px', transform: 'translate(-59px, 27px) rotate(0deg)' }}>
+                    <div className="flex justify-between items-center mb-[25px] shrink-0">
+                        <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.5', letterSpacing: '-0.5px', transform: 'translate(0px, 5px)' }}>{story?.title}</h2>
+                        
+                        <div className="flex gap-[10px]" style={{ transform: 'translate(34px, 0px) scale(1)', transformOrigin: 'right center' }}>
+                            <button onClick={handleReadAloud} className="w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]">
+                              <Volume2 size={20} />
+                            </button>
+                            <button onClick={() => setIsFav(!isFav)} className={`w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}>
+                              <Star size={20} fill={isFav ? '#FFD700' : 'none'} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-[#1d1d1f] break-words">
+                        {renderContent()}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Column (Flashcards) */}
+            <div className="flex items-center justify-center shrink-0" style={{ flex: '0 0 150px', transform: 'translate(10px, 52px) scale(1.6) rotate(6deg)' }}>
+                <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF]">
+                    <span className="z-10">Flashcards</span>
+                </div>
+            </div>
         </div>
       </div>
 
-      {/* Adaptive Layout Container (Reconstructed Legacy UI) */}
-      <div className="flex flex-col lg:flex-row items-center justify-center w-full px-4 relative mt-8 lg:mt-4 lg:w-[1150px] lg:min-w-[1150px] mx-auto" style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', transition: 'transform 0.3s ease' }}>
-        
-        {/* เลนซ้าย: รูปภาพกล้อง (ซ่อนในมือถือ) */}
-        <div className="hidden lg:flex flex-none w-[310px] relative justify-center items-center lg:-translate-x-[53px] lg:translate-y-[73px]">
-          <div className="absolute top-[-15px] left-[-15px] z-10 font-solway text-[2.3rem] font-semibold text-black drop-shadow-sm lg:translate-x-[19px] lg:translate-y-[5px]">
-            01
-          </div>
-          {story?.image_url && (
-            <img src={story.image_url} alt="Story Art" className="w-full max-w-[310px] h-auto rounded-[16px] min-h-[400px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))' }} />
-          )}
-        </div>
-
-        {/* เลนกลาง: กระดาษเนื้อเรื่อง */}
-        <div className="flex-1 min-w-0 w-full max-w-[800px] flex flex-col z-10">
-          
-          {/* Top Controls: Level & Toggle */}
-          <div className="flex justify-center lg:justify-end items-center gap-4 mb-4 lg:mb-[15px] lg:pr-[20px] relative">
-            <div className="flex gap-2 items-center lg:absolute lg:left-[40%] lg:-translate-x-1/2 lg:translate-y-[31px]">
-              {['I', 'II', 'III'].map(lvl => (
-                <button 
-                  key={lvl} 
-                  onClick={() => { setLevel(lvl); setShowThai(false); }} 
-                  className={`border-none rounded-full px-5 lg:px-[18px] py-1 lg:py-[4px] font-solway text-[0.95rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-105 shadow-md' : 'opacity-30 hover:opacity-80'}`} 
-                  style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
-                >
-                  {lvl}
-                </button>
-              ))}
-            </div>
-
-            <label className="relative inline-block w-[44px] h-[24px] lg:ml-[10px] lg:-translate-x-[44px] lg:translate-y-[31px]">
-              <input type="checkbox" className="opacity-0 w-0 h-0 peer" checked={showThai} onChange={() => setShowThai(!showThai)} />
-              <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-black/10 rounded-full transition-all duration-300 peer-checked:bg-[#FF8A00] before:absolute before:content-[''] before:h-[18px] before:w-[18px] before:left-[3px] before:bottom-[3px] before:bg-white before:rounded-full before:transition-all before:duration-300 peer-checked:before:translate-x-[20px] before:shadow-md"></span>
-            </label>
-          </div>
-
-          {/* Notebook Paper */}
-          <div className="notebook-paper-effect w-full lg:h-[550px] min-h-[500px] flex flex-col p-6 lg:px-[60px] lg:py-[30px] lg:-translate-x-[59px] lg:translate-y-[27px]">
-            
-            <div className="flex justify-between items-start lg:items-center mb-6 lg:mb-[25px] shrink-0 gap-4">
-              <h1 className="font-solway font-extrabold text-2xl lg:text-[2.2rem] text-black m-0 leading-tight lg:leading-[0.5] lg:tracking-[-0.5px] lg:translate-y-[5px]">
-                {story?.title || 'Loading...'}
-              </h1>
-              
-              <div className="hidden lg:flex gap-[10px] lg:translate-x-[34px]">
-                <button onClick={handleReadAloud} className="w-[38px] h-[38px] rounded-full bg-white border border-black/10 text-gray-400 flex justify-center items-center cursor-pointer transition-all active:scale-90 shadow-sm hover:text-blue-500">
-                  <Volume2 size={20} />
-                </button>
-                <button onClick={() => setIsFav(!isFav)} className="w-[38px] h-[38px] rounded-full bg-white border border-black/10 text-gray-400 flex justify-center items-center cursor-pointer transition-all active:scale-90 shadow-sm hover:text-yellow-500">
-                  <Star size={20} fill={isFav ? '#EAB308' : 'none'} stroke={isFav ? '#EAB308' : 'currentColor'} />
-                </button>
+      {/* 📱 Mobile & Tablet Portrait Layout (Responsive Fallback) */}
+      <div className="flex lg:hidden flex-col items-center justify-start w-full min-h-screen px-6 pt-[30px] pb-[120px]">
+          {/* Top Controls Mobile */}
+          <div className="w-full flex justify-center items-center mb-6">
+              <div className="flex gap-2 items-center bg-white/50 backdrop-blur-md border border-black/10 px-3 py-2 rounded-full shadow-sm">
+                  {['I', 'II', 'III'].map(lvl => (
+                    <button 
+                      key={lvl}
+                      onClick={() => { setLevel(lvl); setShowThai(false); }}
+                      className={`border-none rounded-full px-5 py-1.5 font-solway text-[0.95rem] font-bold text-white transition-all duration-200 ${level === lvl ? 'opacity-100 scale-105 shadow-md' : 'opacity-30'}`}
+                      style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
+                    >
+                      {lvl}
+                    </button>
+                  ))}
               </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto lg:pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-black break-words">
-              {renderContent()}
-            </div>
-
           </div>
-        </div>
 
-        {/* เลนขวา: ปุ่ม Flashcards (ซ่อนในมือถือ) */}
-        <div className="hidden lg:flex flex-none w-[150px] items-center justify-center lg:translate-x-[10px] lg:translate-y-[52px] lg:scale-[1.6] lg:rotate-[6deg]">
-          <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-gray-400 hover:text-blue-500">
-            <span className="z-10">Flashcards</span>
+          {/* Paper Mobile */}
+          <div className="w-full flex flex-col relative z-10 max-w-[600px]">
+              <div className="font-solway text-[0.85rem] font-bold text-[#FF9500] tracking-[1.5px] uppercase mb-2">STORY 01</div>
+              <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] leading-[1.1] mb-6 text-left">{story?.title}</h2>
+              <div className="w-full font-solway text-[1.1rem] leading-relaxed text-[#1d1d1f] break-words">
+                  {renderContent()}
+              </div>
           </div>
-        </div>
-
-      </div>
-
-      {/* 📱 Mobile Portrait Pill Controls */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 lg:hidden flex items-center gap-1.5 p-2 rounded-full shadow-2xl z-50 border border-white/10" style={{ background: 'rgba(28, 28, 30, 0.85)', backdropFilter: 'blur(16px)' }}>
-        <button onClick={handleReadAloud} className="w-12 h-12 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10 active:scale-95 transition-all"><Volume2 size={20} /></button>
-        <button onClick={() => setShowThai(!showThai)} className={`w-12 h-12 rounded-full flex items-center justify-center active:scale-95 transition-all ${showThai ? 'text-indigo-400 bg-indigo-500/20' : 'text-white/70 hover:bg-white/10'}`}><Languages size={20} /></button>
-        <button onClick={handleOpenFlashcards} className="h-12 px-6 rounded-full bg-white text-black font-bold text-sm mx-1 active:scale-95 transition-transform shadow-lg flex items-center gap-2">
-          <Layers size={16} /> Flashcards
-        </button>
-        <button onClick={() => setIsFav(!isFav)} className={`w-12 h-12 rounded-full flex items-center justify-center active:scale-95 transition-all ${isFav ? 'text-yellow-400' : 'text-white/70 hover:bg-white/10'}`}><Star size={20} fill={isFav ? 'currentColor' : 'none'} /></button>
+          
+          {/* Mobile Nav Bottom Pill */}
+          <div className="fixed bottom-[30px] left-1/2 -translate-x-1/2 bg-[#1C1C1E] border border-white/10 rounded-[999px] p-2 gap-2 flex items-center shadow-[0_8px_30px_rgba(0,0,0,0.4)] z-[2000]">
+             <button onClick={handleReadAloud} className="w-[44px] h-[44px] rounded-full flex justify-center items-center text-white transition-all active:scale-90 hover:bg-white/10"><Volume2 size={22} /></button>
+             <button onClick={handleOpenFlashcards} className="h-[44px] px-[20px] rounded-full bg-[#2C2C2E] text-white font-semibold text-[0.95rem] transition-all active:scale-95 flex items-center gap-2 border border-white/5">Flashcards</button>
+             <button onClick={() => setShowThai(!showThai)} className={`w-[44px] h-[44px] rounded-full flex justify-center items-center transition-all active:scale-90 ${showThai ? 'text-[#FF8A00] bg-white/10' : 'text-white hover:bg-white/10'}`}><Languages size={22} /></button>
+             <button onClick={() => setIsFav(!isFav)} className={`w-[44px] h-[44px] rounded-full flex justify-center items-center transition-all active:scale-90 ${isFav ? 'text-[#FFD700]' : 'text-white hover:bg-white/10'}`}><Star size={22} fill={isFav ? 'currentColor' : 'none'} /></button>
+          </div>
       </div>
 
       {/* 🃏 Flashcard Modal Overlay */}
@@ -246,7 +301,7 @@ export default function StoryReader() {
                   <div className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-6 ${flashcardList[cardIndex].level === 'I' ? 'bg-rose-100 text-rose-600' : flashcardList[cardIndex].level === 'II' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
                     Level {flashcardList[cardIndex].level}
                   </div>
-                  <h2 className="text-4xl font-serif font-black text-gray-800 break-words w-full" style={{ color: textMain }}>{flashcardList[cardIndex].eng}</h2>
+                  <h2 className="text-4xl font-solway font-black text-gray-800 break-words w-full" style={{ color: textMain }}>{flashcardList[cardIndex].eng}</h2>
                   <p className="text-gray-400 font-bold text-sm mt-8 opacity-60">Tap to flip</p>
                 </div>
 
