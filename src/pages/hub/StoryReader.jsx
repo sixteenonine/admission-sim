@@ -140,7 +140,8 @@ export default function StoryReader() {
   const renderContent = () => {
     if (!story) return null;
     if (showThai) {
-      return <div className="font-sans leading-relaxed text-[1.05em] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
+      // 🇹🇭 แก้ขนาดตัวหนังสือภาษาไทยที่นี่ (เปลี่ยนจาก text-[1.05em] เป็นเล็กลง เช่น text-[0.95rem] หรือ text-[0.9rem])
+      return <div className="font-sans leading-relaxed text-[0.9rem] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
     }
     if (!story.content) return null;
 
@@ -168,7 +169,8 @@ export default function StoryReader() {
       return <span key={index}>{part}</span>;
     });
 
-    return <div className="font-solway leading-[1.4] text-[1rem] whitespace-pre-wrap text-black break-words">{elements}</div>;
+    // 🇬🇧 แก้ขนาดตัวหนังสือภาษาอังกฤษที่นี่ (เปลี่ยนจาก text-[1rem] เป็นเล็กลง เช่น text-[0.9rem] หรือ text-[0.85rem])
+    return <div className="font-solway leading-[1.4] text-[0.9rem] whitespace-pre-wrap text-black break-words">{elements}</div>;
   };
 
   if (loading) return <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3"><Loader2 className="animate-spin text-blue-500" size={32} /><span className="font-medium opacity-60" style={{ color: textMain }}>กำลังกางหน้ากระดาษ...</span></div>;
