@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 export default function LandingApp() {
   return (
@@ -15,9 +16,9 @@ export default function LandingApp() {
             <a href="#features" className="hover:text-[#ea580c] transition-colors">Features</a>
             <a href="#price" className="hover:text-[#ea580c] transition-colors">Price</a>
           </div>
-          <a href="/app.html#/home" className="px-5 py-2 bg-[#1d1d1f] text-white rounded-full hover:scale-105 active:scale-95 transition-all">
+          <Link to="/home" className="px-5 py-2 bg-[#1d1d1f] text-white rounded-full hover:scale-105 active:scale-95 transition-all">
             Login
-          </a>
+          </Link>
         </div>
       </nav>
 

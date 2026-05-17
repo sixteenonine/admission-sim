@@ -10,12 +10,13 @@ import Subscription from './pages/hub/Subscription.jsx';
 import StoryLobby from './pages/hub/StoryLobby.jsx';
 import StoryReader from './pages/hub/StoryReader.jsx';
 import StoryAdmin from './pages/admin/StoryAdmin.jsx';
+import LandingApp from './LandingApp.jsx';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/admin/storydiary" element={<StoryAdmin />} />
-      <Route path="/" element={<Navigate to="/home" replace />} />
+      <Route path="/" element={<LandingApp />} />
       
       <Route element={<HubLayout />}>
         <Route path="/home" element={<HubHome />} />
