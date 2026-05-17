@@ -38,21 +38,14 @@ export default function StoryReader() {
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
+          document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
-          
-          if (w >= 1024) {
-            // 💻 ขนาดเริ่มต้นสำหรับ PC
-            const scaleX = (w / targetWidth) * 0.89; // ปรับความใหญ่ PC ตรงนี้
-            const scaleY = (h / targetHeight) * 0.89;
-            setBaseScale(Math.min(scaleX, scaleY));
-          } else {
-            // 📱 ขนาดเริ่มต้นสำหรับ Tablet แนวนอน (เช่น iPad Mini)
-            const scaleX = (w / targetWidth) * 0.75; // ปรับความใหญ่ Tablet ตรงนี้
-            const scaleY = (h / targetHeight) * 0.75;
-            setBaseScale(Math.min(scaleX, scaleY));
-          }
+          const scaleX = (w / targetWidth) * 0.95;
+          const scaleY = (h / targetHeight) * 0.95;
+          setBaseScale(Math.min(scaleX, scaleY));
         } else {
+          document.body.style.overflow = '';
           setBaseScale(1);
         }
       }, 100);
@@ -184,16 +177,15 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Layout (Absolute Centering - Lock Scroll) */
-        <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden" style={{ zIndex: 1 }}>
+        /* 💻 Desktop Layout (Absolute Centering & Auto-Scale) */
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden" style={{ zIndex: 1 }}>
           <div 
-            className="absolute flex flex-row items-center justify-center"
+            className="flex flex-row items-center justify-center"
             style={{
               width: '1150px',
+              flex: '0 0 auto',
               gap: '25px',
-              left: '50%',
-              top: '50%',
-              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
+              transform: `scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
             }}
