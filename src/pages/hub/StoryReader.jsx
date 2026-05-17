@@ -37,15 +37,21 @@ export default function StoryReader() {
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
-          const targetWidth = 1180;
-          const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.83;
-          const scaleY = (h / targetHeight) * 0.83;
-          setBaseScale(Math.min(scaleX, scaleY));
+          // สร้างกรอบสี่เหลี่ยมที่รัดพอดีกับ UI เป๊ะๆ (ลดความสูงลงเพื่อไม่ให้เหลือขอบบน)
+          const boxWidth = 1350;
+          const boxHeight = 650;
+          
+          // พื้นที่จริงของจอ ลบระยะปลอดภัย (Padding) เพื่อไม่ให้ชิดขอบจอเกินไป
+          const availableWidth = w - 40; 
+          const availableHeight = h - 100; // เผื่อความสูงของ Navbar ด้านบน
+          
+          // คำนวณสเกลที่ปลอดภัยที่สุด
+          const scale = Math.min(availableWidth / boxWidth, availableHeight / boxHeight);
+          setBaseScale(scale);
         } else {
           setBaseScale(1);
         }
-      }, 100);
+      }, 50);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -172,81 +178,70 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Legacy Layout (Absolute Centering Fix to prevent crop) */
-        <div className="flex-1 w-full relative overflow-hidden min-h-[600px]">
+        /* 💻 Desktop Landscape: Absolute Bounding Box (ระบบกันครอป 100%) */
+        <div className="flex-1 w-full flex justify-center items-center min-h-[calc(100vh-80px)] overflow-hidden">
+          
+          {/* กล่องบรรจุ UI ทั้งหมด ขนาด 1350x650 (ตัวแปรเดียวที่ถูกย่อขยาย) */}
           <div 
-            className="absolute flex flex-row items-center justify-center"
+            className="relative shrink-0"
             style={{
-              width: '1150px',
-              gap: '25px',
-              left: '50%',
-              top: '48%', /* ดึงศูนย์กลางขึ้นด้านบนเล็กน้อยเพื่อลดพื้นที่ว่างใต้ Navbar */
-              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
+              width: '1350px',
+              height: '650px',
+              transform: `scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
             }}
           >
-              {/* Left Column (Image) */}
-              <div className="relative flex justify-center items-center shrink-0" style={{ flex: '0 0 310px', transform: 'translate(-53px, 73px)' }}>
-                 <div className="absolute z-10 font-solway font-semibold text-[2.3rem] text-[#1d1d1f]" style={{ top: '-15px', left: '-15px', transform: 'translate(19px, 5px)' }}>
-                    01
-                 </div>
+              {/* เลนซ้าย: กล้องรูปภาพ (ล็อกพิกัดซ้าย) */}
+              <div className="absolute z-30" style={{ left: '40px', top: '90px', width: '310px' }}>
+                 <div className="absolute font-solway font-semibold text-[2.5rem] text-[#1d1d1f]" style={{ top: '-40px', left: '10px' }}>01</div>
                  {story?.image_url ? (
-                   <img src={story.image_url} alt="Cover" className="w-full max-w-[310px] h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))' }} />
+                   <img src={story.image_url} alt="Cover" className="w-full h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.2))' }} />
                  ) : (
-                   <div className="w-full max-w-[310px] h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><Layers size={48} /></div>
+                   <div className="w-full h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_4px_20px_rgba(0,0,0,0.1)]"><Layers size={48} /></div>
                  )}
               </div>
 
-              {/* Center Column (Paper) */}
-              <div className="flex flex-col shrink-0 z-10" style={{ flex: '1', minWidth: '0', maxWidth: '800px' }}>
+              {/* เลนกลาง: กระดาษเนื้อเรื่อง (ล็อกพิกัดกึ่งกลาง) */}
+              <div className="absolute z-20 flex flex-col" style={{ left: '50%', transform: 'translateX(-50%)', top: '10px', width: '800px' }}>
+                  
+                  {/* ปุ่มกดด้านบน */}
                   <div className="flex justify-end items-center relative mb-[15px] pr-[20px]" style={{ gap: '20px' }}>
-                      {/* Level buttons */}
-                      <div className="absolute z-20 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translate(-50%, 31px) scale(1)', transformOrigin: 'center center' }}>
+                      <div className="absolute z-30 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translateX(-50%)' }}>
                           {['I', 'II', 'III'].map(lvl => (
                             <button 
-                              key={lvl}
-                              onClick={() => { setLevel(lvl); setShowThai(false); }}
-                              className={`border-none rounded-[20px] px-[18px] py-[4px] font-solway text-[0.95rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-[1.05] shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'opacity-30 hover:opacity-80'}`}
+                              key={lvl} onClick={() => { setLevel(lvl); setShowThai(false); }}
+                              className={`border-none rounded-[20px] px-[20px] py-[6px] font-solway text-[1rem] font-bold text-white cursor-pointer transition-all duration-200 ${level === lvl ? 'opacity-100 scale-[1.05] shadow-[0_4px_10px_rgba(0,0,0,0.15)]' : 'opacity-30 hover:opacity-80'}`}
                               style={{ backgroundColor: lvl === 'I' ? '#FD3259' : lvl === 'II' ? '#FF8A00' : '#007AFF' }}
-                            >
-                              {lvl}
-                            </button>
+                            >{lvl}</button>
                           ))}
                       </div>
-                      {/* Toggle switch */}
-                      <label className="relative inline-block w-[44px] h-[24px] ml-[10px] z-20 cursor-pointer" style={{ transform: 'translate(-44px, 31px) scale(1)', transformOrigin: 'left center' }}>
+                      <label className="relative inline-block w-[46px] h-[26px] z-30 cursor-pointer">
                         <input type="checkbox" className="opacity-0 w-0 h-0 peer" checked={showThai} onChange={() => setShowThai(!showThai)} />
                         <span className="absolute inset-0 bg-[#e5e5ea] rounded-[24px] transition-all duration-300 peer-checked:bg-[#007AFF] shadow-inner border border-black/5"></span>
-                        <span className="absolute left-[3px] bottom-[3px] w-[18px] h-[18px] bg-white rounded-full transition-all duration-300 peer-checked:translate-x-[20px] shadow-[0_2px_4px_rgba(0,0,0,0.2)]"></span>
+                        <span className="absolute left-[3px] bottom-[3px] w-[20px] h-[20px] bg-white rounded-full transition-all duration-300 peer-checked:translate-x-[20px] shadow-[0_2px_4px_rgba(0,0,0,0.2)]"></span>
                       </label>
                   </div>
                   
-                  {/* The Paper */}
-                  <div className="notebook-paper-effect flex flex-col relative z-1" style={{ width: '100%', height: '550px', padding: '30px 60px', transform: 'translate(-59px, 27px) rotate(0deg)' }}>
+                  {/* ตัวกระดาษ */}
+                  <div className="notebook-paper-effect flex flex-col relative z-10 w-full h-[550px]" style={{ padding: '35px 60px' }}>
                       <div className="flex justify-between items-center mb-[25px] shrink-0">
-                          <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.5', letterSpacing: '-0.5px', transform: 'translate(0px, 5px)' }}>{story?.title}</h2>
-                          
-                          <div className="flex gap-[10px]" style={{ transform: 'translate(34px, 0px) scale(1)', transformOrigin: 'right center' }}>
-                              <button onClick={handleReadAloud} className="w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]">
-                                <Volume2 size={20} />
-                              </button>
-                              <button onClick={() => setIsFav(!isFav)} className={`w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}>
-                                <Star size={20} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} />
-                              </button>
+                          <h2 className="font-solway font-extrabold text-[2.4rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.9', letterSpacing: '-0.5px' }}>{story?.title}</h2>
+                          <div className="flex gap-[10px]">
+                              <button onClick={handleReadAloud} className="w-[42px] h-[42px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]"><Volume2 size={22} /></button>
+                              <button onClick={() => setIsFav(!isFav)} className={`w-[42px] h-[42px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}><Star size={22} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} /></button>
                           </div>
                       </div>
-
-                      <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-[#1d1d1f] break-words">
+                      <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1.05rem] leading-[1.5] text-[#1d1d1f] break-words">
                           {renderContent()}
                       </div>
                   </div>
               </div>
 
-              {/* Right Column (Flashcards) */}
-              <div className="flex items-center justify-center shrink-0" style={{ flex: '0 0 150px', transform: 'translate(10px, 52px) scale(1.6) rotate(6deg)' }}>
-                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF]">
-                      <span className="z-10">Flashcards</span>
+              {/* เลนขวา: Flashcards (ล็อกพิกัดขวา) */}
+              <div className="absolute z-10" style={{ right: '50px', top: '150px', width: '150px' }}>
+                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[150px] h-[210px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF] cursor-pointer" style={{ transform: 'scale(1.3) rotate(6deg)' }}>
+                      <span className="z-10 text-[1.1rem]">Flashcards</span>
                   </div>
               </div>
           </div>
