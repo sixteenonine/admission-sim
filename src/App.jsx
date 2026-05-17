@@ -28,7 +28,6 @@ export default function App() {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/storydiary" element={<StoryLobby />} />
         <Route path="/storydiary/play" element={<StoryReader />} />
-        <Route path="/admin/storydiary" element={<StoryAdmin />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />
