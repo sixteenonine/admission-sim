@@ -34,6 +34,7 @@ export default function StoryReader() {
       timeoutId = setTimeout(() => {
         const w = window.innerWidth;
         const h = window.innerHeight;
+        
         const isDesktop = w >= 1024 && w > h;
         const isTabletLandscape = w >= 768 && w < 1024 && w > h;
         const isLandscape = isDesktop || isTabletLandscape;
@@ -44,15 +45,16 @@ export default function StoryReader() {
           document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
+          
           if (isDesktop) {
-            // ปรับขนาดเริ่มต้นของ PC ที่ตัวคูณตรงนี้ (เช่น 0.92)
-            const scaleX = (w / targetWidth) * 0.95;
-            const scaleY = (h / targetHeight) * 0.95;
-            setBaseScale(Math.min(scaleX, scaleY));
-          } else if (isTabletLandscape) {
-            // ปรับขนาดเริ่มต้นของ Tablet ที่ตัวคูณตรงนี้ (เช่น 0.85)
+            // ทดสอบปรับตัวคูณเป็น 0.5 เพื่อให้เห็นการเปลี่ยนแปลงชัดเจน (ถ้าได้ผลค่อยแก้กลับเป็น 0.92 หรือค่าที่ต้องการ)
             const scaleX = (w / targetWidth) * 0.5;
             const scaleY = (h / targetHeight) * 0.5;
+            setBaseScale(Math.min(scaleX, scaleY));
+          } else if (isTabletLandscape) {
+            // ตั้งค่าเริ่มต้นของ Tablet แนวนอน
+            const scaleX = (w / targetWidth) * 0.85;
+            const scaleY = (h / targetHeight) * 0.85;
             setBaseScale(Math.min(scaleX, scaleY));
           }
         } else {
