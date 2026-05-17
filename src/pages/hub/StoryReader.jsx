@@ -44,9 +44,17 @@ export default function StoryReader() {
           document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.92;
-          const scaleY = (h / targetHeight) * 0.92;
-          setBaseScale(Math.min(scaleX, scaleY));
+          if (isDesktop) {
+            // ปรับขนาดเริ่มต้นของ PC ที่ตัวคูณตรงนี้ (เช่น 0.92)
+            const scaleX = (w / targetWidth) * 0.92;
+            const scaleY = (h / targetHeight) * 0.92;
+            setBaseScale(Math.min(scaleX, scaleY));
+          } else if (isTabletLandscape) {
+            // ปรับขนาดเริ่มต้นของ Tablet ที่ตัวคูณตรงนี้ (เช่น 0.85)
+            const scaleX = (w / targetWidth) * 0.85;
+            const scaleY = (h / targetHeight) * 0.85;
+            setBaseScale(Math.min(scaleX, scaleY));
+          }
         } else {
           document.body.style.overflow = '';
           setBaseScale(1);
