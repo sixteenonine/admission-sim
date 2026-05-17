@@ -5,7 +5,7 @@ import { ChevronLeft, Volume2, Star, Languages, Layers, ZoomIn, ZoomOut, Loader2
 export default function StoryReader() {
   const contextVals = useOutletContext();
   const { bg, textMain } = contextVals;
-
+  
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const storyId = searchParams.get('id');
@@ -137,7 +137,6 @@ export default function StoryReader() {
         if (vocabItem) {
           const word = vocabItem[level] || '';
           const color = level === 'I' ? '#FD3259' : level === 'II' ? '#FF8A00' : '#007AFF';
-     
           return (
             <span 
               key={index} 
@@ -152,6 +151,7 @@ export default function StoryReader() {
       }
       return <span key={index}>{part}</span>;
     });
+
     return <div className="font-solway leading-[1.4] text-[1rem] whitespace-pre-wrap text-black break-words">{elements}</div>;
   };
 
@@ -176,29 +176,27 @@ export default function StoryReader() {
         </div>
       )}
 
-      {isLandscapeMode ?
-        (
-          /* 💻 Desktop Layout (Exact Copy of index.html) */
-          <div className="flex-1 w-full flex items-center justify-center">
-            <div 
-              className="relative flex flex-row items-center justify-center"
-              style={{
-                width: '1150px',
-                minWidth: '1150px',
-                gap: '25px',
-                margin: '0',
-                transform: `scale(${baseScale * zoom})`,
-                transformOrigin: 'center center',
-                transition: 'transform 0.2s ease-out'
-              }}
-            >
+      {isLandscapeMode ? (
+        /* 💻 Desktop Layout (Exact Copy of index.html) */
+        <div className="flex-1 w-full flex items-center justify-center">
+          <div 
+            className="relative flex flex-row items-center justify-center"
+            style={{
+              width: '1150px',
+              minWidth: '1150px',
+              gap: '25px',
+              margin: '0',
+              transform: `scale(${baseScale * zoom})`,
+              transformOrigin: 'center center',
+              transition: 'transform 0.2s ease-out'
+            }}
+          >
               {/* Left Column (Image) */}
               <div className="relative flex justify-center items-center shrink-0" style={{ flex: '0 0 310px', transform: 'translate(-53px, 73px)' }}>
                  <div className="absolute z-10 font-solway font-semibold text-[2.3rem] text-[#1d1d1f]" style={{ top: '-15px', left: '-15px', transform: 'translate(19px, 5px)' }}>
-                   01
+                    01
                  </div>
-                 {story?.image_url ?
-                 (
+                 {story?.image_url ? (
                    <img src={story.image_url} alt="Cover" className="w-full max-w-[310px] h-auto min-h-[400px] rounded-[16px] object-cover" style={{ filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.15))' }} />
                  ) : (
                    <div className="w-full max-w-[310px] h-[450px] bg-white border border-[rgba(0,0,0,0.08)] rounded-[16px] flex items-center justify-center text-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"><Layers size={48} /></div>
@@ -208,7 +206,7 @@ export default function StoryReader() {
               {/* Center Column (Paper) */}
               <div className="flex flex-col shrink-0 z-10" style={{ flex: '1', minWidth: '0', maxWidth: '800px' }}>
                   <div className="flex justify-end items-center relative mb-[15px] pr-[20px]" style={{ gap: '20px' }}>
-                     <div className="absolute z-20 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translate(-50%, 31px) scale(1)', transformOrigin: 'center center' }}>
+                      <div className="absolute z-20 flex items-center gap-[8px]" style={{ left: '40%', transform: 'translate(-50%, 31px) scale(1)', transformOrigin: 'center center' }}>
                           {['I', 'II', 'III'].map(lvl => (
                             <button 
                               key={lvl} onClick={() => { setLevel(lvl); setShowThai(false); }}
@@ -224,7 +222,7 @@ export default function StoryReader() {
                       </label>
                   </div>
                   
-                  <div className="notebook-paper-effect flex flex-col relative z-[1] bg-white rounded-[32px] border border-black/10 shadow-sm before:content-[''] before:absolute before:inset-0 before:bg-white before:rounded-[32px] before:border before:border-black/10 before:shadow-sm before:-z-10 before:opacity-60 before:rotate-[2deg]" style={{ width: '100%', height: '550px', padding: '30px 60px', transform: 'translate(-59px, 27px) rotate(0deg)' }}>
+                  <div className="notebook-paper-effect flex flex-col relative z-1" style={{ width: '100%', height: '550px', padding: '30px 60px', transform: 'translate(-59px, 27px) rotate(0deg)' }}>
                       <div className="flex justify-between items-center mb-[25px] shrink-0">
                           <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.5', letterSpacing: '-0.5px', transform: 'translate(0px, 5px)' }}>{story?.title}</h2>
                           <div className="flex gap-[10px]" style={{ transform: 'translate(34px, 0px) scale(1)', transformOrigin: 'right center' }}>
@@ -233,18 +231,18 @@ export default function StoryReader() {
                           </div>
                       </div>
                       <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-[#1d1d1f] break-words">
-                         {renderContent()}
+                          {renderContent()}
                       </div>
                   </div>
               </div>
 
               {/* Right Column (Flashcards) */}
               <div className="flex items-center justify-center shrink-0" style={{ flex: '0 0 150px', transform: 'translate(10px, 52px) scale(1.6) rotate(6deg)' }}>
-                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy relative w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-[#8E8E93] bg-white border border-black/10 rounded-[20px] shadow-sm hover:text-[#007AFF] hover:-translate-y-[5px] hover:shadow-md transition-all cursor-pointer after:content-[''] after:absolute after:top-[6px] after:left-[6px] after:w-[calc(100%-12px)] after:h-[calc(100%-12px)] after:border-2 after:border-dashed after:border-black/10 after:rounded-[14px] after:transition-all hover:after:border-[#007AFF] hover:after:opacity-50">
+                  <div onClick={handleOpenFlashcards} className="side-flashcard-legacy w-[140px] h-[200px] flex justify-center items-center font-solway font-bold text-[#8E8E93] hover:text-[#007AFF]">
                       <span className="z-10">Flashcards</span>
                   </div>
               </div>
-           </div>
+          </div>
         </div>
       ) : (
         /* 📱 Mobile & Tablet Portrait Layout */
@@ -312,8 +310,7 @@ export default function StoryReader() {
               <button 
                 onClick={() => {
                   if (cardIndex < flashcardList.length - 1) {
-                    setIsFlipped(false);
-                    setTimeout(() => setCardIndex(prev => prev + 1), 150);
+                    setIsFlipped(false); setTimeout(() => setCardIndex(prev => prev + 1), 150);
                   } else { setShowFlashcards(false); }
                 }}
                 className="py-4 rounded-2xl font-bold text-white bg-blue-500 hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
