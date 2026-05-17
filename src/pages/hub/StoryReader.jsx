@@ -201,6 +201,7 @@ export default function StoryReader() {
               width: '1150px',
               height: '820px',
               gap: '25px',
+              marginTop: '-20px',
               transform: `scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
@@ -261,7 +262,7 @@ export default function StoryReader() {
         </div>
       ) : (
         /* 📱 Mobile & Tablet Portrait Layout */
-        <div className="flex flex-col items-center justify-start w-full min-h-screen px-6 pt-[80px] pb-[120px] overflow-y-auto">
+        <div className="flex flex-col items-center justify-start w-full min-h-screen px-6 pt-[50px] pb-[120px] overflow-y-auto">
             <div className="w-full flex justify-center items-center mb-6">
                 <div className="flex gap-2 items-center bg-white/50 backdrop-blur-md border border-black/10 px-3 py-2 rounded-full shadow-sm">
                     {['I', 'II', 'III'].map(lvl => (
