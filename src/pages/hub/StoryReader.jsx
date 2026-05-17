@@ -40,8 +40,8 @@ export default function StoryReader() {
         if (isLandscape) {
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.92;
-          const scaleY = (h / targetHeight) * 0.92;
+          const scaleX = (w / targetWidth) * 0.83;
+          const scaleY = (h / targetHeight) * 0.83;
           setBaseScale(Math.min(scaleX, scaleY));
         } else {
           setBaseScale(1);
@@ -155,7 +155,7 @@ export default function StoryReader() {
   if (error) return <div className="p-8 text-center text-red-500 bg-red-500/10 rounded-2xl font-bold max-w-md mx-auto mt-20">{error}</div>;
 
   return (
-    <div className={`w-full min-h-[100dvh] flex flex-col relative ${isLandscapeMode ? 'overflow-hidden' : 'overflow-x-hidden'}`} style={{ background: bg }}>
+    <div className={`w-full flex flex-col relative ${isLandscapeMode ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-x-hidden'}`} style={{ background: bg }}>
       
       {/* Global Back Button */}
       <div className="fixed top-[30px] left-[30px] z-[1000]">
@@ -173,15 +173,16 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Layout (Flex Centering & Auto-Scale เหมือน Index) */
-        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden">
+        /* 💻 Desktop Legacy Layout (Absolute Centering - No Crop Guaranteed) */
+        <div className="flex-1 w-full relative">
           <div 
-            className="relative flex flex-row items-center justify-center"
+            className="absolute flex flex-row items-center justify-center"
             style={{
               width: '1150px',
-              minWidth: '1150px',
               gap: '25px',
-              transform: `scale(${baseScale * zoom})`,
+              left: '50%',
+              top: '30%',
+              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
             }}
