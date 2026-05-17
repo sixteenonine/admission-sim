@@ -35,9 +35,12 @@ export default function StoryReader() {
         const w = window.innerWidth;
         const h = window.innerHeight;
         
-        const isDesktop = w >= 1024 && w > h;
-        const isTabletLandscape = w >= 768 && w < 1024 && w > h;
-        const isLandscape = isDesktop || isTabletLandscape;
+        // ตรวจจับระบบสัมผัสเพื่อแยก Tablet กับ PC ขาดจากกัน
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const isLandscape = w > 900 && w > h;
+        
+        const isDesktop = isLandscape && !isTouchDevice;
+        const isTabletLandscape = isLandscape && isTouchDevice;
         
         setIsLandscapeMode(isLandscape);
 
@@ -47,12 +50,12 @@ export default function StoryReader() {
           const targetHeight = 820;
           
           if (isDesktop) {
-            // ทดสอบปรับตัวคูณเป็น 0.5 เพื่อให้เห็นการเปลี่ยนแปลงชัดเจน (ถ้าได้ผลค่อยแก้กลับเป็น 0.92 หรือค่าที่ต้องการ)
-            const scaleX = (w / targetWidth) * 0.95;
-            const scaleY = (h / targetHeight) * 0.95;
+            // ปรับตัวคูณของ PC ตรงนี้
+            const scaleX = (w / targetWidth) * 0.92;
+            const scaleY = (h / targetHeight) * 0.92;
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
-            // ตั้งค่าเริ่มต้นของ Tablet แนวนอน
+            // ปรับตัวคูณของ Tablet ตรงนี้
             const scaleX = (w / targetWidth) * 0.85;
             const scaleY = (h / targetHeight) * 0.85;
             setBaseScale(Math.min(scaleX, scaleY));
