@@ -40,8 +40,8 @@ export default function StoryReader() {
         if (isLandscape) {
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.83;
-          const scaleY = (h / targetHeight) * 0.83;
+          const scaleX = (w / targetWidth) * 0.92;
+          const scaleY = (h / targetHeight) * 0.92;
           setBaseScale(Math.min(scaleX, scaleY));
         } else {
           setBaseScale(1);
@@ -173,16 +173,15 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Legacy Layout (Absolute Centering - No Crop Guaranteed) */
-        <div className="flex-1 w-full relative">
+        /* 💻 Desktop Layout (Flex Centering & Auto-Scale เหมือน Index) */
+        <div className="flex-1 w-full h-full flex items-center justify-center overflow-hidden">
           <div 
-            className="absolute flex flex-row items-center justify-center"
+            className="relative flex flex-row items-center justify-center"
             style={{
               width: '1150px',
+              minWidth: '1150px',
               gap: '25px',
-              left: '50%',
-              top: '30%',
-              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
+              transform: `scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
             }}
