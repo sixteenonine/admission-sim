@@ -51,13 +51,13 @@ export default function StoryReader() {
           
           if (isDesktop) {
             // ปรับตัวคูณของ PC ตรงนี้
-            const scaleX = (w / targetWidth) * 0.92;
-            const scaleY = (h / targetHeight) * 0.92;
+            const scaleX = (w / targetWidth) * 0.95;
+            const scaleY = (h / targetHeight) * 0.95;
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
             // ปรับตัวคูณของ Tablet ตรงนี้
-            const scaleX = (w / targetWidth) * 0.85;
-            const scaleY = (h / targetHeight) * 0.85;
+            const scaleX = (w / targetWidth) * 0.80;
+            const scaleY = (h / targetHeight) * 0.80;
             setBaseScale(Math.min(scaleX, scaleY));
           }
         } else {
