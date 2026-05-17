@@ -11,8 +11,8 @@ export async function onRequestPost(context) {
     const storyId = 'story-' + crypto.randomUUID();
 
     // 1. บันทึกทะเบียนลิสต์รายการลง D1
-    await db.prepare("INSERT INTO stories (id, title, image_url, is_premium) VALUES (?, ?, ?, ?)")
-            .bind(storyId, title, image_url, is_premium ? 1 : 0).run();
+    await db.prepare("INSERT INTO stories (id, title, image_url, is_premium, content) VALUES (?, ?, ?, ?, ?)")
+            .bind(storyId, title, image_url, is_premium ? 1 : 0, "").run();
 
     // 2. บันทึกเนื้อหาขนาดใหญ่แยกไปลง KV
     const kvPayload = {
