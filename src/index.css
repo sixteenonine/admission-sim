@@ -1,2 +1,58 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800;900&family=Prompt:wght@200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+/* Story Diary Legacy Styles */
+.font-solway {
+  font-family: 'Solway', serif;
+}
+
+.notebook-paper-effect {
+  background: #FFFFFF;
+  border-radius: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
+}
+
+.notebook-paper-effect::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #FFFFFF;
+  border-radius: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  z-index: -1;
+  opacity: 0.6;
+  transform: rotate(2deg);
+}
+
+.side-flashcard-legacy {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  position: relative;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.side-flashcard-legacy:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.side-flashcard-legacy::after {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px;
+  width: calc(100% - 12px); height: calc(100% - 12px);
+  border: 2px dashed rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  z-index: 0;
+  transition: 0.2s;
+}
+
+.side-flashcard-legacy:hover::after {
+  border-color: #007AFF;
+  opacity: 0.5;
+}
