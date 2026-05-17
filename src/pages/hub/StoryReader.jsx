@@ -34,15 +34,18 @@ export default function StoryReader() {
       timeoutId = setTimeout(() => {
         const w = window.innerWidth;
         const h = window.innerHeight;
-        const isLandscape = w > 900 && w > h;
+        const isDesktop = w >= 1024 && w > h;
+        const isTabletLandscape = w >= 768 && w < 1024 && w > h;
+        const isLandscape = isDesktop || isTabletLandscape;
+        
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
           document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.83;
-          const scaleY = (h / targetHeight) * 0.83;
+          const scaleX = (w / targetWidth) * 0.92;
+          const scaleY = (h / targetHeight) * 0.92;
           setBaseScale(Math.min(scaleX, scaleY));
         } else {
           document.body.style.overflow = '';
@@ -159,7 +162,7 @@ export default function StoryReader() {
   if (error) return <div className="p-8 text-center text-red-500 bg-red-500/10 rounded-2xl font-bold max-w-md mx-auto mt-20">{error}</div>;
 
   return (
-    <div className={`w-full flex flex-col relative ${isLandscapeMode ? 'h-[100dvh] overflow-hidden items-center justify-center' : 'min-h-[100dvh] overflow-x-hidden'}`} style={{ background: bg }}>
+    <div className={`w-full flex flex-col relative ${isLandscapeMode ? 'h-[100dvh] overflow-hidden' : 'min-h-[100dvh] overflow-x-hidden'}`} style={{ background: bg }}>
       
       {/* Global Back Button */}
       <div className="fixed top-[30px] left-[30px] z-[1000]">
@@ -177,15 +180,14 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Layout (Exact Copy of index.html) */
-        <div className="flex-1 w-full flex items-center justify-center">
+        /* 💻 Desktop Layout (Fixed Fullscreen Wrapper to trap layout box) */
+        <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden flex items-center justify-center" style={{ zIndex: 1 }}>
           <div 
             className="relative flex flex-row items-center justify-center"
             style={{
               width: '1150px',
-              minWidth: '1150px',
+              height: '820px',
               gap: '25px',
-              margin: '0',
               transform: `scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
