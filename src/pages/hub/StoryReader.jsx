@@ -38,21 +38,25 @@ export default function StoryReader() {
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
+          document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.83;
-          const scaleY = (h / targetHeight) * 0.83;
+          const scaleX = (w / targetWidth) * 0.92;
+          const scaleY = (h / targetHeight) * 0.92;
           setBaseScale(Math.min(scaleX, scaleY));
         } else {
+          document.body.style.overflow = '';
           setBaseScale(1);
         }
       }, 100);
     };
+ 
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
+      document.body.style.overflow = '';
     };
   }, []);
 
@@ -173,15 +177,15 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Legacy Layout (Absolute Centering - No Crop Guaranteed) */
-        <div className="flex-1 w-full relative">
+        /* 💻 Desktop Layout (Absolute Centering - Lock Scroll) */
+        <div className="fixed inset-0 w-full h-[100dvh] overflow-hidden" style={{ zIndex: 1 }}>
           <div 
             className="absolute flex flex-row items-center justify-center"
             style={{
               width: '1150px',
               gap: '25px',
               left: '50%',
-              top: '30%',
+              top: '50%',
               transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
               transition: 'transform 0.2s ease-out'
