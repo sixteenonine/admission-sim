@@ -38,14 +38,21 @@ export default function StoryReader() {
         setIsLandscapeMode(isLandscape);
 
         if (isLandscape) {
-          document.body.style.overflow = 'hidden';
           const targetWidth = 1180;
           const targetHeight = 820;
-          const scaleX = (w / targetWidth) * 0.92;
-          const scaleY = (h / targetHeight) * 0.92;
-          setBaseScale(Math.min(scaleX, scaleY));
+          
+          if (w >= 1024) {
+            // 💻 ขนาดเริ่มต้นสำหรับ PC
+            const scaleX = (w / targetWidth) * 0.89; // ปรับความใหญ่ PC ตรงนี้
+            const scaleY = (h / targetHeight) * 0.89;
+            setBaseScale(Math.min(scaleX, scaleY));
+          } else {
+            // 📱 ขนาดเริ่มต้นสำหรับ Tablet แนวนอน (เช่น iPad Mini)
+            const scaleX = (w / targetWidth) * 0.75; // ปรับความใหญ่ Tablet ตรงนี้
+            const scaleY = (h / targetHeight) * 0.75;
+            setBaseScale(Math.min(scaleX, scaleY));
+          }
         } else {
-          document.body.style.overflow = '';
           setBaseScale(1);
         }
       }, 100);
