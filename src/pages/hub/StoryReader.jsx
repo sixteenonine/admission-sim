@@ -56,8 +56,8 @@ export default function StoryReader() {
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
             // ปรับตัวคูณของ Tablet ตรงนี้
-            const scaleX = (w / targetWidth) * 0.80;
-            const scaleY = (h / targetHeight) * 0.80;
+            const scaleX = (w / targetWidth) * 0.90;
+            const scaleY = (h / targetHeight) * 0.90;
             setBaseScale(Math.min(scaleX, scaleY));
           }
         } else {
