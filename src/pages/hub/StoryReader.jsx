@@ -30,7 +30,7 @@ export default function StoryReader() {
     let cards = [];
     Object.values(story.vocab_levels).forEach(item => {
       if (item[level]) {
-        cards.push({ eng: item[level], thai: item.thai, level: level });
+        cards.push({ eng: item[level], thai: item['thai_' + level] || item.thai, level: level });
       }
     });
 
@@ -113,7 +113,7 @@ export default function StoryReader() {
               key={index} 
               className="font-bold underline decoration-2 cursor-pointer transition-colors px-1 rounded hover:bg-black/5" 
               style={{ color: color, borderColor: color }}
-              title={vocabItem.thai}
+              title={vocabItem['thai_' + level] || vocabItem.thai}
             >
               {word}
             </span>
