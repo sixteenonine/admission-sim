@@ -48,8 +48,8 @@ export default function StoryReader() {
           
           if (isDesktop) {
             // ทดสอบปรับตัวคูณเป็น 0.5 เพื่อให้เห็นการเปลี่ยนแปลงชัดเจน (ถ้าได้ผลค่อยแก้กลับเป็น 0.92 หรือค่าที่ต้องการ)
-            const scaleX = (w / targetWidth) * 0.5;
-            const scaleY = (h / targetHeight) * 0.5;
+            const scaleX = (w / targetWidth) * 0.95;
+            const scaleY = (h / targetHeight) * 0.95;
             setBaseScale(Math.min(scaleX, scaleY));
           } else if (isTabletLandscape) {
             // ตั้งค่าเริ่มต้นของ Tablet แนวนอน
