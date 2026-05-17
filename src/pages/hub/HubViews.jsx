@@ -15,9 +15,6 @@ export function HubHome() {
         <Link to="/admissim" className="w-full md:w-[25%] rounded-[0.8rem] flex items-end justify-center pb-10 transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
           <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>ADMiSSiM</span>
         </Link>
-        <Link to="/admin/storydiary" className="w-full md:w-[25%] rounded-[0.8rem] flex items-center justify-center bg-red-600 text-white font-black">
-          TEST ADMIN
-        </Link>
         {/* กล่องที่ 2 */}
         <div 
           onClick={() => navigate('/speedread')}

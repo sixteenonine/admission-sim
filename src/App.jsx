@@ -20,7 +20,6 @@ export default function App() {
       <Route element={<HubLayout />}>
         <Route path="/home" element={<HubHome />} />
         <Route path="/vocab" element={<HubFlashcards />} />
-        {/* เพิ่มหน้าเล่น Flashcard เข้าไปในระบบ */}
         <Route path="/vocab/play" element={<FlashcardPlayer />} />
         <Route path="/hub" element={<HubSpeedRead />} />
         <Route path="speedread" element={<SpeedReadLobby />} />
