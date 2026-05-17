@@ -172,18 +172,18 @@ export default function StoryReader() {
       )}
 
       {isLandscapeMode ? (
-        /* 💻 Desktop Legacy Layout (Perfectly Scaled & Positioned from original Index.txt) */
-        <div className="flex flex-1 w-full items-center justify-center pt-10 overflow-hidden">
+        /* 💻 Desktop Legacy Layout (Absolute Centering Fix to prevent crop) */
+        <div className="flex-1 w-full relative overflow-hidden min-h-[600px]">
           <div 
-            className="relative flex flex-row items-center justify-center"
+            className="absolute flex flex-row items-center justify-center"
             style={{
               width: '1150px',
-              minWidth: '1150px',
               gap: '25px',
-              transform: `scale(${baseScale * zoom})`,
+              left: '50%',
+              top: '48%', /* ดึงศูนย์กลางขึ้นด้านบนเล็กน้อยเพื่อลดพื้นที่ว่างใต้ Navbar */
+              transform: `translate(-50%, -50%) scale(${baseScale * zoom})`,
               transformOrigin: 'center center',
-              transition: 'transform 0.2s ease-out',
-              marginTop: '10px'
+              transition: 'transform 0.2s ease-out'
             }}
           >
               {/* Left Column (Image) */}
