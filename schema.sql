@@ -7,6 +7,7 @@ CREATE TABLE users (
     email TEXT UNIQUE NOT NULL,
     display_name TEXT NOT NULL,
     avatar_id INTEGER DEFAULT 1,
+    avatar_url TEXT,
     plan_tier TEXT DEFAULT 'common',
     plan_expire_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -48,4 +49,15 @@ CREATE TABLE user_sync_data (
     custom_speedreads TEXT DEFAULT '[]',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+DROP TABLE IF EXISTS vocab_repository;
+CREATE TABLE vocab_repository (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    eng TEXT NOT NULL UNIQUE,
+    thai TEXT NOT NULL,
+    type TEXT,
+    example TEXT,
+    category TEXT,
+    level TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

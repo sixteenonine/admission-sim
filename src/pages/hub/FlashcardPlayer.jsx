@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Shuffle, Undo2, Star, MessageSquare, CheckCircle2 } from 'lucide-react';
-import { vocabDatabase } from '../../data/vocab.js';
 import { db } from '../../utils/db.js';
 
 export default function FlashcardPlayer() {
@@ -41,10 +40,15 @@ export default function FlashcardPlayer() {
         // 1. เช็กว่าเคยโหลดคำศัพท์ลงเครื่องหรือยัง
         const count = await db.flashcards.count();
         if (count === 0) {
-          // 2. ถ้ายัง ให้ก๊อปปี้คำศัพท์ไปเซฟไว้ในเครื่องผู้ใช้ (ทำแค่ครั้งแรก)
-          const initialData = vocabDatabase.map(v => ({ ...v, isStarred: 0 }));
-          await db.flashcards.bulkAdd(initialData);
+          // 2. ถ้ายัง ให้ดึงคำศัพท์จริงจากคลาวด์มาเซฟลงเครื่อง (ทำแค่ครั้งแรก)
+          const res = await fetch('/api/vocab/list');
+          const cloudVocab = await res.json();
+          if (cloudVocab.status === 'success' && cloudVocab.data) {
+            const initialData = cloudVocab.data.map(v => ({ ...v, isStarred: 0 }));
+            await db.flashcards.bulkAdd(initialData);
+          }
         }
+        
         // 2.5 ดึงข้อมูลดาวล่าสุดจาก Cloud มาทับในเครื่อง (ซิงก์ข้อมูลเวลาเปลี่ยนเครื่อง)
         if (user?.id) {
           try {
@@ -63,16 +67,20 @@ export default function FlashcardPlayer() {
           } catch(e) { console.error('Cloud sync error', e); }
         }
         
-        // 3. ดึงคำศัพท์จากเครื่องผู้ใช้มาแสดงผลแทน (โหลดเร็ว 0ms รองรับหลักหมื่นคำสบายๆ)
-        const localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+        // 3. ดึงคำศัพท์มาแสดงผลรองรับหมวดพึงพอใจพิเศษ
+        let localDeck = [];
+        if (currentCategory === 'MY FAVORITE') {
+          localDeck = await db.flashcards.where('isStarred').equals(1).toArray();
+        } else {
+          localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+        }
         setDeck(localDeck);
 
         // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา
         const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
         setStarredWords(starred.map(w => w.eng));
       } catch (error) {
-        // โหมดสำรองเผื่อเครื่องรวน ให้ดึงข้อมูลแบบปกติ
-        setDeck(vocabDatabase.filter(word => word.category === currentCategory));
+        console.error('LocalDB Error:', error);
       }
     }
     initLocalDB();
@@ -144,7 +152,12 @@ export default function FlashcardPlayer() {
   };
   const handleRestart = async () => { 
     triggerCardAnim('shuffle', async () => { 
-      const localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+      let localDeck = [];
+      if (currentCategory === 'MY FAVORITE') {
+        localDeck = await db.flashcards.where('isStarred').equals(1).toArray();
+      } else {
+        localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+      }
       setDeck(localDeck); 
       setCurrentIndex(0); 
       setMasteredHistory([]); 
