@@ -37,16 +37,29 @@ export default function FlashcardPlayer() {
   useEffect(() => {
     async function initLocalDB() {
       try {
-        // 1. เช็กว่าเคยโหลดคำศัพท์ลงเครื่องหรือยัง
-        const count = await db.flashcards.count();
-        if (count === 0) {
-          // 2. ถ้ายัง ให้ดึงคำศัพท์จริงจากคลาวด์มาเซฟลงเครื่อง (ทำแค่ครั้งแรก)
+        const localCount = await db.flashcards.count();
+        
+        try {
           const res = await fetch('/api/vocab/list');
           const cloudVocab = await res.json();
+          
           if (cloudVocab.status === 'success' && cloudVocab.data) {
-            const initialData = cloudVocab.data.map(v => ({ ...v, isStarred: 0 }));
-            await db.flashcards.bulkAdd(initialData);
+            // อัปเดตข้อมูลอัตโนมัติหากจำนวนคำศัพท์คลาดเคลื่อน
+            if (localCount !== cloudVocab.data.length) {
+              const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
+              const starSet = new Set(currentStars.map(w => w.eng));
+              
+              const newData = cloudVocab.data.map(v => ({ 
+                ...v, 
+                isStarred: starSet.has(v.eng) ? 1 : 0 
+              }));
+              
+              await db.flashcards.clear();
+              await db.flashcards.bulkAdd(newData);
+            }
           }
+        } catch (e) {
+          console.warn('Offline mode: using local database');
         }
         
         // 2.5 ดึงข้อมูลดาวล่าสุดจาก Cloud มาทับในเครื่อง (ซิงก์ข้อมูลเวลาเปลี่ยนเครื่อง)
