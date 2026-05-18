@@ -29,20 +29,22 @@ export default function FlashcardPlayer() {
   const pendingSyncRef = useRef(false);
   const latestStarsRef = useRef(starredWords);
   const fullFavsRef = useRef({ stories: [], vocab: [] });
+  const actionQueueRef = useRef([]);
+
   useEffect(() => { latestStarsRef.current = starredWords; }, [starredWords]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && pendingSyncRef.current && user?.id) {
-        syncToCloud(latestStarsRef.current, true);
+        syncToCloud(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.id]);
   
-  const syncToCloud = async (starsList, isEmergency = false) => {
-    if (!user?.id) return;
+  const syncToCloud = async (isEmergency = false) => {
+    if (!user?.id || actionQueueRef.current.length === 0) return;
     pendingSyncRef.current = false;
     
     if (syncTimeoutRef.current) {
@@ -50,23 +52,24 @@ export default function FlashcardPlayer() {
       syncTimeoutRef.current = null;
     }
 
-    // นำคำศัพท์ที่กดดาวไปใส่ในกล่องความจำ แล้วเตรียมส่งทันทีโดยไม่ต้องรอโหลดข้อมูลเก่า
-    fullFavsRef.current.vocab = starsList;
-    const payload = { userId: user.id, favorites: fullFavsRef.current };
+    const pendingActions = [...actionQueueRef.current];
+    actionQueueRef.current = [];
+    const payload = { userId: user.id, syncActions: pendingActions };
 
     if (isEmergency) {
-      // ไม้ตายสุดท้าย: ใช้ Beacon API ยิงข้อมูลแบบไม่รอกลับ การันตีการส่งแม้กดปิดแท็บกะทันหัน
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
       navigator.sendBeacon('/api/user/sync', blob);
     } else {
       try {
-        await fetch('/api/user/sync', {
+        const response = await fetch('/api/user/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+        if (!response.ok) throw new Error('Network error');
       } catch (err) {
         console.error('Sync failed:', err);
+        actionQueueRef.current = [...pendingActions, ...actionQueueRef.current];
         pendingSyncRef.current = true;
       }
     }
@@ -237,12 +240,18 @@ export default function FlashcardPlayer() {
     // อัปเดตฐานข้อมูลในเครื่องทันทีด้วย where (เร็วกว่า filter)
     await db.flashcards.where('eng').equals(word).modify({ isStarred: isCurrentlyStarred ? 0 : 1 });
 
-    // เข้าสู่กระบวนการหน่วงเวลา 3 วินาที (Debounce)
+    actionQueueRef.current.push({
+      type: 'star_vocab',
+      word: word,
+      isStarred: !isCurrentlyStarred,
+      timestamp: Date.now()
+    });
+
     pendingSyncRef.current = true;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     
     syncTimeoutRef.current = setTimeout(() => {
-      syncToCloud(newStarredWords);
+      syncToCloud();
     }, 3000);
   };
   const isStarred = currentWord && starredWords.includes(currentWord.eng);

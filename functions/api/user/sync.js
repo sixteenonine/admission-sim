@@ -15,11 +15,37 @@ export async function onRequestGet(context) {
 
 export async function onRequestPost(context) {
   try {
-    const { userId, favorites, custom_decks, custom_speedreads } = await context.request.json();
+    const payload = await context.request.json();
+    const { userId, favorites, custom_decks, custom_speedreads, syncActions } = payload;
     if (!userId) return new Response(JSON.stringify({ status: "error", message: "Missing userId" }), { status: 400 });
 
     const db = context.env.DB;
-    // ใช้ COALESCE เพื่ออัปเดตเฉพาะฟิลด์ที่มีการส่งค่ามา (ไม่กระทบฟิลด์อื่น)
+    let finalFavoritesJson = null;
+
+    if (syncActions && Array.isArray(syncActions)) {
+      const existingData = await db.prepare("SELECT favorites FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+      let currentFavs = { stories: [], vocab: [] };
+      
+      if (existingData && existingData.favorites) {
+        try { currentFavs = JSON.parse(existingData.favorites); } catch (e) {}
+      }
+      currentFavs.vocab = currentFavs.vocab || [];
+      
+      syncActions.sort((a, b) => a.timestamp - b.timestamp);
+      for (let action of syncActions) {
+        if (action.type === 'star_vocab') {
+          if (action.isStarred && !currentFavs.vocab.includes(action.word)) {
+            currentFavs.vocab.push(action.word);
+          } else if (!action.isStarred) {
+            currentFavs.vocab = currentFavs.vocab.filter(w => w !== action.word);
+          }
+        }
+      }
+      finalFavoritesJson = JSON.stringify(currentFavs);
+    } else if (favorites) {
+      finalFavoritesJson = JSON.stringify(favorites);
+    }
+
     await db.prepare(`
       INSERT INTO user_sync_data (user_id, favorites, custom_decks, custom_speedreads)
       VALUES (?, ?, ?, ?)
@@ -30,7 +56,7 @@ export async function onRequestPost(context) {
       updated_at = CURRENT_TIMESTAMP
     `).bind(
       userId,
-      favorites ? JSON.stringify(favorites) : null,
+      finalFavoritesJson,
       custom_decks ? JSON.stringify(custom_decks) : null,
       custom_speedreads ? JSON.stringify(custom_speedreads) : null
     ).run();
