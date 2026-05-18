@@ -31,3 +31,21 @@ CREATE TABLE payments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+DROP TABLE IF EXISTS stories;
+CREATE TABLE stories (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    image_url TEXT,
+    is_premium BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+DROP TABLE IF EXISTS user_sync_data;
+CREATE TABLE user_sync_data (
+    user_id TEXT PRIMARY KEY,
+    favorites TEXT DEFAULT '{"stories":[], "vocab":[]}',
+    custom_decks TEXT DEFAULT '[]',
+    custom_speedreads TEXT DEFAULT '[]',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

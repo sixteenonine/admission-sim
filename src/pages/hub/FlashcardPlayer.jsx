@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Shuffle, Undo2, Star, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { vocabDatabase } from '../../data/vocab.js';
+import { db } from '../../utils/db.js';
 
 export default function FlashcardPlayer() {
-  const themeVals = useOutletContext();
+  const contextVals = useOutletContext();
+  const { currentUser: user, ...themeVals } = contextVals;
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -34,9 +36,47 @@ export default function FlashcardPlayer() {
   const shadowMd = '0 8px 24px rgba(0, 0, 0, 0.08)';
 
   useEffect(() => {
-    const filteredDeck = vocabDatabase.filter(word => word.category === currentCategory);
-    setDeck(filteredDeck);
-  }, [currentCategory]);
+    async function initLocalDB() {
+      try {
+        // 1. เช็กว่าเคยโหลดคำศัพท์ลงเครื่องหรือยัง
+        const count = await db.flashcards.count();
+        if (count === 0) {
+          // 2. ถ้ายัง ให้ก๊อปปี้คำศัพท์ไปเซฟไว้ในเครื่องผู้ใช้ (ทำแค่ครั้งแรก)
+          const initialData = vocabDatabase.map(v => ({ ...v, isStarred: 0 }));
+          await db.flashcards.bulkAdd(initialData);
+        }
+        // 2.5 ดึงข้อมูลดาวล่าสุดจาก Cloud มาทับในเครื่อง (ซิงก์ข้อมูลเวลาเปลี่ยนเครื่อง)
+        if (user?.id) {
+          try {
+            const res = await fetch(`/api/user/sync?userId=${user.id}`);
+            const cloudData = await res.json();
+            if (cloudData.status === 'success' && cloudData.data?.favorites) {
+              const favData = JSON.parse(cloudData.data.favorites);
+              const cloudVocabFavs = favData.vocab || [];
+              
+              // ล้างดาวเก่าในเครื่อง และอัปเดตดาวใหม่จากคลาวด์
+              await db.flashcards.toCollection().modify({ isStarred: 0 });
+              if (cloudVocabFavs.length > 0) {
+                await db.flashcards.where('eng').anyOf(cloudVocabFavs).modify({ isStarred: 1 });
+              }
+            }
+          } catch(e) { console.error('Cloud sync error', e); }
+        }
+        
+        // 3. ดึงคำศัพท์จากเครื่องผู้ใช้มาแสดงผลแทน (โหลดเร็ว 0ms รองรับหลักหมื่นคำสบายๆ)
+        const localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+        setDeck(localDeck);
+
+        // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา
+        const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
+        setStarredWords(starred.map(w => w.eng));
+      } catch (error) {
+        // โหมดสำรองเผื่อเครื่องรวน ให้ดึงข้อมูลแบบปกติ
+        setDeck(vocabDatabase.filter(word => word.category === currentCategory));
+      }
+    }
+    initLocalDB();
+  }, [currentCategory, user?.id]);
 
   const currentWord = deck[currentIndex];
   const progressPercent = deck.length > 0 ? ((currentIndex + 1) / deck.length) * 100 : 100;
@@ -102,9 +142,36 @@ export default function FlashcardPlayer() {
       setCurrentIndex(lastMastered.originalIndex);
     });
   };
-  const handleRestart = () => { triggerCardAnim('shuffle', () => { const filteredDeck = vocabDatabase.filter(word => word.category === currentCategory); setDeck(filteredDeck); setCurrentIndex(0); setMasteredHistory([]); }); };
+  const handleRestart = async () => { 
+    triggerCardAnim('shuffle', async () => { 
+      const localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+      setDeck(localDeck); 
+      setCurrentIndex(0); 
+      setMasteredHistory([]); 
+    }); 
+  };
 
-  const toggleStar = () => { const word = currentWord.eng; setStarredWords(prev => prev.includes(word) ? prev.filter(w => w !== word) : [...prev, word]); };
+  const toggleStar = async () => { 
+    const word = currentWord.eng; 
+    const isCurrentlyStarred = starredWords.includes(word);
+    
+    const newStarredWords = isCurrentlyStarred ? starredWords.filter(w => w !== word) : [...starredWords, word];
+    setStarredWords(newStarredWords); 
+    
+    const card = await db.flashcards.filter(w => w.eng === word).first();
+    if (card) {
+      await db.flashcards.update(card.id, { isStarred: isCurrentlyStarred ? 0 : 1 });
+    }
+
+    // แอบส่งข้อมูลไปคลาวด์เบื้องหลังเพื่อกันข้อมูลหาย
+    if (user?.id) {
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, favorites: { vocab: newStarredWords } })
+      }).catch(err => console.error('Sync failed:', err));
+    }
+  };
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
