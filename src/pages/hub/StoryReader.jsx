@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Volume2, Star, Languages, Layers, ZoomIn, ZoomOut, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 export default function StoryReader() {
   const contextVals = useOutletContext();
@@ -10,9 +11,23 @@ export default function StoryReader() {
   const navigate = useNavigate();
   const storyId = searchParams.get('id');
 
-  const [story, setStory] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: story, isLoading: loading, isError, error: queryError } = useQuery({
+    queryKey: ['story', storyId],
+    queryFn: async () => {
+      if (!storyId) throw new Error('ไม่พบรหัสเรื่องสั้น');
+      const res = await fetch('/api/stories/get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId })
+      });
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error(data.message || 'ไม่สามารถโหลดเรื่องสั้นได้');
+      return data.story;
+    },
+    enabled: !!storyId,
+  });
+
+  const error = isError ? (queryError?.message || 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว') : '';
   
   const [level, setLevel] = useState('I');
   const [showThai, setShowThai] = useState(false);
@@ -92,34 +107,6 @@ export default function StoryReader() {
     setIsFlipped(false);
     setShowFlashcards(true);
   };
-
-  useEffect(() => {
-    async function fetchStory() {
-      if (!storyId) {
-        setError('ไม่พบรหัสเรื่องสั้น');
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch('/api/stories/get', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storyId })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-          setStory(data.story);
-        } else {
-          setError(data.message || 'ไม่สามารถโหลดเรื่องสั้นได้');
-        }
-      } catch (err) {
-        setError('เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว');
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchStory();
-  }, [storyId]);
 
   const handleReadAloud = () => {
     if (showThai) return alert("กรุณาสลับเป็นโหมดภาษาอังกฤษเพื่อฟังเสียงอ่าน");

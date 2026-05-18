@@ -1,34 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
 import { BookOpen, Lock, ChevronRight, Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 export default function StoryLobby() {
   const contextVals = useOutletContext();
   const { currentUser: user, ...themeVals } = contextVals;
   const { bg, textMain, shadowOuter, shadowPlateau, shadowDeepInset } = themeVals;
 
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    async function fetchStories() {
-      try {
-        const res = await fetch('/api/stories/list');
-        const data = await res.json();
-        if (data.status === 'success') {
-          setStories(data.stories);
-        } else {
-          setError('ไม่สามารถโหลดรายการเรื่องสั้นได้');
-        }
-      } catch (err) {
-        setError('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
-      } finally {
-        setLoading(false);
-      }
+  const { data: stories = [], isLoading: loading, isError: error } = useQuery({
+    queryKey: ['storiesList'],
+    queryFn: async () => {
+      const res = await fetch('/api/stories/list');
+      const data = await res.json();
+      if (data.status !== 'success') throw new Error('ไม่สามารถโหลดรายการเรื่องสั้นได้');
+      return data.stories;
     }
-    fetchStories();
-  }, []);
+  });
 
   return (
     <div className="w-full max-w-5xl mx-auto animate-in fade-in duration-300">
