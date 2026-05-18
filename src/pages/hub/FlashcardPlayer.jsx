@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Shuffle, Undo2, Star, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { db } from '../../utils/db.js';
@@ -23,6 +23,49 @@ export default function FlashcardPlayer() {
   const [showExampleFront, setShowExampleFront] = useState(false);
   const [showExampleBack, setShowExampleBack] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
+
+  // ระบบ Debounce & Visibility API
+  const syncTimeoutRef = useRef(null);
+  const pendingSyncRef = useRef(false);
+  const latestStarsRef = useRef(starredWords);
+  
+  useEffect(() => { latestStarsRef.current = starredWords; }, [starredWords]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && pendingSyncRef.current && user?.id) {
+        syncToCloud(latestStarsRef.current, true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.id]);
+  
+  const syncToCloud = async (starsList, isEmergency = false) => {
+    if (!user?.id) return;
+    pendingSyncRef.current = false;
+    
+    try {
+      const res = await fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`);
+      const oldData = await res.json();
+      
+      let currentFavorites = {};
+      if (oldData.status === 'success' && oldData.data?.favorites) {
+        currentFavorites = JSON.parse(oldData.data.favorites);
+      }
+      currentFavorites.vocab = starsList;
+
+      await fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, favorites: currentFavorites }),
+        keepalive: isEmergency 
+      });
+    } catch (err) {
+      console.error('Sync failed:', err);
+      pendingSyncRef.current = true;
+    }
+  };
 
   // ดึงค่าสีพื้นฐานมาใช้เป็น Apple-like design เหมือนต้นฉบับ
   const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
@@ -183,20 +226,18 @@ export default function FlashcardPlayer() {
     
     const newStarredWords = isCurrentlyStarred ? starredWords.filter(w => w !== word) : [...starredWords, word];
     setStarredWords(newStarredWords); 
+    latestStarsRef.current = newStarredWords; 
     
-    const card = await db.flashcards.filter(w => w.eng === word).first();
-    if (card) {
-      await db.flashcards.update(card.id, { isStarred: isCurrentlyStarred ? 0 : 1 });
-    }
+    // อัปเดตฐานข้อมูลในเครื่องทันทีด้วย where (เร็วกว่า filter)
+    await db.flashcards.where('eng').equals(word).modify({ isStarred: isCurrentlyStarred ? 0 : 1 });
 
-    // แอบส่งข้อมูลไปคลาวด์เบื้องหลังเพื่อกันข้อมูลหาย
-    if (user?.id) {
-      fetch('/api/user/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, favorites: { vocab: newStarredWords } })
-      }).catch(err => console.error('Sync failed:', err));
-    }
+    // เข้าสู่กระบวนการหน่วงเวลา 3 วินาที (Debounce)
+    pendingSyncRef.current = true;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    
+    syncTimeoutRef.current = setTimeout(() => {
+      syncToCloud(newStarredWords);
+    }, 3000);
   };
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
