@@ -1,2 +1,3 @@
-INSERT INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('', '', '', '', '', '');
-INSERT INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('', '', '', '', '', '');
+INSERT OR IGNORE INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('Advancement', 'ความก้าวหน้า', 'n.', 'Technological advancement has completely changed how we live today.', 'SCIENCE, HEALTH & NATURE', 'A-Level');
+INSERT OR IGNORE INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('Algorithm', 'อัลกอริทึม, ขั้นตอนวิธี', 'n.', 'Social media platforms use a complex algorithm to determine which posts you see.', 'SCIENCE, HEALTH & NATURE', 'A-Level');
+INSERT OR IGNORE INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('Analysis', 'การวิเคราะห์', 'n.', 'The scientists conducted a detailed analysis of the water samples.', 'SCIENCE, HEALTH & NATURE', 'A-Level');

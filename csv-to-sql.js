@@ -1,29 +1,31 @@
 import fs from 'fs';
 import Papa from 'papaparse';
 
-// 1. อ่านไฟล์ CSV ของคุณ
 const csvFile = fs.readFileSync('vocab.csv', 'utf8');
 
-// 2. แปลงข้อมูลอย่างฉลาด (ข้าม Header อัตโนมัติและจัดการลูกน้ำในประโยคให้)
 const parsed = Papa.parse(csvFile, {
     header: true, 
-    skipEmptyLines: true
+    skipEmptyLines: true,
+    // เพิ่มฟังก์ชันจัดระเบียบหัวคอลัมน์ ป้องกันปัญหาตัวพิมพ์เล็กใหญ่หรือเว้นวรรคเกิน
+    transformHeader: header => header.trim().toLowerCase()
 });
 
-// 3. เตรียมชุดคำสั่ง SQL
 let sql = '';
-parsed.data.forEach(row => {
-    // ป้องกัน Error จากเครื่องหมาย ' (เช่น คำว่า don't) ให้เปลี่ยนเป็น ''
-    const eng = (row.eng || '').replace(/'/g, "''");
-    const thai = (row.thai || '').replace(/'/g, "''");
-    const type = (row.type || '').replace(/'/g, "''");
-    const example = (row.example || '').replace(/'/g, "''");
-    const category = (row.category || '').replace(/'/g, "''");
-    const level = (row.level || '').replace(/'/g, "''");
+let count = 0;
 
-    sql += `INSERT INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('${eng}', '${thai}', '${type}', '${example}', '${category}', '${level}');\n`;
+parsed.data.forEach(row => {
+    const eng = (row.eng || '').trim().replace(/'/g, "''");
+    if (!eng) return; 
+
+    const thai = (row.thai || '').trim().replace(/'/g, "''");
+    const type = (row.type || '').trim().replace(/'/g, "''");
+    const example = (row.example || '').trim().replace(/'/g, "''");
+    const category = (row.category || '').trim().replace(/'/g, "''");
+    const level = (row.level || '').trim().replace(/'/g, "''");
+
+    sql += `INSERT OR IGNORE INTO vocab_repository (eng, thai, type, example, category, level) VALUES ('${eng}', '${thai}', '${type}', '${example}', '${category}', '${level}');\n`;
+    count++;
 });
 
-// 4. บันทึกเป็นไฟล์ .sql
 fs.writeFileSync('vocab.sql', sql);
-console.log('✅ แปลงไฟล์เสร็จสมบูรณ์! ได้ไฟล์ vocab.sql แล้ว');
+console.log(`✅ แปลงไฟล์เสร็จสมบูรณ์! ได้คำศัพท์ทั้งหมด ${count} คำ`);
