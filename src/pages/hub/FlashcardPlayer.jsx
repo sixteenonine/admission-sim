@@ -44,6 +44,10 @@ export default function FlashcardPlayer() {
   const syncToCloud = async (starsList, isEmergency = false) => {
     if (!user?.id) return;
     pendingSyncRef.current = false;
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
     
     try {
       const res = await fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`);
