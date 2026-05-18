@@ -28,7 +28,7 @@ export default function FlashcardPlayer() {
   const syncTimeoutRef = useRef(null);
   const pendingSyncRef = useRef(false);
   const latestStarsRef = useRef(starredWords);
-  
+  const fullFavsRef = useRef({ stories: [], vocab: [] });
   useEffect(() => { latestStarsRef.current = starredWords; }, [starredWords]);
 
   useEffect(() => {
@@ -44,30 +44,31 @@ export default function FlashcardPlayer() {
   const syncToCloud = async (starsList, isEmergency = false) => {
     if (!user?.id) return;
     pendingSyncRef.current = false;
+    
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
       syncTimeoutRef.current = null;
     }
-    
-    try {
-      const res = await fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`);
-      const oldData = await res.json();
-      
-      let currentFavorites = {};
-      if (oldData.status === 'success' && oldData.data?.favorites) {
-        currentFavorites = JSON.parse(oldData.data.favorites);
-      }
-      currentFavorites.vocab = starsList;
 
-      await fetch('/api/user/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, favorites: currentFavorites }),
-        keepalive: isEmergency 
-      });
-    } catch (err) {
-      console.error('Sync failed:', err);
-      pendingSyncRef.current = true;
+    // นำคำศัพท์ที่กดดาวไปใส่ในกล่องความจำ แล้วเตรียมส่งทันทีโดยไม่ต้องรอโหลดข้อมูลเก่า
+    fullFavsRef.current.vocab = starsList;
+    const payload = { userId: user.id, favorites: fullFavsRef.current };
+
+    if (isEmergency) {
+      // ไม้ตายสุดท้าย: ใช้ Beacon API ยิงข้อมูลแบบไม่รอกลับ การันตีการส่งแม้กดปิดแท็บกะทันหัน
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      navigator.sendBeacon('/api/user/sync', blob);
+    } else {
+      try {
+        await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error('Sync failed:', err);
+        pendingSyncRef.current = true;
+      }
     }
   };
 
@@ -116,6 +117,7 @@ export default function FlashcardPlayer() {
             const cloudData = await res.json();
             if (cloudData.status === 'success' && cloudData.data?.favorites) {
               const favData = JSON.parse(cloudData.data.favorites);
+              fullFavsRef.current = favData;
               const cloudVocabFavs = favData.vocab || [];
               
               // ล้างดาวเก่าในเครื่อง และอัปเดตดาวใหม่จากคลาวด์
