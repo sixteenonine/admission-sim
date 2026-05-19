@@ -90,7 +90,7 @@ export default function StoryLobby() {
           <span className="text-sm font-medium opacity-60" style={{ color: textMain }}>กำลังเตรียมคลังเรื่องสั้น...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {(() => {
             const displayStories = activeTab === 'FAVORITE' 
               ? stories.filter(story => favoriteIds.includes(story.id))

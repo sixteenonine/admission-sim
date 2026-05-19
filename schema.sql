@@ -36,6 +36,8 @@ DROP TABLE IF EXISTS stories;
 CREATE TABLE stories (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
+    content TEXT,
+    translation TEXT,
     image_url TEXT,
     is_premium BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
