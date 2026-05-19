@@ -12,13 +12,13 @@ export function HubHome() {
       {/* ใช้ flex และ justify-center เพื่อให้อยู่ตรงกลางเสมอ */}
       <div className="flex flex-col md:flex-row flex-wrap justify-center items-stretch gap-6 w-full max-w-5xl mx-auto h-[60vh] min-h-[350px]">
         {/* กล่องที่ 1 ปรับความกว้างด้วย md:w-[เปอร์เซ็นต์ หรือ px] */}
-        <Link to="/admissim" className="w-full md:w-[25%] rounded-[0.8rem] flex items-end justify-center pb-10 transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+        <Link to="/admissim" className="w-full md:w-[25%] rounded-[1.5rem] flex items-end justify-center pb-10 transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
           <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>ADMiSSiM</span>
         </Link>
         {/* กล่องที่ 2 */}
         <div 
           onClick={() => navigate('/speedread')}
-          className="w-full md:w-[25%] rounded-[0.8rem] flex items-end justify-center pb-10 cursor-pointer transition-transform active:scale-95 border border-white/10" 
+          className="w-full md:w-[25%] rounded-[1.5rem] flex items-end justify-center pb-10 cursor-pointer transition-transform active:scale-95 border border-white/10" 
           style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}
         >
           <span className="text-xl font-black tracking-widest uppercase text-center leading-none transition-colors" style={{ color: themeVals.textMain }}>
@@ -27,12 +27,13 @@ export function HubHome() {
         </div>
         {/* กล่องที่ 3 (รวม 2 กล่องย่อยแนวตั้ง) */}
         <div className="w-full md:w-[25%] flex flex-col gap-6">
-          <Link to="/vocab" className="flex-1 rounded-[0.8rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/vocab" className="flex-1 rounded-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>FLASHCARDS</span>
           </Link>
-          <Link to="/storydiary" className="flex-1 rounded-[0.8rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/storydiary" className="flex-1 rounded-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>STORY DiARY</span>
           </Link>
+          
           
           
         </div>
@@ -51,40 +52,42 @@ export function HubFlashcards() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-2">
+    <div className="flex flex-col items-center gap-6 animate-in fade-in duration-300 w-full pt-0">
       <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: themeVals.textMain }}>FLASHCARD DECKS</h1>
       
-      <div className="flex flex-col md:flex-row justify-center items-stretch gap-6 w-full max-w-5xl mx-auto px-4">
+      <div className="flex flex-col md:flex-row justify-center items-stretch gap-5 max-w-5xl mx-auto px-4">
         
         {/* คอลัมน์ที่ 1 (ซ้าย) */}
-        <div className="flex flex-col gap-6 w-full md:flex-1">
-          <div onClick={() => goToDeck('SCIENCE, HEALTH & NATURE')} className="w-full h-[200px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+        <div className="flex flex-col gap-6 w-full md:flex-0">
+          <div onClick={() => goToDeck('SCIENCE, HEALTH & NATURE')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>SCIENCE, HEALTH & NATURE</span>
           </div>
-          <div onClick={() => goToDeck('BUSINESS & TECHNOLOGY')} className="w-full h-[240px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <div onClick={() => goToDeck('BUSINESS & TECHNOLOGY')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>BUSINESS & TECHNOLOGY</span>
           </div>
         </div>
 
         {/* คอลัมน์ที่ 2 (กลาง) */}
-        <div className="flex flex-col gap-6 w-full md:flex-1">
-          <div onClick={() => goToDeck('MY FAVORITE')} className="w-full h-[260px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+        <div className="flex flex-col gap-6 w-full md:flex-0">
+          <div onClick={() => goToDeck('MY FAVORITE')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>MY FAVORITE</span>
           </div>
-          <div onClick={() => goToDeck('SOCIETY & CULTURE')} className="w-full h-[180px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <div onClick={() => goToDeck('SOCIETY & CULTURE')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>SOCIETY & CULTURE</span>
           </div>
         </div>
 
         {/* คอลัมน์ที่ 3 (ขวา) */}
-        <div className="flex flex-col gap-6 w-full md:flex-1">
-          <div onClick={() => goToDeck('ACADEMIC & CAREER')} className="w-full h-[200px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+        <div className="flex flex-col gap-6 w-full md:flex-2">
+          <div onClick={() => goToDeck('ACADEMIC & CAREER')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>ACADEMIC & CAREER</span>
           </div>
-          <div onClick={() => goToDeck('LIFESTYLE & MEDIA')} className="w-full h-[240px] rounded-[0.8rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <div onClick={() => goToDeck('LIFESTYLE & MEDIA')} className="w-[200px] h-[250px] rounded-[1.9rem] flex items-center justify-center p-6 text-center cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-lg font-black uppercase leading-tight" style={{ color: themeVals.textMain }}>LIFESTYLE & MEDIA</span>
           </div>
         </div>
+
+        
 
       </div>
     </div>
