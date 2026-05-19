@@ -246,7 +246,16 @@ export default function StoryReader() {
       
       {/* Global Back Button */}
       <div className="fixed z-[1000]" style={{ top: '100px', left: '80px' }}>
-        <button onClick={() => navigate('/storydiary')} className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 border border-black/10 bg-white/50 backdrop-blur-md shadow-sm hover:bg-white" style={{ color: textMain }}>
+        <button 
+          onClick={async () => {
+            if (pendingSyncRef.current) {
+              await syncToCloud();
+            }
+            navigate('/storydiary', { state: { toggledStoryId: storyId, toggledStatus: isFav } });
+          }} 
+          className="w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-95 border border-black/10 bg-white/50 backdrop-blur-md shadow-sm hover:bg-white" 
+          style={{ color: textMain }}
+        >
           <ChevronLeft size={22} />
         </button>
       </div>

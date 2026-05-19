@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext, Link } from 'react-router-dom';
+import { useOutletContext, Link, useLocation } from 'react-router-dom';
 import { BookOpen, Lock, ChevronRight, Loader2, Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -11,6 +11,19 @@ export default function StoryLobby() {
   const [activeTab, setActiveTab] = useState('ALL');
   const [favoriteIds, setFavoriteIds] = useState([]);
 
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.toggledStoryId) {
+      const { toggledStoryId, toggledStatus } = location.state;
+      setFavoriteIds(prev => {
+        if (toggledStatus && !prev.includes(toggledStoryId)) return [...prev, toggledStoryId];
+        if (!toggledStatus) return prev.filter(id => id !== toggledStoryId);
+        return prev;
+      });
+    }
+  }, [location.state]);
+
   useEffect(() => {
     if (user?.id) {
       fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
@@ -18,11 +31,21 @@ export default function StoryLobby() {
         .then(data => {
           if (data.status === 'success' && data.data?.favorites) {
             const favs = JSON.parse(data.data.favorites);
-            setFavoriteIds(favs.stories || []);
+            let storiesList = favs.stories || [];
+            
+            if (location.state?.toggledStoryId) {
+              const { toggledStoryId, toggledStatus } = location.state;
+              if (toggledStatus && !storiesList.includes(toggledStoryId)) {
+                storiesList.push(toggledStoryId);
+              } else if (!toggledStatus) {
+                storiesList = storiesList.filter(id => id !== toggledStoryId);
+              }
+            }
+            setFavoriteIds(storiesList);
           }
         }).catch(console.error);
     }
-  }, [user?.id]);
+  }, [user?.id, location.state]);
 
   const { data: stories = [], isLoading: loading, isError: error } = useQuery({
     queryKey: ['storiesList'],
