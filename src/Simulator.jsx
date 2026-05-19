@@ -86,9 +86,8 @@ export default function App() {
   
   const [currentUser, setCurrentUser] = useState(null);
 
-  // ตรวจสอบสถานะการล็อกอินด้วย HttpOnly Cookie เมื่อเปิดหน้า Simulator
   useEffect(() => {
-    fetch('/api/auth/check')
+    fetch('/api/auth/check', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success' && data.user) {
@@ -99,15 +98,14 @@ export default function App() {
   }, []);
 
   const handleLoginSuccess = (user) => {
-    setCurrentUser(user); // เลิกใช้ localStorage
+    setCurrentUser(user);
   };
 
   const handleLogout = async () => {
-    setCurrentUser(null); // เลิกใช้ localStorage
+    setCurrentUser(null);
     setReflectionHistory([]);
-    // สั่งให้หลังบ้านทำลายคุกกี้ทิ้ง
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {
       console.error("Logout error:", e);
     }
@@ -115,7 +113,7 @@ export default function App() {
 
   const handleRefreshUser = async () => {
     try {
-      const res = await fetch('/api/auth/check');
+      const res = await fetch('/api/auth/check', { credentials: 'include' });
       const data = await res.json();
       if (data.status === 'success') {
         setCurrentUser(data.user);
@@ -411,6 +409,7 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         user={currentUser}
         themeVals={themeVals}
+        onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)}
         onRefreshUser={handleRefreshUser}
       />
 

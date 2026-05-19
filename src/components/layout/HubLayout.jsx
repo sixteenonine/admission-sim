@@ -26,7 +26,7 @@ export default function HubLayout() {
 
   // 1. ตรวจสอบสถานะการล็อกอินด้วย HttpOnly Cookie เมื่อเปิดหน้าเว็บ
   useEffect(() => {
-    fetch('/api/auth/check')
+    fetch('/api/auth/check', { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success' && data.user) {
@@ -42,7 +42,7 @@ export default function HubLayout() {
     setIsLogoutModalOpen(false);
     // 2. สั่งให้หลังบ้านทำลายคุกกี้ทิ้ง
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {
       console.error("Logout error:", e);
     }
@@ -51,7 +51,7 @@ export default function HubLayout() {
   const handleRefreshUser = async () => {
     // 3. ใช้ endpoint auth/check ดึงข้อมูลโปรไฟล์ล่าสุดแทน
     try {
-      const res = await fetch('/api/auth/check');
+      const res = await fetch('/api/auth/check', { credentials: 'include' });
       const data = await res.json();
       if (data.status === 'success') {
         setCurrentUser(data.user);
