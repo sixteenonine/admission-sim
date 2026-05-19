@@ -1,31 +1,27 @@
 export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
-    
-    // ดึง userId จากด่านตรวจ แทนที่จะอ่านจาก URL
     const userId = context.data?.user?.userId;
 
     if (!userId) {
       return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
-        status: 401, headers: { "Content-Type": "application/json" } 
+        status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
       });
     }
 
-    // ดึงประวัติทั้งหมดของ User คนนี้ เรียงจากใหม่ไปเก่า
     const { results } = await db.prepare(
       "SELECT reflection_data FROM exam_history WHERE user_id = ? ORDER BY created_at DESC"
     ).bind(userId).all();
     
-    // แปลง JSON string กลับเป็น Object เพื่อส่งให้ฝั่งหน้าเว็บนำไปแสดงผล
     const historyData = results.map(row => JSON.parse(row.reflection_data));
 
     return new Response(JSON.stringify({ status: "success", data: historyData }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
 
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { 
-      status: 500, headers: { "Content-Type": "application/json" } 
+      status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
     });
   }
 }
@@ -33,25 +29,21 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    // เลิกรับ userId จากหน้าบ้าน
     const { mode, score, reflectionData } = await context.request.json();
-    
-    // ดึง userId จากด่านตรวจ
     const userId = context.data?.user?.userId;
 
     if (!userId) {
       return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
-        status: 401, headers: { "Content-Type": "application/json" } 
+        status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
       });
     }
 
     if (!reflectionData) {
       return new Response(JSON.stringify({ status: "error", message: "ข้อมูลไม่ครบถ้วน" }), { 
-        status: 400, headers: { "Content-Type": "application/json" } 
+        status: 400, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
       });
     }
 
-    // ใช้ ID เดิมจากก้อนข้อมูล หรือสร้างใหม่ถ้าไม่มี
     const historyId = reflectionData.id || crypto.randomUUID();
 
     await db.prepare(
@@ -59,12 +51,12 @@ export async function onRequestPost(context) {
     ).bind(historyId, userId, mode || "full", score || 0, JSON.stringify(reflectionData)).run();
 
     return new Response(JSON.stringify({ status: "success", message: "บันทึกประวัติสำเร็จ" }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
 
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { 
-      status: 500, headers: { "Content-Type": "application/json" } 
+      status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
     });
   }
 }

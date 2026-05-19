@@ -12,6 +12,25 @@ CREATE TABLE users (
     plan_expire_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+PRAGMA defer_foreign_keys = TRUE;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS exam_history;
+DROP TABLE IF EXISTS user_sync_data;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    avatar_id INTEGER DEFAULT 1,
+    avatar_url TEXT,
+    plan_tier TEXT DEFAULT 'common',
+    plan_expire_at DATETIME,
+    generation TEXT,
+    target_uni TEXT,
+    target_fac TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE exam_history (
     id TEXT PRIMARY KEY,

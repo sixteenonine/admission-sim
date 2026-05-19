@@ -1,25 +1,24 @@
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    // ดึงเฉพาะข้อมูลโปรไฟล์จากหน้าบ้าน
     const { generation, targetUni, targetFac, avatarId } = await context.request.json();
-    
-    // ดึง userId จากด่านตรวจความปลอดภัย (Middleware)
     const userId = context.data?.user?.userId;
 
     if (!userId) {
-      return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
+      return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
+        status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
+      });
     }
 
     const query = `UPDATE users SET generation = ?, target_uni = ?, target_fac = ?, avatar_id = ? WHERE id = ?`;
     await db.prepare(query).bind(generation, targetUni, targetFac, avatarId, userId).run();
 
     return new Response(JSON.stringify({ status: "success", message: "อัปเดตข้อมูลสำเร็จ" }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { 
-      status: 500, headers: { "Content-Type": "application/json" } 
+      status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
     });
   }
 }
