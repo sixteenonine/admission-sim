@@ -1,10 +1,14 @@
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    const { userId, generation, targetUni, targetFac, avatarId } = await context.request.json();
+    // ดึงเฉพาะข้อมูลโปรไฟล์จากหน้าบ้าน
+    const { generation, targetUni, targetFac, avatarId } = await context.request.json();
+    
+    // ดึง userId จากด่านตรวจความปลอดภัย (Middleware)
+    const userId = context.data?.user?.userId;
 
     if (!userId) {
-      return new Response(JSON.stringify({ status: "error", message: "User ID is required" }), { status: 400 });
+      return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
     }
 
     const query = `UPDATE users SET generation = ?, target_uni = ?, target_fac = ?, avatar_id = ? WHERE id = ?`;

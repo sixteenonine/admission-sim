@@ -1,12 +1,13 @@
 export async function onRequestGet(context) {
   try {
     const db = context.env.DB;
-    const url = new URL(context.request.url);
-    const userId = url.searchParams.get("userId");
+    
+    // ดึง userId จากด่านตรวจ แทนที่จะอ่านจาก URL
+    const userId = context.data?.user?.userId;
 
     if (!userId) {
-      return new Response(JSON.stringify({ status: "error", message: "Missing userId" }), { 
-        status: 400, headers: { "Content-Type": "application/json" } 
+      return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
+        status: 401, headers: { "Content-Type": "application/json" } 
       });
     }
 
@@ -32,9 +33,19 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    const { userId, mode, score, reflectionData } = await context.request.json();
+    // เลิกรับ userId จากหน้าบ้าน
+    const { mode, score, reflectionData } = await context.request.json();
+    
+    // ดึง userId จากด่านตรวจ
+    const userId = context.data?.user?.userId;
 
-    if (!userId || !reflectionData) {
+    if (!userId) {
+      return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
+        status: 401, headers: { "Content-Type": "application/json" } 
+      });
+    }
+
+    if (!reflectionData) {
       return new Response(JSON.stringify({ status: "error", message: "ข้อมูลไม่ครบถ้วน" }), { 
         status: 400, headers: { "Content-Type": "application/json" } 
       });
