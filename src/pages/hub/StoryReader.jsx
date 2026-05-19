@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Volume2, Star, Languages, Layers, ZoomIn, ZoomOut, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 export default function StoryReader() {
   const contextVals = useOutletContext();
-  const { bg, textMain } = contextVals;
+  const { bg, textMain, currentUser: user } = contextVals;
   
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -41,6 +41,84 @@ export default function StoryReader() {
 
   const [baseScale, setBaseScale] = useState(1);
   const [isLandscapeMode, setIsLandscapeMode] = useState(true);
+
+  const syncTimeoutRef = useRef(null);
+  const pendingSyncRef = useRef(false);
+  const actionQueueRef = useRef([]);
+
+  useEffect(() => {
+    if (user?.id && storyId) {
+      fetch(`/api/user/sync?userId=${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && data.data?.favorites) {
+            const favs = JSON.parse(data.data.favorites);
+            if (favs.stories?.includes(storyId)) setIsFav(true);
+          }
+        }).catch(console.error);
+    }
+  }, [user?.id, storyId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && pendingSyncRef.current && user?.id) {
+        syncToCloud(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.id]);
+
+  const syncToCloud = async (isEmergency = false) => {
+    if (!user?.id || actionQueueRef.current.length === 0) return;
+    pendingSyncRef.current = false;
+    
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+
+    const pendingActions = [...actionQueueRef.current];
+    actionQueueRef.current = [];
+    const payload = { userId: user.id, syncActions: pendingActions };
+
+    if (isEmergency) {
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      navigator.sendBeacon('/api/user/sync', blob);
+    } else {
+      try {
+        const response = await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error('Network error');
+      } catch (err) {
+        console.error('Sync failed:', err);
+        actionQueueRef.current = [...pendingActions, ...actionQueueRef.current];
+        pendingSyncRef.current = true;
+      }
+    }
+  };
+
+  const toggleStar = () => {
+    const newStatus = !isFav;
+    setIsFav(newStatus);
+    
+    actionQueueRef.current.push({
+      type: 'star_story',
+      storyId: storyId,
+      isStarred: newStatus,
+      timestamp: Date.now()
+    });
+
+    pendingSyncRef.current = true;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    
+    syncTimeoutRef.current = setTimeout(() => {
+      syncToCloud();
+    }, 3000);
+  };
 
   useEffect(() => {
     let timeoutId;
@@ -232,7 +310,7 @@ export default function StoryReader() {
                           <h2 className="font-solway font-extrabold text-[2.2rem] text-[#1d1d1f] m-0" style={{ lineHeight: '0.5', letterSpacing: '-0.5px', transform: 'translate(0px, 5px)' }}>{story?.title}</h2>
                           <div className="flex gap-[10px]" style={{ transform: 'translate(34px, 0px) scale(1)', transformOrigin: 'right center' }}>
                               <button onClick={handleReadAloud} className="w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center text-[#8E8E93] transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:text-[#007AFF]"><Volume2 size={20} /></button>
-                              <button onClick={() => setIsFav(!isFav)} className={`w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}><Star size={20} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} /></button>
+                              <button onClick={toggleStar} className={`w-[38px] h-[38px] rounded-full bg-[#FFFFFF] border border-[rgba(0,0,0,0.08)] flex justify-center items-center transition-all active:scale-90 shadow-[0_2px_8px_rgba(0,0,0,0.04)] ${isFav ? 'text-[#FFD700] border-[#FFD700]' : 'text-[#8E8E93] hover:text-[#FFD700]'}`}><Star size={20} fill={isFav ? '#FFD700' : 'none'} stroke={isFav ? '#FFD700' : 'currentColor'} /></button>
                           </div>
                       </div>
                       <div className="flex-1 overflow-y-auto pr-[15px] custom-scrollbar font-solway text-[1rem] leading-[1.4] text-[#1d1d1f] break-words">
@@ -276,7 +354,7 @@ export default function StoryReader() {
                <button onClick={handleReadAloud} className="w-[44px] h-[44px] rounded-full flex justify-center items-center text-white transition-all active:scale-90 hover:bg-white/10"><Volume2 size={22} /></button>
                <button onClick={handleOpenFlashcards} className="h-[44px] px-[20px] rounded-full bg-[#2C2C2E] text-white font-semibold text-[0.95rem] transition-all active:scale-95 flex items-center gap-2 border border-white/5">Flashcards</button>
                <button onClick={() => setShowThai(!showThai)} className={`w-[44px] h-[44px] rounded-full flex justify-center items-center transition-all active:scale-90 ${showThai ? 'text-[#FF8A00] bg-white/10' : 'text-white hover:bg-white/10'}`}><Languages size={22} /></button>
-               <button onClick={() => setIsFav(!isFav)} className={`w-[44px] h-[44px] rounded-full flex justify-center items-center transition-all active:scale-90 ${isFav ? 'text-[#FFD700]' : 'text-white hover:bg-white/10'}`}><Star size={22} fill={isFav ? 'currentColor' : 'none'} stroke={isFav ? 'currentColor' : 'currentColor'} /></button>
+               <button onClick={toggleStar} className={`w-[44px] h-[44px] rounded-full flex justify-center items-center transition-all active:scale-90 ${isFav ? 'text-[#FFD700]' : 'text-white hover:bg-white/10'}`}><Star size={22} fill={isFav ? 'currentColor' : 'none'} stroke={isFav ? 'currentColor' : 'currentColor'} /></button>
             </div>
         </div>
       )}

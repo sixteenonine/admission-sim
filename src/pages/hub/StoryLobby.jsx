@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext, Link } from 'react-router-dom';
-import { BookOpen, Lock, ChevronRight, Loader2 } from 'lucide-react';
+import { BookOpen, Lock, ChevronRight, Loader2, Star } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 export default function StoryLobby() {
   const contextVals = useOutletContext();
   const { currentUser: user, ...themeVals } = contextVals;
-  const { bg, textMain, shadowOuter, shadowPlateau, shadowDeepInset } = themeVals;
+  const { bg, textMain, shadowOuter } = themeVals;
+
+  const [activeTab, setActiveTab] = useState('ALL');
+  const [favoriteIds, setFavoriteIds] = useState([]);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && data.data?.favorites) {
+            const favs = JSON.parse(data.data.favorites);
+            setFavoriteIds(favs.stories || []);
+          }
+        }).catch(console.error);
+    }
+  }, [user?.id]);
 
   const { data: stories = [], isLoading: loading, isError: error } = useQuery({
     queryKey: ['storiesList'],
@@ -27,7 +43,23 @@ export default function StoryLobby() {
         <p className="text-sm opacity-60 font-medium" style={{ color: textMain }}>ฝึกอ่านเรื่องสั้นระดับพรีเมียมและสะสมคลังคำศัพท์ประจำวัน</p>
       </div>
 
-      {error && <div className="p-4 mb-8 text-[14px] text-red-500 bg-red-500/10 rounded-2xl border border-red-500/20 text-center font-bold">{error}</div>}
+      {/* แท็บตัวเลือกหมวดหมู่ */}
+      <div className="flex gap-3 mb-6 px-2">
+        <button 
+          onClick={() => setActiveTab('ALL')}
+          className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'ALL' ? 'bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+        >
+          <BookOpen size={16} /> ทั้งหมด
+        </button>
+        <button 
+          onClick={() => setActiveTab('FAVORITE')}
+          className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'FAVORITE' ? 'bg-[#FFD700] text-gray-900 shadow-[0_4px_12px_rgba(255,215,0,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+        >
+          <Star size={16} fill={activeTab === 'FAVORITE' ? "currentColor" : "none"} /> ที่ถูกใจ
+        </button>
+      </div>
+
+      {error && <div className="p-4 mb-8 text-[14px] text-red-500 bg-red-500/10 rounded-2xl border border-red-500/20 text-center font-bold">เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว</div>}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -36,14 +68,29 @@ export default function StoryLobby() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stories.length === 0 ? (
-            <div className="col-span-full text-center py-16 rounded-[2rem] border border-dashed border-gray-200" style={{ background: bg }}>
-              <BookOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
-              <p className="text-sm font-bold opacity-50" style={{ color: textMain }}>ยังไม่มีเรื่องสั้นในระบบขณะนี้</p>
-            </div>
-          ) : (
-            stories.map((story) => {
+          {(() => {
+            const displayStories = activeTab === 'FAVORITE' 
+              ? stories.filter(story => favoriteIds.includes(story.id))
+              : stories;
+
+            if (displayStories.length === 0) {
+              return (
+                <div className="col-span-full text-center py-16 rounded-[2rem] border border-dashed border-gray-200" style={{ background: bg }}>
+                  {activeTab === 'FAVORITE' ? (
+                    <Star size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
+                  ) : (
+                    <BookOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
+                  )}
+                  <p className="text-sm font-bold opacity-50" style={{ color: textMain }}>
+                    {activeTab === 'FAVORITE' ? 'คุณยังไม่ได้กดถูกใจเรื่องสั้นใดเลย' : 'ยังไม่มีเรื่องสั้นในระบบขณะนี้'}
+                  </p>
+                </div>
+              );
+            }
+
+            return displayStories.map((story) => {
               const isLocked = story.is_premium === 1 && user?.plan_tier !== 'pro' && user?.plan_tier !== 'premium';
+              const isFav = favoriteIds.includes(story.id);
               
               return (
                 <div 
@@ -61,7 +108,12 @@ export default function StoryLobby() {
                       </div>
                     )}
                     {story.is_premium === 1 && (
-                      <span className="absolute top-4 right-4 bg-purple-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full tracking-widest shadow-md">PREMIUM</span>
+                      <span className="absolute top-4 right-4 bg-purple-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full tracking-widest shadow-md z-10">PREMIUM</span>
+                    )}
+                    {isFav && (
+                       <span className="absolute top-4 left-4 bg-white/80 backdrop-blur-sm text-[#FFD700] p-1.5 rounded-full shadow-sm z-10">
+                          <Star size={16} fill="currentColor" />
+                       </span>
                     )}
                   </div>
 
@@ -94,8 +146,8 @@ export default function StoryLobby() {
                   </div>
                 </div>
               );
-            })
-          )}
+            });
+          })()}
         </div>
       )}
     </div>
