@@ -85,10 +85,6 @@ export default function App() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  
   const { currentUser, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
 
   const handleLogoutLocal = async () => {
