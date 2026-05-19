@@ -28,6 +28,13 @@ export default function HubLayout() {
     handleLogout();
     setIsLogoutModalOpen(false);
   };
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
+        <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
@@ -41,9 +48,7 @@ export default function HubLayout() {
       />
       
       <main className="max-w-6xl mx-auto px-6 pt-32 pb-12 relative z-10">
-        {!isAuthChecking && (
-          <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
-        )}
+        <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
       </main>
 
       <AuthModal 

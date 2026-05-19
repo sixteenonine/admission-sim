@@ -85,7 +85,7 @@ export default function App() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
-  const { currentUser, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
+  const { currentUser, isAuthChecking, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
 
   const handleLogoutLocal = async () => {
     setReflectionHistory([]);
@@ -351,6 +351,13 @@ export default function App() {
     setReflectionHistory(prev => prev.filter(s => s.id !== idToDelete));
     if (activeSessionId === idToDelete) setActiveSessionId(null);
   }, [activeSessionId]);
+  if (isAuthChecking) {
+    return (
+      <div className="fixed inset-0 w-full h-full flex items-center justify-center transition-colors duration-300" style={{ backgroundColor: themeVals.bg }}>
+        <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
