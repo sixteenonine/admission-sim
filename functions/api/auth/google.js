@@ -81,8 +81,8 @@ export async function onRequestPost(context) {
 
     // ตั้งค่า HttpOnly Cookie (ป้องกัน XSS) พร้อมระบบป้องกัน CSRF
     const isProd = new URL(context.request.url).protocol === 'https:';
-    const cookieString = `auth_token=${token}; HttpOnly; Path=/; Max-Age=${2 * 60 * 60}; SameSite=Strict${isProd ? '; Secure' : ''}`;
-
+    // ปรับ SameSite เป็น Lax เพื่อให้ Cookie ไม่หลุดเวลา Refresh
+    const cookieString = `auth_token=${token}; HttpOnly; Path=/; Max-Age=${2 * 60 * 60}; SameSite=Lax${isProd ? '; Secure' : ''}`;
     return new Response(JSON.stringify({ 
       status: "success", 
       user: { 
