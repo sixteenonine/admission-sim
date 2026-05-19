@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import AuthModal from '../../components/AuthModal';
 import ProfileModal from '../../components/ProfileModal';
 import { AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const themeVals = {
   bg: "#eef2f6",
@@ -17,56 +18,15 @@ const themeVals = {
 };
 
 export default function HubLayout() {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const { currentUser, isAuthChecking, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  // 1. ตรวจสอบสถานะการล็อกอินด้วย HttpOnly Cookie เมื่อเปิดหน้าเว็บ
-  useEffect(() => {
-    fetch('/api/auth/check', { 
-      credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success' && data.user) {
-          setCurrentUser(data.user);
-        }
-      })
-      .catch(console.error)
-      .finally(() => setIsAuthChecking(false));
-  }, []);
-
-  const handleLogout = async () => {
-    setCurrentUser(null);
+  const handleLogoutLocal = () => {
+    handleLogout();
     setIsLogoutModalOpen(false);
-    // 2. สั่งให้หลังบ้านทำลายคุกกี้ทิ้ง
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
-  };
-
-  const handleRefreshUser = async () => {
-    // 3. ใช้ endpoint auth/check ดึงข้อมูลโปรไฟล์ล่าสุดแทน
-    try {
-      const res = await fetch('/api/auth/check', { 
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setCurrentUser(data.user);
-        return true;
-      }
-    } catch (error) {
-      console.error("Refresh failed:", error);
-    }
-    return false;
   };
 
   return (
@@ -89,7 +49,7 @@ export default function HubLayout() {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
-        onLoginSuccess={(user) => setCurrentUser(user)} // เลิกใช้ localStorage
+        onLoginSuccess={handleLoginSuccess}
         themeVals={{ theme: { textMain: themeVals.textMain, textSub: themeVals.textSub }, bg: themeVals.bg, shadowOuter: themeVals.shadowOuter, shadowDeepInset: themeVals.shadowDeepInset, indentedGradient: themeVals.indentedGradient, raisedGradient: themeVals.raisedGradient }}
       />
 
@@ -98,7 +58,7 @@ export default function HubLayout() {
         onClose={() => setIsProfileModalOpen(false)} 
         user={currentUser}
         themeVals={{ theme: { textMain: themeVals.textMain, textSub: themeVals.textSub }, bg: themeVals.bg, shadowOuter: themeVals.shadowOuter, shadowDeepInset: themeVals.shadowDeepInset, indentedGradient: themeVals.indentedGradient, raisedGradient: themeVals.raisedGradient }}
-        onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)} // เลิกใช้ localStorage
+        onUpdateUser={handleLoginSuccess}
         onRefreshUser={handleRefreshUser}
       />
 
@@ -110,7 +70,7 @@ export default function HubLayout() {
             <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.textSub }}>หนูต้องการออกจากระบบใช่หรือไม่?</p>
             <div className="grid grid-cols-2 gap-4">
               <button onClick={() => setIsLogoutModalOpen(false)} className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest transition-all active:scale-95" style={{ background: themeVals.indentedGradient, color: themeVals.textMain, boxShadow: themeVals.shadowDeepInset }}>Cancel</button>
-              <button onClick={handleLogout} className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg" style={{ background: 'linear-gradient(145deg, #ef4444, #dc2626)' }}>Confirm</button>
+              <button onClick={handleLogoutLocal} className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg" style={{ background: 'linear-gradient(145deg, #ef4444, #dc2626)' }}>Confirm</button>
             </div>
           </div>
         </div>

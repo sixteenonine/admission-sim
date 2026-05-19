@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { UserCircle2, LogOut, Settings, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
+import { UserCircle2, LogOut, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -8,23 +9,27 @@ const AVATARS = [
   { id: 5, color: '#f97316' }, { id: 6, color: '#14b8a6' }
 ];
 
-export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, setIsProfileModalOpen, setIsLogoutModalOpen, isSimulator = false, simulatorProps = {} }) {
+export default function TopBar({ themeVals, setIsAuthModalOpen, setIsProfileModalOpen, setIsLogoutModalOpen, isSimulator = false, simulatorProps = {} }) {
   const location = useLocation();
+  const { currentUser } = useAuth();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
 
   const { isRunning, isTimerStarted, mode, MODES, handleModeSelect, isDarkMode, setIsDarkMode } = simulatorProps;
 
   return (
-    <>
-      <div className="fixed top-0 left-0 right-0 h-[80px] z-[80] pointer-events-none" style={{ backgroundColor: themeVals.bg }}></div>
+    <header className="fixed top-0 left-0 right-0 h-[100px] px-6 sm:px-8 flex items-start pt-6 justify-between z-[100] pointer-events-none">
+      <div className="absolute inset-0 h-[80px] z-[-1]" style={{ backgroundColor: themeVals.bg }}></div>
       
-      <Link to="/home" className="fixed top-8 left-8 z-[100] text-xl font-bold tracking-[0.2em] hidden sm:block pointer-events-auto transition-transform active:scale-95" style={{ color: themeVals.textMain }}>
-        ADMiSSIM
-      </Link>
+      {/* ส่วนซ้าย: โลโก้ */}
+      <div className="w-1/3 flex justify-start pointer-events-auto items-center mt-2">
+        <Link to="/home" className="text-xl font-bold tracking-[0.2em] hidden sm:block transition-transform active:scale-95" style={{ color: themeVals.textMain }}>
+          ADMiSSIM
+        </Link>
+      </div>
 
-      {/* ตรงกลาง: สวิตช์โหมด */}
-      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-4">
+      {/* ส่วนกลาง: สวิตช์โหมด หรือ เมนูนำทาง */}
+      <div className="w-1/3 flex justify-center pointer-events-auto">
         {isSimulator ? (
           <div className="flex gap-3 sm:gap-4 items-center">
             <button 
@@ -79,8 +84,8 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
         )}
       </div>
 
-      {/* มุมขวาบน: โปรไฟล์/ล็อกอิน (อิงจากโค้ด App.jsx ต้นฉบับเป๊ะๆ) */}
-      <div className="fixed top-6 right-6 z-[100] flex items-center gap-3">
+      {/* ส่วนขวา: โปรไฟล์ */}
+      <div className="w-1/3 flex justify-end pointer-events-auto">
         {currentUser ? (
           <div className="relative">
             {isProfileDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)}></div>}
@@ -93,7 +98,7 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
                 boxShadow: themeVals.shadowOuter 
               }}
             >
-               {currentUser?.avatar_url ? (
+              {currentUser?.avatar_url ? (
                 <img src={currentUser.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <UserCircle2 size={26} color="#ffffff" className="opacity-80" />
@@ -140,6 +145,6 @@ export default function TopBar({ themeVals, currentUser, setIsAuthModalOpen, set
           </button>
         )}
       </div>
-    </>
+    </header>
   );
 }

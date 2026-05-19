@@ -4,6 +4,7 @@ import AuthModal from './components/AuthModal';
 import ProfileModal from './components/ProfileModal';
 import useExamAudio from './hooks/useExamAudio';
 import TopBar from './components/layout/TopBar.jsx';
+import { useAuth } from './contexts/AuthContext.jsx';
 
 import { AVATARS, MODES, RECOMMENDED_SEQUENCE, EXAM_PARTS, FLAT_EXAM_SUBS, TECHNIQUE_GUIDES, PACING_RULES, UI_CFG } from './utils/constants';
 import { calculateScores, calculateWinner, rgbToHex, getTipColor, getDifficultyColor, buildExamTimeline, calculateProgressState, generateReflectionPoints } from './utils/helpers';
@@ -84,51 +85,15 @@ export default function App() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
-  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  
+  const { currentUser, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
 
-  useEffect(() => {
-    fetch('/api/auth/check', { 
-      credentials: 'include',
-      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.status === 'success' && data.user) {
-          setCurrentUser(data.user);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  const handleLoginSuccess = (user) => {
-    setCurrentUser(user);
-  };
-
-  const handleLogout = async () => {
-    setCurrentUser(null);
+  const handleLogoutLocal = async () => {
     setReflectionHistory([]);
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
-  };
-
-  const handleRefreshUser = async () => {
-    try {
-      const res = await fetch('/api/auth/check', { 
-        credentials: 'include',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
-        setCurrentUser(data.user);
-        return true;
-      }
-    } catch (error) {
-      console.error("Refresh failed:", error);
-    }
-    return false;
+    await handleLogout();
   };
 
   useEffect(() => {
@@ -415,7 +380,7 @@ export default function App() {
         onClose={() => setIsProfileModalOpen(false)}
         user={currentUser}
         themeVals={themeVals}
-        onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)}
+        onUpdateUser={handleLoginSuccess}
         onRefreshUser={handleRefreshUser}
       />
 
@@ -606,7 +571,7 @@ export default function App() {
                 Cancel
               </button>
               <button 
-                onClick={() => { handleLogout(); setIsLogoutModalOpen(false); }}
+                onClick={() => { handleLogoutLocal(); setIsLogoutModalOpen(false); }}
                 className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest text-white transition-all active:scale-95 shadow-lg"
                 style={{ background: 'linear-gradient(145deg, #ef4444, #dc2626)' }}
               >
