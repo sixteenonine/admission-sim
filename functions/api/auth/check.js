@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
     
     if (!userPayload || !userPayload.userId) {
       return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { 
-        status: 401, headers: { "Content-Type": "application/json" } 
+        status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
       });
     }
 
@@ -20,7 +20,7 @@ export async function onRequestGet(context) {
     if (!user) {
       // กรณีบัญชีถูกลบออกจากฐานข้อมูลไปแล้ว แต่ Token ยังไม่หมดอายุ
       return new Response(JSON.stringify({ status: "error", message: "User not found" }), { 
-        status: 404, headers: { "Content-Type": "application/json" } 
+        status: 404, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
       });
     }
 
@@ -41,12 +41,12 @@ export async function onRequestGet(context) {
         created_at: user.created_at
       }
     }), { 
-      headers: { "Content-Type": "application/json" } 
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
 
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { 
-      status: 500, headers: { "Content-Type": "application/json" } 
+      status: 500, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
   }
 }

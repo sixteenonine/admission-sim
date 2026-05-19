@@ -87,7 +87,10 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    fetch('/api/auth/check', { credentials: 'include' })
+    fetch('/api/auth/check', { 
+      credentials: 'include',
+      headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+    })
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success' && data.user) {
@@ -113,7 +116,10 @@ export default function App() {
 
   const handleRefreshUser = async () => {
     try {
-      const res = await fetch('/api/auth/check', { credentials: 'include' });
+      const res = await fetch('/api/auth/check', { 
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+      });
       const data = await res.json();
       if (data.status === 'success') {
         setCurrentUser(data.user);

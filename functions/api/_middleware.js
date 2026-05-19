@@ -68,7 +68,7 @@ export async function onRequest(context) {
 
     if (!token) {
       return new Response(JSON.stringify({ status: "error", message: "Unauthorized: ไม่พบข้อมูลการเข้าสู่ระบบ" }), { 
-        status: 401, headers: { "Content-Type": "application/json" } 
+      status: 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
       });
     }
 
@@ -82,7 +82,7 @@ export async function onRequest(context) {
     return context.next();
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: `Forbidden: ${error.message}` }), { 
-      status: 403, headers: { "Content-Type": "application/json" } 
+      status: 403, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
   }
 }
