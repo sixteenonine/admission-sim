@@ -1,3 +1,32 @@
+// ฟังก์ชันช่วยเข้ารหัส Base64URL
+function base64UrlEncode(arrayBuffer) {
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// ฟังก์ชันสร้าง JWT ด้วย Web Crypto API
+async function createJWT(payload, secret) {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const encoder = new TextEncoder();
+  
+  const headerB64 = base64UrlEncode(encoder.encode(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(encoder.encode(JSON.stringify(payload)));
+  const dataToSign = `${headerB64}.${payloadB64}`;
+
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(dataToSign));
+  const signatureB64 = base64UrlEncode(signature);
+
+  return `${dataToSign}.${signatureB64}`;
+}
+
 export async function onRequestPost(context) {
   try {
     if (!context.env.DB) {
@@ -5,20 +34,23 @@ export async function onRequestPost(context) {
     }
     
     const db = context.env.DB;
+    // ดึง Secret Key สำหรับสร้าง JWT
+    const secretKey = context.env.JWT_SECRET || "bearwithyou-local-secret-key-2026";
     const userInfo = await context.request.json();
 
+    // ⚠️ ช่องโหว่สำคัญ: ตอนนี้ระบบรับ JSON จากหน้าบ้านโดยตรง (ใครก็ยิง API ปลอมอีเมลเข้ามาได้)
+    // การอุดรอยรั่วขั้นต่อไป: ต้องรับเป็น Google ID Token (credential) แล้วเอามายืนยันผ่าน API ของ Google ก่อน
     if (!userInfo || !userInfo.email) {
       throw new Error("ไม่พบข้อมูล Email จาก Google");
     }
 
     let user = await db.prepare("SELECT * FROM users WHERE email = ?").bind(userInfo.email).first();
-    const avatarUrl = userInfo.picture || null; // ดึงรูปล่าสุดจาก Google
+    const avatarUrl = userInfo.picture || null;
 
     if (!user) {
       const newId = crypto.randomUUID();
       const displayName = userInfo.name || userInfo.email.split('@')[0];
       
-      // บันทึก user ใหม่พร้อม avatar_url
       await db.prepare(
         "INSERT INTO users (id, email, display_name, avatar_id, plan_tier, avatar_url) VALUES (?, ?, ?, ?, ?, ?)"
       ).bind(newId, userInfo.email, displayName, 1, 'common', avatarUrl).run();
@@ -28,12 +60,28 @@ export async function onRequestPost(context) {
         avatar_id: 1, plan_tier: 'common', avatar_url: avatarUrl 
       };
     } else {
-      // ถ้ามี user อยู่แล้ว อัปเดตรูปโปรไฟล์ให้เป็นรูปล่าสุด
       if (avatarUrl && user.avatar_url !== avatarUrl) {
         await db.prepare("UPDATE users SET avatar_url = ? WHERE id = ?").bind(avatarUrl, user.id).run();
         user.avatar_url = avatarUrl;
       }
     }
+
+    // สร้าง Payload สำหรับ JWT (อายุ 2 ชั่วโมง)
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = iat + (2 * 60 * 60); 
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.plan_tier || 'common',
+      iat,
+      exp
+    };
+
+    const token = await createJWT(payload, secretKey);
+
+    // ตั้งค่า HttpOnly Cookie (ป้องกัน XSS) พร้อมระบบป้องกัน CSRF
+    const isProd = new URL(context.request.url).protocol === 'https:';
+    const cookieString = `auth_token=${token}; HttpOnly; Path=/; Max-Age=${2 * 60 * 60}; SameSite=Strict${isProd ? '; Secure' : ''}`;
 
     return new Response(JSON.stringify({ 
       status: "success", 
@@ -42,7 +90,7 @@ export async function onRequestPost(context) {
         email: user.email, 
         displayName: user.display_name, 
         avatar_id: user.avatar_id,
-        avatar_url: user.avatar_url, // ส่ง url รูปกลับไปที่หน้าบ้าน
+        avatar_url: user.avatar_url,
         plan_tier: user.plan_tier,
         plan_expire_at: user.plan_expire_at,
         generation: user.generation,
@@ -50,7 +98,12 @@ export async function onRequestPost(context) {
         target_fac: user.target_fac,
         created_at: user.created_at
       } 
-    }), { headers: { "Content-Type": "application/json" } });
+    }), { 
+      headers: { 
+        "Content-Type": "application/json",
+        "Set-Cookie": cookieString
+      } 
+    });
 
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message || "Unknown Error" }), { 

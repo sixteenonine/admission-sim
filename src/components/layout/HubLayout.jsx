@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import AuthModal from '../../components/AuthModal';
@@ -17,32 +17,44 @@ const themeVals = {
 };
 
 export default function HubLayout() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('sim_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
+  
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const handleLogout = () => {
+  // 1. ตรวจสอบสถานะการล็อกอินด้วย HttpOnly Cookie เมื่อเปิดหน้าเว็บ
+  useEffect(() => {
+    fetch('/api/auth/check')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && data.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsAuthChecking(false));
+  }, []);
+
+  const handleLogout = async () => {
     setCurrentUser(null);
-    localStorage.removeItem('sim_user');
     setIsLogoutModalOpen(false);
+    // 2. สั่งให้หลังบ้านทำลายคุกกี้ทิ้ง
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
   };
 
   const handleRefreshUser = async () => {
-    if (!currentUser?.id) return;
+    // 3. ใช้ endpoint auth/check ดึงข้อมูลโปรไฟล์ล่าสุดแทน
     try {
-      const res = await fetch('/api/user/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: currentUser.id })
-      });
+      const res = await fetch('/api/auth/check');
       const data = await res.json();
       if (data.status === 'success') {
         setCurrentUser(data.user);
-        localStorage.setItem('sim_user', JSON.stringify(data.user)); // อัปเดต Cache ใหม่
         return true;
       }
     } catch (error) {
@@ -63,17 +75,15 @@ export default function HubLayout() {
       />
       
       <main className="max-w-6xl mx-auto px-6 pt-32 pb-12 relative z-10">
-        <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
+        {!isAuthChecking && (
+          <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
+        )}
       </main>
 
-      {/* ระบบ Authentication แบบเดียวกับหน้าจับเวลา */}
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          localStorage.setItem('sim_user', JSON.stringify(user));
-        }}
+        onLoginSuccess={(user) => setCurrentUser(user)} // เลิกใช้ localStorage
         themeVals={{ theme: { textMain: themeVals.textMain, textSub: themeVals.textSub }, bg: themeVals.bg, shadowOuter: themeVals.shadowOuter, shadowDeepInset: themeVals.shadowDeepInset, indentedGradient: themeVals.indentedGradient, raisedGradient: themeVals.raisedGradient }}
       />
 
@@ -82,10 +92,7 @@ export default function HubLayout() {
         onClose={() => setIsProfileModalOpen(false)} 
         user={currentUser}
         themeVals={{ theme: { textMain: themeVals.textMain, textSub: themeVals.textSub }, bg: themeVals.bg, shadowOuter: themeVals.shadowOuter, shadowDeepInset: themeVals.shadowDeepInset, indentedGradient: themeVals.indentedGradient, raisedGradient: themeVals.raisedGradient }}
-        onUpdateUser={(updatedUser) => {
-          setCurrentUser(updatedUser);
-          localStorage.setItem('sim_user', JSON.stringify(updatedUser));
-        }}
+        onUpdateUser={(updatedUser) => setCurrentUser(updatedUser)} // เลิกใช้ localStorage
         onRefreshUser={handleRefreshUser}
       />
 

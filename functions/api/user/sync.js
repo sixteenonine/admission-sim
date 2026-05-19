@@ -1,8 +1,8 @@
 export async function onRequestGet(context) {
   try {
-    const url = new URL(context.request.url);
-    const userId = url.searchParams.get('userId');
-    if (!userId) return new Response(JSON.stringify({ status: "error", message: "Missing userId" }), { status: 400 });
+    // ดึง userId จาก Middleware ที่ผ่านการตรวจสอบ JWT แล้ว (ปลอดภัย 100%)
+    const userId = context.data?.user?.userId;
+    if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
     const data = await db.prepare("SELECT * FROM user_sync_data WHERE user_id = ?").bind(userId).first();
@@ -16,8 +16,11 @@ export async function onRequestGet(context) {
 export async function onRequestPost(context) {
   try {
     const payload = await context.request.json();
-    const { userId, favorites, custom_decks, custom_speedreads, syncActions } = payload;
-    if (!userId) return new Response(JSON.stringify({ status: "error", message: "Missing userId" }), { status: 400 });
+    const { favorites, custom_decks, custom_speedreads, syncActions } = payload;
+    
+    // ดึง userId จาก Middleware แทนการรับจากหน้าบ้านป้องกันการสวมรอย (IDOR)
+    const userId = context.data?.user?.userId;
+    if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
     let finalFavoritesJson = null;
