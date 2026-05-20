@@ -9,7 +9,7 @@ export async function onRequestPost(context) {
     }
 
     // ดึงเฉพาะ Metadata ความปลอดภัยจาก D1
-    const storyMeta = await db.prepare("SELECT id, title, image_url, is_premium FROM stories WHERE id = ?").bind(storyId).first();
+    const storyMeta = await db.prepare("SELECT id, title, type, image_url, is_premium FROM stories WHERE id = ?").bind(storyId).first();
     if (!storyMeta) {
       return new Response(JSON.stringify({ status: "error", message: "ไม่พบเรื่องสั้นที่ต้องการ" }), { status: 404 });
     }

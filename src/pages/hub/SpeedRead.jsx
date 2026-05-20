@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Play, Pause, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
+import { ChevronLeft, Play, Pause, RotateCcw, SkipBack, SkipForward, Loader2 } from 'lucide-react';
 
 export default function SpeedRead() {
   const themeVals = useOutletContext();
@@ -8,13 +8,35 @@ export default function SpeedRead() {
   const location = useLocation();
   const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
 
+  const { id, title, content: initialContent, isSystem } = location.state || {};
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [wpm, setWpm] = useState(300);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [text, setText] = useState(initialContent || "");
+  const [loading, setLoading] = useState(isSystem && !initialContent);
   const timerRef = useRef(null);
 
-  const text = "Speed reading is a process of rapidly recognizing and absorbing phrases or sentences on a page all at once, rather than identifying individual words.";
-  const words = text.split(/\s+/);
+  useEffect(() => {
+    if (isSystem && !initialContent && id) {
+      setLoading(true);
+      fetch('/api/stories/get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId: id })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && data.story) {
+            setText(data.story.content || "");
+          }
+        })
+        .catch(err => console.error("โหลดเนื้อหาล้มเหลว", err))
+        .finally(() => setLoading(false));
+    }
+  }, [id, isSystem, initialContent]);
+
+  const words = text ? text.split(/\s+/) : [];
 
   // ฟังก์ชันหาตำแหน่ง Focus Letter แบบใน Index.txt
   const getFocusIndex = (word) => {
@@ -40,6 +62,14 @@ export default function SpeedRead() {
 
   const currentWord = words[currentIndex] || "";
   const focusIdx = getFocusIndex(currentWord);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full max-w-[500px] mx-auto min-h-screen px-4" style={{ color: themeVals.textMain }}>
+        <Loader2 className="animate-spin mb-2" size={32} />
+        <span className="text-sm font-bold opacity-70">กำลังโหลดเนื้อหา...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center w-full max-w-[500px] mx-auto min-h-screen px-4 overflow-hidden">
