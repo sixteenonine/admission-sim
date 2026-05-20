@@ -1,8 +1,8 @@
 export async function onRequestPost(context) {
   try {
-    const { chunk } = await context.request.json();
+    const payload = await context.request.json();
+    const { chunk, batchId } = payload;
     if (!chunk || !Array.isArray(chunk)) return new Response(JSON.stringify({ status: "error", message: "ข้อมูลไม่ถูกต้อง" }), { status: 400 });
-    const { batchId } = await context.request.json();
 
     const db = context.env.DB;
     
