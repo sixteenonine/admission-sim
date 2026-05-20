@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, AlertCircle, CheckCircle2, Trash2, Edit3, Plus } from 'lucide-react';
+import { Save, Loader2, AlertCircle, CheckCircle2, Trash2, Edit3, Plus, BookOpen, Zap } from 'lucide-react';
 
 export default function StoryAdmin() {
   const [stories, setStories] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [activeTab, setActiveTab] = useState('story'); // 'story' | 'speedread'
+  
   const [formData, setFormData] = useState({ title: '', image_url: '', content: '', translation: '', is_premium: false });
   const [vocabRows, setVocabRows] = useState(
     Array.from({ length: 10 }, (_, i) => ({ id: i + 1, I: '', thai_I: '', II: '', thai_II: '', III: '', thai_III: '' }))
@@ -21,13 +23,13 @@ export default function StoryAdmin() {
       const data = await res.json();
       if (data.status === 'success') setStories(data.stories);
     } catch (err) {
-      console.error("โหลดรายการเรื่องสั้นล้มเหลว");
+      console.error("โหลดรายการข้อมูลล้มเหลว");
     }
   };
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
-  const handleEditSelect = async (storyId) => {
+  const handleEditSelect = async (storyId, itemType) => {
     setLoading(true);
     setStatus({ type: '', msg: '' });
     try {
@@ -38,6 +40,7 @@ export default function StoryAdmin() {
       });
       const data = await res.json();
       if (data.status === 'success') {
+        setActiveTab(itemType || 'story');
         setEditingId(storyId);
         setFormData({
           title: data.story.title || '',
@@ -66,14 +69,14 @@ export default function StoryAdmin() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
-      setStatus({ type: 'error', msg: 'โหลดข้อมูลเรื่องสั้นล้มเหลว' });
+      setStatus({ type: 'error', msg: 'โหลดข้อมูลล้มเหลว' });
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (storyId) => {
-    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบเรื่องสั้นนี้อย่างถาวร?")) return;
+    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้อย่างถาวร?")) return;
     try {
       const res = await fetch('/api/admin/stories/delete', {
         method: 'POST',
@@ -82,7 +85,7 @@ export default function StoryAdmin() {
       });
       const data = await res.json();
       if (data.status === 'success') {
-        alert("ลบเรื่องสั้นเรียบร้อยแล้ว");
+        alert("ลบข้อมูลเรียบร้อยแล้ว");
         if (editingId === storyId) handleResetForm();
         fetchStories();
       }
@@ -91,10 +94,12 @@ export default function StoryAdmin() {
     }
   };
 
-  const handleResetForm = () => {
+  const handleResetForm = (tab = activeTab) => {
     setEditingId(null);
     setFormData({ title: '', image_url: '', content: '', translation: '', is_premium: false });
     setVocabRows(Array.from({ length: 10 }, (_, i) => ({ id: i + 1, I: '', thai_I: '', II: '', thai_II: '', III: '', thai_III: '' })));
+    setActiveTab(tab);
+    setStatus({ type: '', msg: '' });
   };
 
   const handleSubmit = async (e) => {
@@ -103,21 +108,22 @@ export default function StoryAdmin() {
     setStatus({ type: '', msg: '' });
 
     const vocab_levels = {};
-    vocabRows.forEach(row => {
-      if (row.I.trim()) {
-        vocab_levels[row.id] = {
-          I: row.I.trim(),
-          thai_I: row.thai_I.trim(),
-          II: row.II.trim(),
-          thai_II: row.thai_II.trim(),
-          III: row.III.trim(),
-          thai_III: row.thai_III.trim()
-        };
-      }
-    });
+    if (activeTab === 'story') {
+      vocabRows.forEach(row => {
+        if (row.I.trim()) {
+          vocab_levels[row.id] = {
+            I: row.I.trim(), thai_I: row.thai_I.trim(),
+            II: row.II.trim(), thai_II: row.thai_II.trim(),
+            III: row.III.trim(), thai_III: row.thai_III.trim()
+          };
+        }
+      });
+    }
 
     const endpoint = editingId ? '/api/admin/stories/edit' : '/api/admin/stories/add';
-    const payload = editingId ? { id: editingId, ...formData, vocab_levels } : { ...formData, vocab_levels };
+    const payload = editingId 
+      ? { id: editingId, type: activeTab, ...formData, vocab_levels } 
+      : { type: activeTab, ...formData, vocab_levels };
 
     try {
       const res = await fetch(endpoint, {
@@ -128,8 +134,8 @@ export default function StoryAdmin() {
       const data = await res.json();
       
       if (data.status === 'success') {
-        setStatus({ type: 'success', msg: editingId ? 'อัปเดตข้อมูลเรื่องสั้นเรียบร้อย!' : 'บันทึกเรื่องสั้นใหม่ลงฐานข้อมูลเรียบร้อยแล้ว!' });
-        handleResetForm();
+        setStatus({ type: 'success', msg: editingId ? 'อัปเดตข้อมูลเรียบร้อย!' : 'บันทึกข้อมูลใหม่ลงระบบเรียบร้อย!' });
+        handleResetForm(activeTab);
         fetchStories();
       } else {
         setStatus({ type: 'error', msg: data.message });
@@ -141,22 +147,50 @@ export default function StoryAdmin() {
     }
   };
 
+  // กรองรายการข้อมูลตาม Tab ที่เลือก
+  const displayList = stories.filter(s => (s.type || 'story') === activeTab);
+
   return (
     <div className="w-full max-w-5xl mx-auto p-6 flex flex-col gap-10">
       <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
-        <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-black tracking-widest uppercase">StoryDiary Management</h1>
-            <p className="opacity-80 text-sm font-medium mt-1">ระบบเพิ่ม แก้ไข และลบเรื่องสั้นสลับระดับคำศัพท์</p>
+        
+        {/* Header & Tab Switcher */}
+        <div className="bg-blue-600 flex flex-col sm:flex-row justify-between items-stretch">
+          <div className="p-6 text-white flex-1">
+            <h1 className="text-2xl font-black tracking-widest uppercase">Content Management</h1>
+            <p className="opacity-80 text-sm font-medium mt-1">ระบบจัดการเนื้อหาบทความอ่าน</p>
           </div>
-          {editingId && (
-            <button onClick={handleResetForm} className="bg-white/20 hover:bg-white/30 text-white font-bold text-xs px-4 py-2 rounded-full flex items-center gap-1">
-              <Plus size={14}/> โหมดเพิ่มใหม่
+          <div className="flex bg-blue-700/50">
+            <button 
+              onClick={() => handleResetForm('story')}
+              className={`flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${activeTab === 'story' ? 'bg-white text-blue-600' : 'text-blue-100 hover:bg-blue-500/50'}`}
+            >
+              <BookOpen size={18} /> STORY DIARY
             </button>
-          )}
+            <button 
+              onClick={() => handleResetForm('speedread')}
+              className={`flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${activeTab === 'speedread' ? 'bg-gray-900 text-orange-500' : 'text-blue-100 hover:bg-blue-500/50'}`}
+            >
+              <Zap size={18} /> SPEED READ
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 flex flex-col gap-6">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-black text-gray-800">
+              {editingId ? `กำลังแก้ไข: ` : `เพิ่มเนื้อหาใหม่ `}
+              <span className={activeTab === 'speedread' ? 'text-orange-500' : 'text-blue-600'}>
+                {activeTab === 'speedread' ? 'ULTRA SPEEDREAD' : 'STORY DIARY'}
+              </span>
+            </h2>
+            {editingId && (
+              <button type="button" onClick={() => handleResetForm()} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded-full flex items-center gap-1">
+                <Plus size={14}/> ยกเลิกการแก้ไข
+              </button>
+            )}
+          </div>
+
           {status.msg && (
             <div className={`p-4 rounded-xl flex items-center gap-3 font-bold text-sm ${status.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
               {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
@@ -166,84 +200,93 @@ export default function StoryAdmin() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
-              <label className="font-bold text-gray-700 text-sm uppercase">ชื่อเรื่อง (Title) *</label>
+              <label className="font-bold text-gray-700 text-sm uppercase">ชื่อบทความ (Title) *</label>
               <input required name="title" value={formData.title} onChange={handleChange} className="p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500" placeholder="The Mystery of..." />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="font-bold text-gray-700 text-sm uppercase">ลิงก์รูปภาพปก (Image URL)</label>
-              <input name="image_url" value={formData.image_url} onChange={handleChange} className="p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500" placeholder="https://..." />
-            </div>
+            {activeTab === 'story' && (
+              <div className="flex flex-col gap-2">
+                <label className="font-bold text-gray-700 text-sm uppercase">ลิงก์รูปภาพปก (Image URL)</label>
+                <input name="image_url" value={formData.image_url} onChange={handleChange} className="p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500" placeholder="https://..." />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
             <label className="font-bold text-gray-700 text-sm uppercase flex items-center justify-between">
-              <span>เนื้อเรื่องภาษาอังกฤษ (Content) *</span>
-              <span className="text-xs text-blue-500 normal-case font-bold">ระบุพิกัดโดยใช้โครงสร้างปูมคำศัพท์ เช่น {"{1}"}, {"{2}"} ไปจนถึง {"{10}"}</span>
+              <span>เนื้อหาภาษาอังกฤษ (Content) *</span>
+              {activeTab === 'story' && <span className="text-xs text-blue-500 normal-case font-bold">ระบุพิกัดโดยใช้โครงสร้างปูมคำศัพท์ เช่น {"{1}"}, {"{2}"} ไปจนถึง {"{10}"}</span>}
+              {activeTab === 'speedread' && <span className="text-xs text-orange-500 normal-case font-bold">วางบทความ Text ยาวๆ ที่ต้องการให้อ่านเร็วลงที่นี่ได้เลย</span>}
             </label>
-            <textarea required name="content" value={formData.content} onChange={handleChange} className="p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500 min-h-[150px] leading-relaxed font-serif text-lg" placeholder="Once upon a time, a {1} man lived in a {2} house..."></textarea>
+            <textarea required name="content" value={formData.content} onChange={handleChange} className="p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500 min-h-[200px] leading-relaxed font-serif text-lg" placeholder="Once upon a time..."></textarea>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="font-bold text-gray-700 text-sm uppercase">คำแปลภาษาไทยรวมบทความ (Translation)</label>
-            <textarea name="translation" value={formData.translation} onChange={handleChange} className="p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500 min-h-[100px] leading-relaxed" placeholder="เนื้อเรื่องคำแปลยาวภาพรวม..."></textarea>
-          </div>
+          {activeTab === 'story' && (
+            <>
+              <div className="flex flex-col gap-2">
+                <label className="font-bold text-gray-700 text-sm uppercase">คำแปลภาษาไทยรวมบทความ (Translation)</label>
+                <textarea name="translation" value={formData.translation} onChange={handleChange} className="p-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-blue-500 min-h-[100px] leading-relaxed" placeholder="เนื้อเรื่องคำแปลยาวภาพรวม..."></textarea>
+              </div>
 
-          <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
-            <h3 className="font-bold text-gray-800 mb-2 uppercase">คลังคำศัพท์แยกเลเวลและคำแปลอิสระ</h3>
-            <p className="text-xs text-gray-500 mb-4 font-medium">กรอกคำศัพท์พร้อมความหมายภาษาไทยที่จำเพาะเจาะจงของแต่ละระดับให้ตรงกับเลขพิกัดปีกกาในเนื้อเรื่อง</p>
-            
-            <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2">
-              {vocabRows.map((row, idx) => (
-                <div key={row.id} className="flex flex-col gap-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                  <div className="font-black text-gray-400 text-sm border-b pb-1 mb-2">พิกัดตำแหน่งคำศัพท์ #{row.id}</div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="grid grid-cols-2 gap-2 border-l-4 border-rose-500 pl-2">
-                      <input placeholder="Word Lvl I" value={row.I} onChange={(e) => { const r = [...vocabRows]; r[idx].I = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-rose-500" />
-                      <input placeholder="แปลไทย Lvl I" value={row.thai_I} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_I = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-rose-500" />
+              <div className="p-6 bg-gray-50 rounded-2xl border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-2 uppercase">คลังคำศัพท์แยกเลเวลและคำแปลอิสระ</h3>
+                <div className="flex flex-col gap-4 max-h-[500px] overflow-y-auto pr-2">
+                  {vocabRows.map((row, idx) => (
+                    <div key={row.id} className="flex flex-col gap-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                      <div className="font-black text-gray-400 text-sm border-b pb-1 mb-2">พิกัดตำแหน่งคำศัพท์ #{row.id}</div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 gap-2 border-l-4 border-rose-500 pl-2">
+                          <input placeholder="Word I" value={row.I} onChange={(e) => { const r = [...vocabRows]; r[idx].I = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-rose-500" />
+                          <input placeholder="แปล I" value={row.thai_I} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_I = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-rose-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 border-l-4 border-orange-500 pl-2">
+                          <input placeholder="Word II" value={row.II} onChange={(e) => { const r = [...vocabRows]; r[idx].II = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-orange-500" />
+                          <input placeholder="แปล II" value={row.thai_II} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_II = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-orange-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 border-l-4 border-blue-500 pl-2">
+                          <input placeholder="Word III" value={row.III} onChange={(e) => { const r = [...vocabRows]; r[idx].III = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-blue-500" />
+                          <input placeholder="แปล III" value={row.thai_III} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_III = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-blue-500" />
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 border-l-4 border-orange-500 pl-2">
-                      <input placeholder="Word Lvl II" value={row.II} onChange={(e) => { const r = [...vocabRows]; r[idx].II = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-orange-500" />
-                      <input placeholder="แปลไทย Lvl II" value={row.thai_II} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_II = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-orange-500" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 border-l-4 border-blue-500 pl-2">
-                      <input placeholder="Word Lvl III" value={row.III} onChange={(e) => { const r = [...vocabRows]; r[idx].III = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-blue-500" />
-                      <input placeholder="แปลไทย Lvl III" value={row.thai_III} onChange={(e) => { const r = [...vocabRows]; r[idx].thai_III = e.target.value; setVocabRows(r); }} className="p-2 bg-gray-50 border rounded-lg text-sm focus:outline-blue-500" />
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-3 bg-purple-50 p-4 rounded-xl border border-purple-100 cursor-pointer" onClick={() => setFormData(p => ({...p, is_premium: !p.is_premium}))}>
             <input type="checkbox" checked={formData.is_premium} readOnly className="w-5 h-5 accent-purple-600 cursor-pointer" />
-            <span className="font-bold text-purple-800 text-sm uppercase">ตั้งเป็นบทความ Premium (ต้องสมัครสมาชิกถึงจะอ่านได้)</span>
+            <span className="font-bold text-purple-800 text-sm uppercase">ตั้งเป็นบทความ Premium (ต้องสมัครสมาชิก)</span>
           </div>
 
-          <button type="submit" disabled={loading} className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
+          <button type="submit" disabled={loading} className={`mt-2 text-white font-black text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 ${activeTab === 'speedread' ? 'bg-orange-500 hover:bg-orange-600' : 'bg-blue-600 hover:bg-blue-700'}`}>
             {loading ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
-            {editingId ? 'UPDATE STORY DATA' : 'PUBLISH NEW STORY'}
+            {editingId ? 'UPDATE CONTENT' : 'PUBLISH NEW CONTENT'}
           </button>
         </form>
       </div>
 
+      {/* List Display */}
       <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
-        <div className="bg-gray-800 p-5 text-white">
-          <h2 className="text-xl font-black tracking-wider uppercase">Story List Dashboard</h2>
-          <p className="opacity-70 text-xs mt-0.5 font-medium">จัดการแก้ไขข้อมูลและลบคลังเรื่องสั้นที่มีอยู่ในระบบ</p>
+        <div className="bg-gray-800 p-5 text-white flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-black tracking-wider uppercase">Content Repository</h2>
+            <p className="opacity-70 text-xs mt-0.5 font-medium">คลังข้อมูลในระบบหมวด {activeTab === 'speedread' ? 'Ultra Speedread' : 'Story Diary'}</p>
+          </div>
+          <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">{displayList.length} Items</span>
         </div>
         <div className="p-4 flex flex-col divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-          {stories.length === 0 ? (
-            <div className="text-center py-8 font-medium text-gray-400 text-sm">ไม่พบเรื่องสั้นในระบบฐานข้อมูล</div>
+          {displayList.length === 0 ? (
+            <div className="text-center py-8 font-medium text-gray-400 text-sm">ไม่พบข้อมูลในหมวดหมู่นี้</div>
           ) : (
-            stories.map(item => (
+            displayList.map(item => (
               <div key={item.id} className="flex items-center justify-between py-3.5 px-2 hover:bg-gray-50 rounded-xl transition-colors">
                 <div className="flex items-center gap-3">
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${item.is_premium ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{item.is_premium ? 'PREMIUM' : 'FREE'}</span>
                   <span className="font-bold text-gray-800 text-sm">{item.title}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleEditSelect(item.id)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 size={16}/></button>
+                  <button onClick={() => handleEditSelect(item.id, item.type)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 size={16}/></button>
                   <button onClick={() => handleDelete(item.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 export async function onRequestGet(context) {
   const { env } = context;
   try {
-    const { results } = await env.DB.prepare("SELECT id, title, is_premium FROM stories").all();
+    const { results } = await env.DB.prepare("SELECT id, title, type, is_premium FROM stories").all();
     return new Response(JSON.stringify({ status: 'success', stories: results }), {
       headers: { 'Content-Type': 'application/json' }
     });

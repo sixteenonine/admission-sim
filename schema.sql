@@ -59,6 +59,7 @@ CREATE TABLE stories (
     translation TEXT,
     image_url TEXT,
     is_premium BOOLEAN DEFAULT FALSE,
+    type TEXT DEFAULT 'story',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1,12 +1,19 @@
 export async function onRequestPost(context) {
   const { env, request } = context;
   try {
-    const { id, title, image_url, is_premium, content, translation, vocab_levels } = await request.json();
+    const { id, title, type, image_url, is_premium, content, translation, vocab_levels } = await request.json();
+    const storyType = type || 'story';
     
-    await env.DB.prepare("UPDATE stories SET title = ?, image_url = ?, is_premium = ? WHERE id = ?")
-            .bind(title, image_url, is_premium ? 1 : 0, id).run();
+    // อัปเดต D1 (เพิ่ม type)
+    await env.DB.prepare("UPDATE stories SET title = ?, type = ?, image_url = ?, is_premium = ? WHERE id = ?")
+            .bind(title, storyType, image_url, is_premium ? 1 : 0, id).run();
 
-    const kvPayload = { title, content, translation, vocab_levels };
+    // อัปเดต KV
+    const kvPayload = { 
+      content, 
+      translation: storyType === 'story' ? translation : '', 
+      vocab_levels: storyType === 'story' ? (vocab_levels || {}) : {} 
+    };
     await env.STORY_CONTENT.put(id, JSON.stringify(kvPayload));
 
     return new Response(JSON.stringify({ status: 'success' }), {
