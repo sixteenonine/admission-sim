@@ -93,11 +93,21 @@ export default function FlashcardPlayer() {
         try {
           const lastSync = localStorage.getItem('vocabLastSync') || '';
           
-          const res = await fetch(`/api/vocab/list${lastSync ? `?lastSync=${encodeURIComponent(lastSync)}` : ''}`);
-          const cloudVocab = await res.json();
+          // ทะลวงแคชเบราว์เซอร์ด้วย t=${Date.now()}
+          let res = await fetch(`/api/vocab/list?t=${Date.now()}${lastSync ? `&lastSync=${encodeURIComponent(lastSync)}` : ''}`);
+          let cloudVocab = await res.json();
           
-          if (cloudVocab.status === 'success' && cloudVocab.data) {
-            if (cloudVocab.data.length > 0) {
+          if (cloudVocab.status === 'success') {
+            // ถ้ายอดรวมไม่ตรงกัน (มีการลบศัพท์) บังคับให้โหลดใหม่ทั้งหมดแทน Delta
+            let needsFullSync = !lastSync || (cloudVocab.total !== undefined && cloudVocab.total !== localCount);
+
+            if (needsFullSync && lastSync) {
+              const fullRes = await fetch(`/api/vocab/list?t=${Date.now()}`);
+              cloudVocab = await fullRes.json();
+              needsFullSync = true;
+            }
+
+            if (cloudVocab.data && cloudVocab.data.length > 0) {
               const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
               const starSet = new Set(currentStars.map(w => w.eng));
               
@@ -106,17 +116,17 @@ export default function FlashcardPlayer() {
                 isStarred: starSet.has(v.eng) ? 1 : 0 
               }));
               
-              if (!lastSync) {
-                // โหลดครั้งแรก: ล้างข้อมูลเก่าและลงใหม่ทั้งหมด 10,000 คำ
+              if (needsFullSync) {
                 await db.flashcards.clear();
                 await db.flashcards.bulkAdd(newData);
               } else {
-                // Delta Sync: อัปเดตทับ หรือเพิ่มเฉพาะคำที่เปลี่ยนแปลง
                 await db.flashcards.bulkPut(newData);
               }
+            } else if (needsFullSync) {
+               // กรณีลบข้อมูลทิ้งจนฐานข้อมูลว่างเปล่า
+               await db.flashcards.clear();
             }
             
-            // บันทึกเวลาเซิร์ฟเวอร์ล่าสุดไว้ใช้เช็คในรอบหน้า
             if (cloudVocab.serverTime) {
               localStorage.setItem('vocabLastSync', cloudVocab.serverTime);
             }

@@ -154,6 +154,7 @@ export default function StoryAdmin() {
   const [sheetUrl, setSheetUrl] = useState('');
   const [syncProgress, setSyncProgress] = useState(0);
   const [totalSync, setTotalSync] = useState(0);
+  const [isHardSync, setIsHardSync] = useState(false);
 
   const handleSyncVocab = async (e) => {
     e.preventDefault();
@@ -197,6 +198,10 @@ export default function StoryAdmin() {
 
       setTotalSync(allWords.length);
       setStatus({ type: '', msg: `เตรียมบันทึกคำศัพท์จำนวน ${allWords.length} คำ...` });
+      if (isHardSync) {
+        setStatus({ type: '', msg: 'กำลังล้างข้อมูลเก่าทั้งหมด...' });
+        await fetch('/api/admin/vocab/clear', { method: 'POST' });
+      }
 
       const chunkSize = 300;
       let processed = 0;
@@ -256,6 +261,10 @@ export default function StoryAdmin() {
             <div className="flex flex-col gap-2">
               <label className="font-bold text-emerald-700 text-sm uppercase">วางลิงก์ Publish to web (.tsv) ที่นี่</label>
               <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value)} className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl focus:outline-emerald-500 w-full font-medium" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX.../pub?output=tsv" />
+            </div>
+            <div className="flex items-center gap-3 bg-red-50 p-4 rounded-xl border border-red-100 cursor-pointer" onClick={() => setIsHardSync(!isHardSync)}>
+              <input type="checkbox" checked={isHardSync} readOnly className="w-5 h-5 accent-red-600 cursor-pointer" />
+              <span className="font-bold text-red-800 text-sm uppercase">ลบข้อมูลเดิมทิ้งทั้งหมดก่อนซิงก์ (Hard Sync - เปิดเฉพาะเวลาลบศัพท์)</span>
             </div>
             
             {totalSync > 0 && (
