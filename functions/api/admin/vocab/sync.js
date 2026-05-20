@@ -12,7 +12,8 @@ export async function onRequestPost(context) {
         VALUES (?, ?, ?, ?, ?, ?, ?) 
         ON CONFLICT(eng) DO UPDATE SET 
         thai = excluded.thai, pos = excluded.pos, category = excluded.category, 
-        example = excluded.example, synonyms = excluded.synonyms, antonyms = excluded.antonyms
+        example = excluded.example, synonyms = excluded.synonyms, antonyms = excluded.antonyms,
+        updated_at = CURRENT_TIMESTAMP
       `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms);
     });
 
