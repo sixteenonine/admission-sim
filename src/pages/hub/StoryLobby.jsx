@@ -53,7 +53,8 @@ export default function StoryLobby() {
       const res = await fetch('/api/stories/list');
       const data = await res.json();
       if (data.status !== 'success') throw new Error('ไม่สามารถโหลดรายการเรื่องสั้นได้');
-      return data.stories;
+      // กรองเอาเฉพาะหมวด StoryDiary (ซ่อน Speedread)
+      return data.stories.filter(story => !story.type || story.type === 'story');
     }
   });
 
