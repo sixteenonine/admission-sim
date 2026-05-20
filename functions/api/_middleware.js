@@ -52,8 +52,7 @@ export async function onRequest(context) {
     '/api/login',
     '/api/register',
     '/api/payment/webhook',
-    '/api/stories/list', // ให้หน้า Lobby โหลดรายชื่อนิทานได้แม้ไม่ได้ล็อกอิน
-    '/api/admin' ,
+    '/api/stories/list',     
     '/api/vocab/list'
   ];
 
@@ -77,6 +76,13 @@ export async function onRequest(context) {
     // 3. ตรวจสอบและถอดรหัส JWT
     const secretKey = context.env.JWT_SECRET || "bearwithyou-local-secret-key-2026";
     const payload = await verifyJWT(token, secretKey);
+    // 4. ป้องกันการแฮ็ก API หลังบ้าน (เปลี่ยนเป็นอีเมลของคุณเอง)
+    if (url.pathname.startsWith('/api/admin')) {
+      const ADMIN_EMAIL = 'sixteenonine99@gmail.com'; 
+      if (payload.email !== ADMIN_EMAIL) {
+        return new Response(JSON.stringify({ status: "error", message: "Forbidden: เฉพาะผู้ดูแลระบบเท่านั้น" }), { status: 403, headers: { "Content-Type": "application/json" } });
+      }
+    }
 
     // 4. แนบข้อมูลผู้ใช้ (userId) ส่งต่อไปให้ API ตัวอื่นใช้งาน
     context.data = { user: payload };

@@ -91,12 +91,15 @@ export default function FlashcardPlayer() {
         const localCount = await db.flashcards.count();
         
         try {
-          const res = await fetch('/api/vocab/list');
-          const cloudVocab = await res.json();
+          // เช็คแค่จำนวนคำศัพท์ก่อน (ใช้ Data ระดับ Byte ป้องกันโหลดข้อมูล 10,000 คำซ้ำซ้อน)
+          const metaRes = await fetch('/api/vocab/meta');
+          const metaData = await metaRes.json();
           
-          if (cloudVocab.status === 'success' && cloudVocab.data) {
-            // อัปเดตข้อมูลอัตโนมัติหากจำนวนคำศัพท์คลาดเคลื่อน
-            if (localCount !== cloudVocab.data.length) {
+          if (metaData.status === 'success' && metaData.total !== localCount) {
+            const res = await fetch('/api/vocab/list');
+            const cloudVocab = await res.json();
+            
+            if (cloudVocab.status === 'success' && cloudVocab.data) {
               const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
               const starSet = new Set(currentStars.map(w => w.eng));
               
