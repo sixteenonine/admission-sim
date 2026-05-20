@@ -91,15 +91,13 @@ export default function FlashcardPlayer() {
         const localCount = await db.flashcards.count();
         
         try {
-          // เช็คแค่จำนวนคำศัพท์ก่อน (ใช้ Data ระดับ Byte ป้องกันโหลดข้อมูล 10,000 คำซ้ำซ้อน)
-          const metaRes = await fetch('/api/vocab/meta');
-          const metaData = await metaRes.json();
+          const lastSync = localStorage.getItem('vocabLastSync') || '';
           
-          if (metaData.status === 'success' && metaData.total !== localCount) {
-            const res = await fetch('/api/vocab/list');
-            const cloudVocab = await res.json();
-            
-            if (cloudVocab.status === 'success' && cloudVocab.data) {
+          const res = await fetch(`/api/vocab/list${lastSync ? `?lastSync=${encodeURIComponent(lastSync)}` : ''}`);
+          const cloudVocab = await res.json();
+          
+          if (cloudVocab.status === 'success' && cloudVocab.data) {
+            if (cloudVocab.data.length > 0) {
               const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
               const starSet = new Set(currentStars.map(w => w.eng));
               
@@ -108,8 +106,19 @@ export default function FlashcardPlayer() {
                 isStarred: starSet.has(v.eng) ? 1 : 0 
               }));
               
-              await db.flashcards.clear();
-              await db.flashcards.bulkAdd(newData);
+              if (!lastSync) {
+                // โหลดครั้งแรก: ล้างข้อมูลเก่าและลงใหม่ทั้งหมด 10,000 คำ
+                await db.flashcards.clear();
+                await db.flashcards.bulkAdd(newData);
+              } else {
+                // Delta Sync: อัปเดตทับ หรือเพิ่มเฉพาะคำที่เปลี่ยนแปลง
+                await db.flashcards.bulkPut(newData);
+              }
+            }
+            
+            // บันทึกเวลาเซิร์ฟเวอร์ล่าสุดไว้ใช้เช็คในรอบหน้า
+            if (cloudVocab.serverTime) {
+              localStorage.setItem('vocabLastSync', cloudVocab.serverTime);
             }
           }
         } catch (e) {

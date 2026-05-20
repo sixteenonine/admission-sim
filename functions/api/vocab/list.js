@@ -1,7 +1,25 @@
 export async function onRequestGet(context) {
   try {
-    const { results } = await context.env.DB.prepare("SELECT * FROM vocab_repository").all();
-    return new Response(JSON.stringify({ status: 'success', data: results }), {
+    const url = new URL(context.request.url);
+    const lastSync = url.searchParams.get('lastSync');
+    const db = context.env.DB;
+
+    let query = "SELECT * FROM vocab_repository";
+    let params = [];
+
+    if (lastSync) {
+      query += " WHERE updated_at > ?";
+      params.push(lastSync);
+    }
+
+    const { results } = await db.prepare(query).bind(...params).all();
+    const timeRes = await db.prepare("SELECT CURRENT_TIMESTAMP as server_time").first();
+
+    return new Response(JSON.stringify({ 
+      status: 'success', 
+      data: results,
+      serverTime: timeRes.server_time
+    }), {
       headers: { 
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
