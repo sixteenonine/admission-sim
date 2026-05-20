@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Loader2, AlertCircle, CheckCircle2, Trash2, Edit3, Plus, BookOpen, Zap } from 'lucide-react';
+import { Database, RefreshCw } from 'lucide-react';
 
 export default function StoryAdmin() {
   const [stories, setStories] = useState([]);
@@ -149,6 +150,134 @@ export default function StoryAdmin() {
 
   // กรองรายการข้อมูลตาม Tab ที่เลือก
   const displayList = stories.filter(s => (s.type || 'story') === activeTab);
+  // โหมด VOCAB SYNC
+  const [sheetUrl, setSheetUrl] = useState('');
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [totalSync, setTotalSync] = useState(0);
+
+  const handleSyncVocab = async (e) => {
+    e.preventDefault();
+    if (!sheetUrl) return setStatus({ type: 'error', msg: 'กรุณาวางลิงก์ Google Sheets (.tsv)' });
+    
+    setLoading(true); setStatus({ type: '', msg: 'กำลังดาวน์โหลดข้อมูลจาก Google Sheets...' });
+    setSyncProgress(0); setTotalSync(0);
+
+    try {
+      const res = await fetch(sheetUrl);
+      const text = await res.text();
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      
+      if (lines.length < 2) throw new Error('ไม่พบข้อมูลคำศัพท์ใน Sheet');
+
+      const headers = lines[0].toLowerCase().split('\t').map(h => h.trim());
+      const idx = {
+        eng: headers.indexOf('eng'), thai: headers.indexOf('thai'),
+        pos: headers.indexOf('pos'), category: headers.indexOf('category'),
+        example: headers.indexOf('example'), syn: headers.indexOf('synonyms'), ant: headers.indexOf('antonyms')
+      };
+
+      if (idx.eng === -1) throw new Error("ไม่พบคอลัมน์ 'eng' ในแถวแรก");
+
+      const allWords = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split('\t');
+        const eng = cols[idx.eng]?.trim();
+        if (!eng) continue;
+        
+        allWords.push({
+          eng,
+          thai: idx.thai !== -1 ? cols[idx.thai]?.trim() : null,
+          pos: idx.pos !== -1 ? cols[idx.pos]?.trim() : null,
+          category: idx.category !== -1 ? cols[idx.category]?.trim() : null,
+          example: idx.example !== -1 ? cols[idx.example]?.trim() : null,
+          synonyms: idx.syn !== -1 ? cols[idx.syn]?.trim() : null,
+          antonyms: idx.ant !== -1 ? cols[idx.ant]?.trim() : null
+        });
+      }
+
+      setTotalSync(allWords.length);
+      setStatus({ type: '', msg: `เตรียมบันทึกคำศัพท์จำนวน ${allWords.length} คำ...` });
+
+      const chunkSize = 300;
+      let processed = 0;
+
+      for (let i = 0; i < allWords.length; i += chunkSize) {
+        const chunk = allWords.slice(i, i + chunkSize);
+        
+        const chunkRes = await fetch('/api/admin/vocab/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chunk })
+        });
+        
+        if (!chunkRes.ok) throw new Error('การเชื่อมต่อล้มเหลวระหว่างส่งข้อมูล');
+        
+        processed += chunk.length;
+        setSyncProgress(processed);
+        
+        await new Promise(r => setTimeout(r, 500)); 
+      }
+
+      setStatus({ type: 'success', msg: `ซิงค์คำศัพท์สำเร็จทั้งหมด ${processed} คำ!` });
+    } catch (err) {
+      setStatus({ type: 'error', msg: err.message || 'เกิดข้อผิดพลาดในการซิงค์' });
+    } finally { 
+      setLoading(false); 
+      setTimeout(() => { setSyncProgress(0); setTotalSync(0); }, 3000);
+    }
+  };
+
+  if (activeTab === 'vocab') {
+    return (
+      <div className="w-full max-w-5xl mx-auto p-6 flex flex-col gap-10">
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
+          <div className="bg-blue-600 flex flex-col sm:flex-row justify-between items-stretch">
+            <div className="p-6 text-white flex-1">
+              <h1 className="text-2xl font-black tracking-widest uppercase">Content Management</h1>
+              <p className="opacity-80 text-sm font-medium mt-1">ระบบจัดการเนื้อหาและคำศัพท์</p>
+            </div>
+            <div className="flex bg-blue-700/50">
+              <button onClick={() => handleResetForm('story')} className="flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors text-blue-100 hover:bg-blue-500/50"><BookOpen size={18} /> STORY DIARY</button>
+              <button onClick={() => handleResetForm('speedread')} className="flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors text-blue-100 hover:bg-blue-500/50"><Zap size={18} /> SPEED READ</button>
+              <button onClick={() => handleResetForm('vocab')} className="flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors bg-emerald-900 text-emerald-400"><Database size={18} /> VOCAB SYNC</button>
+            </div>
+          </div>
+          
+          <form onSubmit={handleSyncVocab} className="p-8 flex flex-col gap-6">
+            <div className="mb-2">
+              <h2 className="text-xl font-black text-gray-800">1-CLICK GOOGLE SHEETS SYNC</h2>
+              <p className="text-sm text-gray-500 font-medium">ดึงข้อมูลคำศัพท์จาก Google Sheets มาอัปเดตลงฐานข้อมูลแบบอัตโนมัติ</p>
+            </div>
+            {status.msg && (
+              <div className={`p-4 rounded-xl flex items-center gap-3 font-bold text-sm ${status.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
+                {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />} {status.msg}
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <label className="font-bold text-emerald-700 text-sm uppercase">วางลิงก์ Publish to web (.tsv) ที่นี่</label>
+              <input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value)} className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl focus:outline-emerald-500 w-full font-medium" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX.../pub?output=tsv" />
+            </div>
+            
+            {totalSync > 0 && (
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex justify-between text-xs font-bold text-emerald-700">
+                  <span>กำลังอัปเดตข้อมูล...</span>
+                  <span>{syncProgress} / {totalSync} คำ</span>
+                </div>
+                <div className="w-full bg-emerald-100 rounded-full h-3 overflow-hidden">
+                  <div className="bg-emerald-500 h-3 rounded-full transition-all duration-300" style={{ width: `${(syncProgress / totalSync) * 100}%` }}></div>
+                </div>
+              </div>
+            )}
+
+            <button type="submit" disabled={loading} className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
+              {loading ? <Loader2 className="animate-spin" size={24} /> : <RefreshCw size={24} />} SYNC VOCABULARY DATA
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto p-6 flex flex-col gap-10">
@@ -172,6 +301,12 @@ export default function StoryAdmin() {
               className={`flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${activeTab === 'speedread' ? 'bg-gray-900 text-orange-500' : 'text-blue-100 hover:bg-blue-500/50'}`}
             >
               <Zap size={18} /> SPEED READ
+            </button>
+            <button 
+              onClick={() => handleResetForm('vocab')}
+              className={`flex-1 sm:px-8 py-4 flex items-center justify-center gap-2 font-bold transition-colors ${activeTab === 'vocab' ? 'bg-emerald-900 text-emerald-400' : 'text-blue-100 hover:bg-blue-500/50'}`}
+            >
+              <Database size={18} /> VOCAB SYNC
             </button>
           </div>
         </div>
