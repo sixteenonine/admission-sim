@@ -93,38 +93,50 @@ export default function FlashcardPlayer() {
         try {
           const lastSync = localStorage.getItem('vocabLastSync') || '';
           
-          // ทะลวงแคชเบราว์เซอร์ด้วย t=${Date.now()}
           let res = await fetch(`/api/vocab/list?t=${Date.now()}${lastSync ? `&lastSync=${encodeURIComponent(lastSync)}` : ''}`);
           let cloudVocab = await res.json();
           
           if (cloudVocab.status === 'success') {
-            // ถ้ายอดรวมไม่ตรงกัน (มีการลบศัพท์) บังคับให้โหลดใหม่ทั้งหมดแทน Delta
-            let needsFullSync = !lastSync || (cloudVocab.total !== undefined && cloudVocab.total !== localCount);
-
-            if (needsFullSync && lastSync) {
-              const fullRes = await fetch(`/api/vocab/list?t=${Date.now()}`);
-              cloudVocab = await fullRes.json();
-              needsFullSync = true;
-            }
-
-            if (cloudVocab.data && cloudVocab.data.length > 0) {
+            let data = cloudVocab.data || [];
+            
+            if (!lastSync || localCount === 0) {
+              // โหลดครั้งแรกทั้งหมด
+              const activeData = data.filter(v => v.is_deleted !== 1);
               const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
               const starSet = new Set(currentStars.map(w => w.eng));
-              
-              const newData = cloudVocab.data.map(v => ({ 
-                ...v, 
-                isStarred: starSet.has(v.eng) ? 1 : 0 
-              }));
-              
-              if (needsFullSync) {
-                await db.flashcards.clear();
-                await db.flashcards.bulkAdd(newData);
-              } else {
-                await db.flashcards.bulkPut(newData);
+              const newData = activeData.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
+
+              await db.flashcards.clear();
+              await db.flashcards.bulkAdd(newData);
+            } else {
+              // โหลดเฉพาะส่วนต่าง (Delta Sync พร้อมคำสั่งลบ)
+              if (data.length > 0) {
+                const toDelete = data.filter(v => v.is_deleted === 1).map(v => v.eng);
+                const toUpsert = data.filter(v => v.is_deleted !== 1);
+                
+                const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
+                const starSet = new Set(currentStars.map(w => w.eng));
+                const upsertData = toUpsert.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
+                
+                if (toDelete.length > 0) await db.flashcards.bulkDelete(toDelete);
+                if (upsertData.length > 0) await db.flashcards.bulkPut(upsertData);
               }
-            } else if (needsFullSync) {
-               // กรณีลบข้อมูลทิ้งจนฐานข้อมูลว่างเปล่า
-               await db.flashcards.clear();
+              
+              // ตรวจสอบเช็คยอดหลังอัปเดต ถ้าฐานข้อมูลพังจะบังคับโหลดใหม่ให้อัตโนมัติ
+              const newLocalCount = await db.flashcards.count();
+              if (cloudVocab.total !== undefined && newLocalCount !== cloudVocab.total) {
+                const fullRes = await fetch(`/api/vocab/list?t=${Date.now()}`);
+                const fullCloudVocab = await fullRes.json();
+                if (fullCloudVocab.status === 'success' && fullCloudVocab.data) {
+                  const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
+                  const starSet = new Set(currentStars.map(w => w.eng));
+                  const finalData = fullCloudVocab.data.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
+                  await db.flashcards.clear();
+                  await db.flashcards.bulkAdd(finalData);
+                  if (fullCloudVocab.serverTime) localStorage.setItem('vocabLastSync', fullCloudVocab.serverTime);
+                }
+                return;
+              }
             }
             
             if (cloudVocab.serverTime) {

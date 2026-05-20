@@ -8,14 +8,16 @@ export async function onRequestGet(context) {
     let params = [];
 
     if (lastSync) {
-      query += " WHERE updated_at > ?";
+      query += " WHERE updated_at > ?"; // Delta: โหลดทั้งคำใหม่และคำที่ถูกลบเพื่อไปสั่งลบที่เครื่องนักเรียน
       params.push(lastSync);
+    } else {
+      query += " WHERE is_deleted = 0"; // Full: โหลดเฉพาะคำที่มีอยู่จริงเท่านั้น
     }
 
     const { results } = await db.prepare(query).bind(...params).all();
     const timeRes = await db.prepare("SELECT CURRENT_TIMESTAMP as server_time").first();
 
-    const countRes = await db.prepare("SELECT COUNT(*) as total FROM vocab_repository").first();
+    const countRes = await db.prepare("SELECT COUNT(*) as total FROM vocab_repository WHERE is_deleted = 0").first();
 
     return new Response(JSON.stringify({ 
       status: 'success', 

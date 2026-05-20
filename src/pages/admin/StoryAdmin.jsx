@@ -205,6 +205,7 @@ export default function StoryAdmin() {
 
       const chunkSize = 300;
       let processed = 0;
+      const batchId = Date.now().toString();
 
       for (let i = 0; i < allWords.length; i += chunkSize) {
         const chunk = allWords.slice(i, i + chunkSize);
@@ -212,7 +213,7 @@ export default function StoryAdmin() {
         const chunkRes = await fetch('/api/admin/vocab/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chunk })
+          body: JSON.stringify({ chunk, batchId })
         });
         
         if (!chunkRes.ok) throw new Error('การเชื่อมต่อล้มเหลวระหว่างส่งข้อมูล');
@@ -222,6 +223,14 @@ export default function StoryAdmin() {
         
         await new Promise(r => setTimeout(r, 500)); 
       }
+      if (!isHardSync) {
+        setStatus({ type: '', msg: 'กำลังเคลียร์คำศัพท์ที่ถูกลบหรือแก้ไขชื่อ...' });
+        await fetch('/api/admin/vocab/cleanup', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchId })
+        });
+      }
+      
 
       setStatus({ type: 'success', msg: `ซิงค์คำศัพท์สำเร็จทั้งหมด ${processed} คำ!` });
     } catch (err) {
