@@ -53,7 +53,8 @@ export async function onRequest(context) {
     '/api/register',
     '/api/payment/webhook',
     '/api/stories/list', // ให้หน้า Lobby โหลดรายชื่อนิทานได้แม้ไม่ได้ล็อกอิน
-    '/api/admin'
+    '/api/admin' ,
+    '/api/vocab/list'
   ];
 
   // ถ้าเป็น Public Route ให้ปล่อยผ่านไปทำงานต่อได้เลย

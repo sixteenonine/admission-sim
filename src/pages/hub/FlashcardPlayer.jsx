@@ -294,7 +294,7 @@ export default function FlashcardPlayer() {
                   <MessageSquare size={20} strokeWidth={2} />
                 </button>
                 <div className="text-[2.4rem] font-bold mb-[10px] tracking-tight leading-[1.1] break-words" style={{ color: themeVals.textMain }}>{currentWord.eng}</div>
-                <div className="text-[0.85rem] font-semibold uppercase mb-[20px]" style={{ color: textMuted }}>{currentWord.type}</div>
+                <div className="text-[0.85rem] font-semibold uppercase mb-[20px]" style={{ color: textMuted }}>{currentWord.pos}</div>
                 <div className="text-[1.8rem] font-semibold leading-[1.2]" style={{ color: themeVals.textMain }}>{currentWord.thai}</div>
                 <div className="absolute bottom-[20px] text-[0.75rem] font-medium" style={{ color: textMuted }}>Tap to flip</div>
                 
