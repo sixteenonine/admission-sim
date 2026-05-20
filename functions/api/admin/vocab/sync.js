@@ -18,7 +18,6 @@ export async function onRequestPost(context) {
         updated_at = CURRENT_TIMESTAMP
       `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, batchId);
     });
-
     // บันทึกรวดเดียวตามขนาดก้อน
     await db.batch(statements);
 

@@ -8,7 +8,7 @@ export async function onRequestPost(context) {
     await db.prepare(`
       UPDATE vocab_repository 
       SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP 
-      WHERE sync_batch_id != ? AND is_deleted = 0
+      WHERE (sync_batch_id != ? OR sync_batch_id IS NULL) AND is_deleted = 0
     `).bind(batchId).run();
 
     return new Response(JSON.stringify({ status: "success" }));
