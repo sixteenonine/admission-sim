@@ -52,7 +52,8 @@ export async function onRequest(context) {
     '/api/login',
     '/api/register',
     '/api/payment/webhook',
-    '/api/stories/list' // ให้หน้า Lobby โหลดรายชื่อนิทานได้แม้ไม่ได้ล็อกอิน
+    '/api/stories/list', // ให้หน้า Lobby โหลดรายชื่อนิทานได้แม้ไม่ได้ล็อกอิน
+    '/api/admin'
   ];
 
   // ถ้าเป็น Public Route ให้ปล่อยผ่านไปทำงานต่อได้เลย
