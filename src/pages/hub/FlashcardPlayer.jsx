@@ -118,7 +118,7 @@ export default function FlashcardPlayer() {
                 const starSet = new Set(currentStars.map(w => w.eng));
                 const upsertData = toUpsert.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
                 
-                if (toDelete.length > 0) await db.flashcards.bulkDelete(toDelete);
+                if (toDelete.length > 0) await db.flashcards.where('eng').anyOf(toDelete).delete();
                 if (upsertData.length > 0) await db.flashcards.bulkPut(upsertData);
               }
               
@@ -173,6 +173,7 @@ export default function FlashcardPlayer() {
         } else {
           localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
         }
+        localDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
         setDeck(localDeck);
 
         // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา

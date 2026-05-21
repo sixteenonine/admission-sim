@@ -192,7 +192,8 @@ export default function StoryAdmin() {
           category: idx.category !== -1 ? cols[idx.category]?.trim() : null,
           example: idx.example !== -1 ? cols[idx.example]?.trim() : null,
           synonyms: idx.syn !== -1 ? cols[idx.syn]?.trim() : null,
-          antonyms: idx.ant !== -1 ? cols[idx.ant]?.trim() : null
+          antonyms: idx.ant !== -1 ? cols[idx.ant]?.trim() : null,
+          sort_order: i
         });
       }
 

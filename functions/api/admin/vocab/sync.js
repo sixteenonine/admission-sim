@@ -9,14 +9,14 @@ export async function onRequestPost(context) {
     // แปลงข้อมูลเป็นชุดคำสั่ง SQL (Upsert)
     const statements = chunk.map(word => {
       return db.prepare(`
-        INSERT INTO vocab_repository (eng, thai, pos, category, example, synonyms, antonyms, sync_batch_id, is_deleted) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0) 
+        INSERT INTO vocab_repository (eng, thai, pos, category, example, synonyms, antonyms, sync_batch_id, is_deleted, sort_order) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?) 
         ON CONFLICT(eng) DO UPDATE SET 
         thai = excluded.thai, pos = excluded.pos, category = excluded.category, 
         example = excluded.example, synonyms = excluded.synonyms, antonyms = excluded.antonyms,
-        sync_batch_id = excluded.sync_batch_id, is_deleted = 0,
+        sync_batch_id = excluded.sync_batch_id, is_deleted = 0, sort_order = excluded.sort_order,
         updated_at = CURRENT_TIMESTAMP
-      `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, batchId);
+      `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, batchId, word.sort_order);
     });
     // บันทึกรวดเดียวตามขนาดก้อน
     await db.batch(statements);
