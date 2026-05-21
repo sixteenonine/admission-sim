@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserCircle2, LogOut, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
 
 const AVATARS = [
