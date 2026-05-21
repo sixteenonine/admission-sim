@@ -160,85 +160,24 @@ export default function StoryAdmin() {
     e.preventDefault();
     if (!sheetUrl) return setStatus({ type: 'error', msg: 'กรุณาวางลิงก์ Google Sheets (.tsv)' });
     
-    setLoading(true); setStatus({ type: '', msg: 'กำลังดาวน์โหลดข้อมูลจาก Google Sheets...' });
-    setSyncProgress(0); setTotalSync(0);
+    setLoading(true); 
+    setStatus({ type: '', msg: 'กำลังให้เซิร์ฟเวอร์ดึงและประมวลผลข้อมูล โปรดรอสักครู่...' });
 
     try {
-      const res = await fetch(sheetUrl);
-      const text = await res.text();
-      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      const res = await fetch('/api/admin/vocab/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sheetUrl, isHardSync })
+      });
       
-      if (lines.length < 2) throw new Error('ไม่พบข้อมูลคำศัพท์ใน Sheet');
+      const data = await res.json();
+      if (!res.ok || data.status === 'error') throw new Error(data.message || 'การเชื่อมต่อล้มเหลว');
 
-      const headers = lines[0].toLowerCase().split('\t').map(h => h.trim());
-      const idx = {
-        eng: headers.indexOf('eng'), thai: headers.indexOf('thai'),
-        pos: headers.indexOf('pos'), category: headers.indexOf('category'),
-        example: headers.indexOf('example'), syn: headers.indexOf('synonyms'), ant: headers.indexOf('antonyms')
-      };
-
-      if (idx.eng === -1) throw new Error("ไม่พบคอลัมน์ 'eng' ในแถวแรก");
-
-      const allWords = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split('\t');
-        const eng = cols[idx.eng]?.trim();
-        if (!eng) continue;
-        
-        allWords.push({
-          eng,
-          thai: idx.thai !== -1 ? cols[idx.thai]?.trim() : null,
-          pos: idx.pos !== -1 ? cols[idx.pos]?.trim() : null,
-          category: idx.category !== -1 ? cols[idx.category]?.trim() : null,
-          example: idx.example !== -1 ? cols[idx.example]?.trim() : null,
-          synonyms: idx.syn !== -1 ? cols[idx.syn]?.trim() : null,
-          antonyms: idx.ant !== -1 ? cols[idx.ant]?.trim() : null,
-          sort_order: i
-        });
-      }
-
-      setTotalSync(allWords.length);
-      setStatus({ type: '', msg: `เตรียมบันทึกคำศัพท์จำนวน ${allWords.length} คำ...` });
-      if (isHardSync) {
-        setStatus({ type: '', msg: 'กำลังล้างข้อมูลเก่าทั้งหมด...' });
-        await fetch('/api/admin/vocab/clear', { method: 'POST' });
-      }
-
-      const chunkSize = 300;
-      let processed = 0;
-      const batchId = Date.now().toString();
-
-      for (let i = 0; i < allWords.length; i += chunkSize) {
-        const chunk = allWords.slice(i, i + chunkSize);
-        
-        const chunkRes = await fetch('/api/admin/vocab/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chunk, batchId })
-        });
-        
-        if (!chunkRes.ok) throw new Error('การเชื่อมต่อล้มเหลวระหว่างส่งข้อมูล');
-        
-        processed += chunk.length;
-        setSyncProgress(processed);
-        
-        await new Promise(r => setTimeout(r, 500)); 
-      }
-      if (!isHardSync) {
-        setStatus({ type: '', msg: 'กำลังเคลียร์คำศัพท์ที่ถูกลบหรือแก้ไขชื่อ...' });
-        await fetch('/api/admin/vocab/cleanup', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ batchId })
-        });
-      }
-      
-
-      setStatus({ type: 'success', msg: `ซิงค์คำศัพท์สำเร็จทั้งหมด ${processed} คำ!` });
+      setStatus({ type: 'success', msg: `ซิงค์สำเร็จ! ${data.message} (รวมในระบบ ${data.count} คำ)` });
     } catch (err) {
       setStatus({ type: 'error', msg: err.message || 'เกิดข้อผิดพลาดในการซิงค์' });
     } finally { 
       setLoading(false); 
-      setTimeout(() => { setSyncProgress(0); setTotalSync(0); }, 3000);
     }
   };
 
@@ -277,17 +216,7 @@ export default function StoryAdmin() {
               <span className="font-bold text-red-800 text-sm uppercase">ลบข้อมูลเดิมทิ้งทั้งหมดก่อนซิงก์ (Hard Sync - เปิดเฉพาะเวลาลบศัพท์)</span>
             </div>
             
-            {totalSync > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="flex justify-between text-xs font-bold text-emerald-700">
-                  <span>กำลังอัปเดตข้อมูล...</span>
-                  <span>{syncProgress} / {totalSync} คำ</span>
-                </div>
-                <div className="w-full bg-emerald-100 rounded-full h-3 overflow-hidden">
-                  <div className="bg-emerald-500 h-3 rounded-full transition-all duration-300" style={{ width: `${(syncProgress / totalSync) * 100}%` }}></div>
-                </div>
-              </div>
-            )}
+            {/* เลิกใช้ Progress Bar ฝั่ง Frontend เพราะ Backend จัดการเบ็ดเสร็จรวดเดียวแล้ว */}
 
             <button type="submit" disabled={loading} className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin" size={24} /> : <RefreshCw size={24} />} SYNC VOCABULARY DATA
