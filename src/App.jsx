@@ -12,10 +12,12 @@ import StoryReader from './pages/hub/StoryReader.jsx';
 import StoryAdmin from './pages/admin/StoryAdmin.jsx';
 import LandingApp from './LandingApp.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
+import { ThemeProvider } from './contexts/ThemeContext.jsx';
 
 export default function App() {
   return (
     <AuthProvider>
+      <ThemeProvider>
     <Routes>
       <Route path="/admin/storydiary" element={<StoryAdmin />} />
       <Route path="/" element={<LandingApp />} />
@@ -34,6 +36,7 @@ export default function App() {
 
       <Route path="/admissim" element={<Simulator />} />
     </Routes>
+    </ThemeProvider>
     </AuthProvider>
   );
 }

@@ -5,6 +5,7 @@ import AuthModal from '../../components/AuthModal';
 import ProfileModal from '../../components/ProfileModal';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useTheme } from '../../contexts/ThemeContext.jsx';
 
 const themeVals = {
   bg: "#eef2f6",
@@ -18,8 +19,9 @@ const themeVals = {
 };
 
 export default function HubLayout() {
+  const { themeVals } = useTheme();
   const { currentUser, isAuthChecking, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
-  
+   
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -39,8 +41,6 @@ export default function HubLayout() {
   return (
     <div className="min-h-screen font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
       <TopBar 
-        themeVals={themeVals} 
-        currentUser={currentUser} 
         setIsAuthModalOpen={setIsAuthModalOpen}
         setIsProfileModalOpen={setIsProfileModalOpen}
         setIsLogoutModalOpen={setIsLogoutModalOpen}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserCircle2, LogOut, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useTheme } from '../../contexts/ThemeContext.jsx';
 
 const AVATARS = [
   { id: 1, color: '#3b82f6' }, { id: 2, color: '#10b981' }, 
@@ -9,13 +9,14 @@ const AVATARS = [
   { id: 5, color: '#f97316' }, { id: 6, color: '#14b8a6' }
 ];
 
-export default function TopBar({ themeVals, setIsAuthModalOpen, setIsProfileModalOpen, setIsLogoutModalOpen, isSimulator = false, simulatorProps = {} }) {
+export default function TopBar({ setIsAuthModalOpen, setIsProfileModalOpen, setIsLogoutModalOpen, isSimulator = false, simulatorProps = {} }) {
   const location = useLocation();
   const { currentUser } = useAuth();
+  const { isDarkMode, setIsDarkMode, themeVals } = useTheme();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
 
-  const { isRunning, isTimerStarted, mode, MODES, handleModeSelect, isDarkMode, setIsDarkMode } = simulatorProps;
+  const { isRunning, isTimerStarted, mode, MODES, handleModeSelect } = simulatorProps;
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[100px] px-6 sm:px-8 flex items-start pt-6 justify-between z-[100] pointer-events-none">
@@ -32,14 +33,6 @@ export default function TopBar({ themeVals, setIsAuthModalOpen, setIsProfileModa
       <div className="w-1/3 flex justify-center pointer-events-auto">
         {isSimulator ? (
           <div className="flex gap-3 sm:gap-4 items-center">
-            <button 
-              onClick={() => !isRunning && setIsDarkMode(!isDarkMode)} 
-              disabled={isRunning}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all border border-white/10 ${isRunning ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`} 
-              style={{ boxShadow: themeVals.shadowOuter, background: themeVals.raisedGradient, color: themeVals.textMain }}
-            >
-              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
             <div className="relative">
               {isModeDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsModeDropdownOpen(false)}></div>}
               <button 
@@ -125,6 +118,12 @@ export default function TopBar({ themeVals, setIsAuthModalOpen, setIsProfileModa
                </div>
                <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>
                  <UserCircle2 size={18} /> Profile
+               </button>
+               <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full text-left px-4 py-3 font-semibold flex items-center justify-between rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>
+                 <div className="flex items-center gap-3">
+                   {isDarkMode ? <Sun size={18} /> : <Moon size={18} />} Theme
+                 </div>
+                 <span className="text-[11px] font-bold uppercase tracking-wider opacity-50">{isDarkMode ? 'Dark' : 'Light'}</span>
                </button>
                <Link 
                  to="/subscription" 

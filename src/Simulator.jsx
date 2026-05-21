@@ -5,6 +5,7 @@ import ProfileModal from './components/ProfileModal';
 import useExamAudio from './hooks/useExamAudio';
 import TopBar from './components/layout/TopBar.jsx';
 import { useAuth } from './contexts/AuthContext.jsx';
+import { useTheme } from './contexts/ThemeContext.jsx';
 
 import { AVATARS, MODES, RECOMMENDED_SEQUENCE, EXAM_PARTS, FLAT_EXAM_SUBS, TECHNIQUE_GUIDES, PACING_RULES, UI_CFG } from './utils/constants';
 import { calculateScores, calculateWinner, rgbToHex, getTipColor, getDifficultyColor, buildExamTimeline, calculateProgressState, generateReflectionPoints } from './utils/helpers';
@@ -38,7 +39,7 @@ export default function App() {
     return () => document.head.removeChild(style);
   }, []);
 
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, themeVals } = useTheme();
 
   // Synchronous Lazy Initialization
   const savedState = useMemo(() => {
@@ -210,28 +211,6 @@ export default function App() {
     if (selectedKey !== 'full') setAmbientOn(false);
   }, []);
 
-  const themeVals = useMemo(() => {
-    const t = isDarkMode ? {
-      bg: "#1e2229", raised1: "#23272f", raised2: "#191c23", shadowDark: "#13161a", shadowLight: "#292e38",
-      trackBg: "#2a2f38", textMain: "#e2e8f0", textSub: "#94a3b8", textHighlight: "#64748b"
-    } : {
-      bg: "#eef2f6", raised1: "#ffffff", raised2: "#dce3ec", shadowDark: "#c8d4e2", shadowLight: "#ffffff",
-      trackBg: "#d8e1ec", textMain: "#475569", textSub: "#94a3b8", textHighlight: "#64748b"
-    };
-    
-    return {
-      theme: t, bg: t.bg,
-      raisedGradient: `linear-gradient(145deg, ${t.raised1}, ${t.raised2})`,
-      indentedGradient: `linear-gradient(145deg, ${t.raised2}, ${t.raised1})`,
-      shadowOuter: `${cfg.depthOuter}px ${cfg.depthOuter}px ${cfg.depthOuter*2}px ${t.shadowDark}, -${cfg.depthOuter}px -${cfg.depthOuter}px ${cfg.depthOuter*2}px ${t.shadowLight}, inset 1px 1px 2px rgba(255,255,255,0.4), inset -1px -1px 2px rgba(0,0,0,0.02)`,
-      shadowCap: `${cfg.depthCap}px ${cfg.depthCap}px ${cfg.depthCap*2}px ${t.shadowDark}, -${cfg.depthCap}px -${cfg.depthCap}px ${cfg.depthCap*2}px ${t.shadowLight}, inset 2px 2px 4px rgba(255,255,255,0.4), inset -2px -2px 4px rgba(0,0,0,0.02)`,
-      shadowPlateau: isDarkMode ? `${cfg.depthOuter}px ${cfg.depthOuter}px ${cfg.btnSlopeBlur}px ${t.shadowDark}, -${cfg.depthOuter}px -${cfg.depthOuter}px ${cfg.btnSlopeBlur}px ${t.shadowLight}, inset 2px 2px ${cfg.btnEdgeBlur}px rgba(255,255,255,0.03), inset -2px -2px ${cfg.btnEdgeBlur}px rgba(0,0,0,0.2)` : `${cfg.depthOuter}px ${cfg.depthOuter}px ${cfg.btnSlopeBlur}px ${t.shadowDark}, -${cfg.depthOuter}px -${cfg.depthOuter}px ${cfg.btnSlopeBlur}px ${t.shadowLight}, inset 2px 2px ${cfg.btnEdgeBlur}px rgba(255,255,255,0.9), inset -2px -2px ${cfg.btnEdgeBlur}px rgba(0,0,0,0.02)`,
-      shadowTrench: `inset ${cfg.depthTrench}px ${cfg.depthTrench}px ${cfg.depthTrench*2}px ${t.shadowDark}, inset -${cfg.depthTrench}px -${cfg.depthTrench}px ${cfg.depthTrench*2}px ${t.shadowLight}, 1px 1px 2px rgba(255,255,255,0.4)`,
-      shadowDimple: `inset ${cfg.depthDimple}px ${cfg.depthDimple}px ${cfg.depthDimple*2}px ${t.shadowDark}, inset -${cfg.depthDimple}px -${cfg.depthDimple}px ${cfg.depthDimple*2}px ${t.shadowLight}`,
-      shadowDeepInset: `inset 8px 8px ${cfg.dropShadowBlur}px ${cfg.dropShadowSpread}px ${t.shadowDark}, inset -8px -8px ${cfg.dropShadowBlur}px ${cfg.dropShadowSpread}px ${t.shadowLight}`
-    };
-  }, [isDarkMode, cfg.depthOuter, cfg.depthCap, cfg.btnSlopeBlur, cfg.btnEdgeBlur, cfg.depthTrench, cfg.depthDimple, cfg.dropShadowBlur, cfg.dropShadowSpread]);
-
   const toggleTimer = useCallback(() => {
     setIsRunning(prev => {
       if (!prev && timeLeftRef.current > 0) {
@@ -363,13 +342,11 @@ export default function App() {
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
       
       <TopBar 
-        themeVals={themeVals} 
-        currentUser={currentUser} 
         setIsAuthModalOpen={setIsAuthModalOpen}
         setIsProfileModalOpen={setIsProfileModalOpen}
         setIsLogoutModalOpen={setIsLogoutModalOpen}
         isSimulator={true}
-        simulatorProps={{ isRunning, isTimerStarted: isRunning && timeLeft < totalTime.current, mode, MODES, handleModeSelect, isDarkMode, setIsDarkMode }}
+        simulatorProps={{ isRunning, isTimerStarted: isRunning && timeLeft < totalTime.current, mode, MODES, handleModeSelect }}
       />
 
       <AuthModal 
