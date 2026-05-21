@@ -39,81 +39,58 @@ export async function onRequestPost(context) {
     }
 
     if (isHardSync) {
-        await db.prepare("DELETE FROM vocab_repository").run();
-      }
+      await db.prepare("DELETE FROM vocab_repository").run();
+    }
 
-      // --- 2. ดึงข้อมูลเดิมมาเปรียบเทียบ (Optimize Database Write) ---
-      const { results: existingRows } = await db.prepare("SELECT eng, thai, pos, category, example, synonyms, antonyms, sort_order, is_deleted FROM vocab_repository").all();
-      
-      const existingMap = new Map();
-      existingRows.forEach(row => existingMap.set(row.eng, row));
+    // 1. อ่านเฉพาะคีย์ (eng) เพื่อลดการใช้ RAM และ Read Quota อย่างมหาศาล
+    const { results: existingEngs } = await db.prepare("SELECT eng FROM vocab_repository WHERE is_deleted = 0").all();
+    const activeWords = new Set(existingEngs.map(r => r.eng));
 
-      const statements = [];
-      const sheetEngs = new Set();
-      let insertedCount = 0;
-      let updatedCount = 0;
+    const chunkSize = 100;
+    let processed = 0;
 
-      for (const word of allWords) {
-        sheetEngs.add(word.eng);
-        const existing = existingMap.get(word.eng);
-
-        // แปลงค่า Null และช่องว่างให้เหมือนกันก่อนเปรียบเทียบ
-        const normalize = (val) => val === null || val === undefined ? null : String(val).trim();
-
-        if (!existing) {
-          // คำศัพท์ใหม่เอี่ยม -> เก็บคำสั่ง INSERT
-          statements.push(db.prepare(`
-            INSERT INTO vocab_repository (eng, thai, pos, category, example, synonyms, antonyms, is_deleted, sort_order) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
-          `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, word.sort_order));
-          insertedCount++;
-        } else {
-          // มีคำศัพท์อยู่แล้ว -> เปรียบเทียบข้อมูลว่ามีการเปลี่ยนแปลงหรือไม่
-          const hasChanged = 
-            normalize(existing.thai) !== normalize(word.thai) ||
-            normalize(existing.pos) !== normalize(word.pos) ||
-            normalize(existing.category) !== normalize(word.category) ||
-            normalize(existing.example) !== normalize(word.example) ||
-            normalize(existing.synonyms) !== normalize(word.synonyms) ||
-            normalize(existing.antonyms) !== normalize(word.antonyms) ||
-            existing.sort_order !== word.sort_order ||
-            existing.is_deleted === 1; // หากเคยถูกลบไปแล้ว (Soft delete) ให้กู้คืน
-
-          if (hasChanged) {
-            // ข้อมูลเปลี่ยน -> เก็บคำสั่ง UPDATE เฉพาะแถวที่ต่างจากเดิม
-            statements.push(db.prepare(`
-              UPDATE vocab_repository SET 
-              thai = ?, pos = ?, category = ?, example = ?, synonyms = ?, antonyms = ?, 
-              is_deleted = 0, sort_order = ?, updated_at = CURRENT_TIMESTAMP
-              WHERE eng = ?
-            `).bind(word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, word.sort_order, word.eng));
-            updatedCount++;
-          }
-        }
-      }
-
-      let deletedCount = 0;
-      if (!isHardSync) {
-        // --- 3. หาคำศัพท์ที่ถูกลบออกจาก Sheet (มีใน DB แต่ไม่มีใน Sheet) ---
-        for (const [eng, row] of existingMap.entries()) {
-          if (!sheetEngs.has(eng) && row.is_deleted === 0) {
-            statements.push(db.prepare("UPDATE vocab_repository SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE eng = ?").bind(eng));
-            deletedCount++;
-          }
-        }
-      }
-
-      // --- 4. บันทึกข้อมูลที่เปลี่ยนแปลงแบบ Batch (ทีละ 100 คำสั่ง) ประหยัดโควต้า ---
-      const chunkSize = 100;
-      for (let i = 0; i < statements.length; i += chunkSize) {
-        const chunk = statements.slice(i, i + chunkSize);
-        await db.batch(chunk);
-      }
-
-      const message = `เพิ่มใหม่ ${insertedCount} คำ, อัปเดต ${updatedCount} คำ, ลบ ${deletedCount} คำ`;
-      return new Response(JSON.stringify({ status: "success", count: allWords.length, message }), {
-        headers: { "Content-Type": "application/json" }
+    // 2. โยนชุดคำสั่งเข้า DB ให้ทำงานระดับ Engine (Database-Level Diffing)
+    for (let i = 0; i < allWords.length; i += chunkSize) {
+      const chunk = allWords.slice(i, i + chunkSize);
+      const chunkStatements = chunk.map(word => {
+        activeWords.delete(word.eng); // หักล้างคำที่มีใน Sheet ออกจากรายการ
+        
+        return db.prepare(`
+          INSERT INTO vocab_repository (eng, thai, pos, category, example, synonyms, antonyms, is_deleted, sort_order) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
+          ON CONFLICT(eng) DO UPDATE SET 
+          thai = excluded.thai, pos = excluded.pos, category = excluded.category, 
+          example = excluded.example, synonyms = excluded.synonyms, antonyms = excluded.antonyms,
+          is_deleted = 0, sort_order = excluded.sort_order, updated_at = CURRENT_TIMESTAMP
+          WHERE 
+          IFNULL(vocab_repository.thai, '') != IFNULL(excluded.thai, '') OR 
+          IFNULL(vocab_repository.pos, '') != IFNULL(excluded.pos, '') OR 
+          IFNULL(vocab_repository.category, '') != IFNULL(excluded.category, '') OR 
+          IFNULL(vocab_repository.example, '') != IFNULL(excluded.example, '') OR 
+          IFNULL(vocab_repository.synonyms, '') != IFNULL(excluded.synonyms, '') OR 
+          IFNULL(vocab_repository.antonyms, '') != IFNULL(excluded.antonyms, '') OR 
+          vocab_repository.sort_order != excluded.sort_order OR 
+          vocab_repository.is_deleted = 1
+        `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, word.sort_order);
       });
+      await db.batch(chunkStatements);
+      processed += chunk.length;
+    }
+
+    // 3. นำคำที่ตกค้างใน Set ไปตั้งค่าลบ (Soft Delete)
+    if (!isHardSync && activeWords.size > 0) {
+      const deleteStmts = Array.from(activeWords).map(eng => 
+        db.prepare("UPDATE vocab_repository SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE eng = ?").bind(eng)
+      );
+      for (let i = 0; i < deleteStmts.length; i += chunkSize) {
+        await db.batch(deleteStmts.slice(i, i + chunkSize));
+      }
+    }
+
+    const message = `ทำงานด้วยระบบ DB-Level Diffing สมบูรณ์`;
+    return new Response(JSON.stringify({ status: "success", count: processed, message }), {
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
