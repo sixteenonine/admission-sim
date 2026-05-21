@@ -160,24 +160,68 @@ export default function StoryAdmin() {
     e.preventDefault();
     if (!sheetUrl) return setStatus({ type: 'error', msg: 'กรุณาวางลิงก์ Google Sheets (.tsv)' });
     
-    setLoading(true); 
-    setStatus({ type: '', msg: 'กำลังให้เซิร์ฟเวอร์ดึงและประมวลผลข้อมูล โปรดรอสักครู่...' });
+    setLoading(true); setStatus({ type: '', msg: 'กำลังดาวน์โหลดข้อมูลจาก Google Sheets...' });
+    setSyncProgress(0); setTotalSync(0);
 
     try {
-      const res = await fetch('/api/admin/vocab/sync', {
+      // 1. ให้ Backend โหลดไฟล์และแปลงเป็น JSON เพื่อทะลวง CORS และเซฟ RAM
+      const fetchRes = await fetch('/api/admin/vocab/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sheetUrl, isHardSync })
+        body: JSON.stringify({ sheetUrl })
       });
       
-      const data = await res.json();
-      if (!res.ok || data.status === 'error') throw new Error(data.message || 'การเชื่อมต่อล้มเหลว');
+      const fetchData = await fetchRes.json();
+      if (!fetchRes.ok || fetchData.status === 'error') throw new Error(fetchData.message || 'ดึงข้อมูล Sheet ไม่สำเร็จ');
+      
+      const allWords = fetchData.data;
 
-      setStatus({ type: 'success', msg: `ซิงค์สำเร็จ! ${data.message} (รวมในระบบ ${data.count} คำ)` });
+      setTotalSync(allWords.length);
+      setStatus({ type: '', msg: `เตรียมบันทึกคำศัพท์จำนวน ${allWords.length} คำ...` });
+
+      if (isHardSync) {
+        setStatus({ type: '', msg: 'กำลังล้างข้อมูลเก่าทั้งหมด...' });
+        await fetch('/api/admin/vocab/clear', { method: 'POST' });
+      }
+
+      // 2. หั่นข้อมูลและทยอยส่งให้เซิร์ฟเวอร์ (Chunking) พร้อมหน่วงเวลาแก้ Rate Limit
+      const chunkSize = 300;
+      let processed = 0;
+      const batchId = Date.now().toString();
+
+      for (let i = 0; i < allWords.length; i += chunkSize) {
+        const chunk = allWords.slice(i, i + chunkSize);
+
+        const chunkRes = await fetch('/api/admin/vocab/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chunk, batchId })
+        });
+
+        if (!chunkRes.ok) throw new Error('การเชื่อมต่อล้มเหลวระหว่างส่งข้อมูล');
+
+        processed += chunk.length;
+        setSyncProgress(processed);
+        
+        // หน่วงเวลา 500ms ป้องกันระบบกันสแปมของเซิร์ฟเวอร์บล็อก API (Error 429)
+        if (i + chunkSize < allWords.length) await new Promise(r => setTimeout(r, 500));
+      }
+
+      // 3. ยิง API ล้างข้อมูลที่หายไปจาก Sheet ประจำรอบการอัปเดตนี้
+      if (!isHardSync) {
+        setStatus({ type: '', msg: 'กำลังเคลียร์คำศัพท์ที่ถูกลบ...' });
+        await fetch('/api/admin/vocab/cleanup', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ batchId })
+        });
+      }
+
+      setStatus({ type: 'success', msg: `ซิงค์สำเร็จทั้งหมด ${processed} คำ! (กระจายโหลด Client-Side)` });
     } catch (err) {
       setStatus({ type: 'error', msg: err.message || 'เกิดข้อผิดพลาดในการซิงค์' });
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
+      setTimeout(() => { setSyncProgress(0); setTotalSync(0); }, 3000);
     }
   };
 
@@ -216,7 +260,17 @@ export default function StoryAdmin() {
               <span className="font-bold text-red-800 text-sm uppercase">ลบข้อมูลเดิมทิ้งทั้งหมดก่อนซิงก์ (Hard Sync - เปิดเฉพาะเวลาลบศัพท์)</span>
             </div>
             
-            {/* เลิกใช้ Progress Bar ฝั่ง Frontend เพราะ Backend จัดการเบ็ดเสร็จรวดเดียวแล้ว */}
+            {totalSync > 0 && (
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex justify-between text-xs font-bold text-emerald-700">
+                  <span>กำลังอัปเดตข้อมูลทีละชุด...</span>
+                  <span>{syncProgress} / {totalSync} คำ</span>
+                </div>
+                <div className="w-full bg-emerald-100 rounded-full h-3 overflow-hidden">
+                  <div className="bg-emerald-500 h-3 rounded-full transition-all duration-300" style={{ width: `${(syncProgress / totalSync) * 100}%` }}></div>
+                </div>
+              </div>
+            )}
 
             <button type="submit" disabled={loading} className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg p-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50">
               {loading ? <Loader2 className="animate-spin" size={24} /> : <RefreshCw size={24} />} SYNC VOCABULARY DATA
