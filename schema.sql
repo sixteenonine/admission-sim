@@ -69,6 +69,7 @@ CREATE TABLE user_sync_data (
     favorites TEXT DEFAULT '{"stories":[], "vocab":[]}',
     custom_decks TEXT DEFAULT '[]',
     custom_speedreads TEXT DEFAULT '[]',
+    srs_progress TEXT DEFAULT '{}',
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

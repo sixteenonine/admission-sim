@@ -167,13 +167,26 @@ export default function FlashcardPlayer() {
         }
         
         // 3. ดึงคำศัพท์มาแสดงผลรองรับหมวดพึงพอใจพิเศษ
-        let localDeck = [];
+        let rawDeck = [];
         if (currentCategory === 'MY FAVORITE') {
-          localDeck = await db.flashcards.where('isStarred').equals(1).toArray();
+          rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
         } else {
-          localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+          rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
         }
-        localDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        rawDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+        // กรองด้วย SRS: คัดเฉพาะคำศัพท์ใหม่ หรือคำที่ถึงกำหนดเวลาทบทวน
+        const srsData = await db.vocab_srs.toArray();
+        const srsMap = {};
+        srsData.forEach(item => srsMap[item.eng] = item);
+        
+        const now = Date.now();
+        let localDeck = rawDeck.filter(card => {
+          const srs = srsMap[card.eng];
+          if (!srs) return true; // ศัพท์ใหม่ที่ยังไม่เคยเรียน
+          return srs.next_review <= now; // ศัพท์ที่ถึงรอบทบทวน
+        });
+
         setDeck(localDeck);
 
         // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา
@@ -229,6 +242,43 @@ export default function FlashcardPlayer() {
   const handleNext = () => { if (currentIndex < deck.length - 1) triggerCardAnim('next', () => setCurrentIndex(prev => prev + 1)); };
   const handlePrev = () => { if (currentIndex > 0) triggerCardAnim('prev', () => setCurrentIndex(prev => prev - 1)); };
   const handleShuffle = () => { triggerCardAnim('shuffle', () => { const shuffled = [...deck].sort(() => Math.random() - 0.5); setDeck(shuffled); setCurrentIndex(0); }); };
+  const handleSRSEvaluate = async (q) => {
+    if (!currentWord || isChangingWord) return;
+    
+    const eng = currentWord.eng;
+    const currentSrs = await db.vocab_srs.get(eng) || { eng, repetition: 0, interval: 0, ease_factor: 2.5 };
+    let { repetition, interval, ease_factor } = currentSrs;
+
+    if (q >= 3) {
+      if (repetition === 0) interval = 1;
+      else if (repetition === 1) interval = 6;
+      else interval = Math.round(interval * ease_factor);
+      repetition += 1;
+    } else {
+      repetition = 0;
+      interval = 1;
+    }
+
+    ease_factor = ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
+    if (ease_factor < 1.3) ease_factor = 1.3;
+    const next_review = Date.now() + (interval * 24 * 60 * 60 * 1000);
+
+    const newSrsData = { eng, repetition, interval, ease_factor, next_review };
+    await db.vocab_srs.put(newSrsData);
+
+    actionQueueRef.current.push({ type: 'srs_update', word: eng, srsData: newSrsData, timestamp: Date.now() });
+    pendingSyncRef.current = true;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
+
+    triggerCardAnim('next', () => {
+      setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
+      const newDeck = [...deck];
+      newDeck.splice(currentIndex, 1);
+      setDeck(newDeck);
+      if (currentIndex >= newDeck.length && currentIndex > 0) setCurrentIndex(newDeck.length - 1);
+    });
+  };
   const handleMastered = () => {
     triggerCardAnim('down', () => {
       setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
@@ -252,13 +302,25 @@ export default function FlashcardPlayer() {
   };
   const handleRestart = async () => { 
     triggerCardAnim('shuffle', async () => { 
-      let localDeck = [];
+      let rawDeck = [];
       if (currentCategory === 'MY FAVORITE') {
-        localDeck = await db.flashcards.where('isStarred').equals(1).toArray();
+        rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
       } else {
-        localDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+        rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
       }
-      setDeck(localDeck); 
+      rawDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+      const srsData = await db.vocab_srs.toArray();
+      const srsMap = {};
+      srsData.forEach(item => srsMap[item.eng] = item);
+      
+      const now = Date.now();
+      let localDeck = rawDeck.filter(card => {
+        const srs = srsMap[card.eng];
+        return !srs || srs.next_review <= now;
+      });
+
+      setDeck(localDeck);
       setCurrentIndex(0); 
       setMasteredHistory([]); 
     }); 
@@ -375,9 +437,27 @@ export default function FlashcardPlayer() {
             <button onClick={handleShuffle} disabled={isChangingWord} className="col-span-1 py-[16px] flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: textMuted, boxShadow: shadowSm }}>
               <Shuffle size={22} strokeWidth={2.5} />
             </button>
-            <button onClick={handleMastered} disabled={isChangingWord} className="col-span-4 py-[16px] flex justify-center items-center rounded-[16px] font-semibold text-[1rem] transition-transform active:scale-95 disabled:opacity-80 disabled:cursor-not-allowed" style={{ background: primaryColor, color: '#FFF', boxShadow: shadowSm }}>
-              I Know This
-            </button>
+            
+            {!isFlipped ? (
+              <button onClick={() => setIsFlipped(true)} disabled={isChangingWord} className="col-span-4 py-[16px] flex justify-center items-center rounded-[16px] font-semibold text-[1rem] transition-transform active:scale-95 disabled:opacity-80 disabled:cursor-not-allowed" style={{ background: primaryColor, color: '#FFF', boxShadow: shadowSm }}>
+                Show Answer
+              </button>
+            ) : (
+              <div className="col-span-4 grid grid-cols-4 gap-[8px]">
+                <button onClick={() => handleSRSEvaluate(1)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF3B30]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[0.85rem]">Again</span>
+                </button>
+                <button onClick={() => handleSRSEvaluate(3)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF9500]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[0.85rem]">Hard</span>
+                </button>
+                <button onClick={() => handleSRSEvaluate(4)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#007AFF]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[0.85rem]">Good</span>
+                </button>
+                <button onClick={() => handleSRSEvaluate(5)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#34C759]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[0.85rem]">Easy</span>
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
