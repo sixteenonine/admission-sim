@@ -210,9 +210,11 @@ export default function StoryAdmin() {
       // 3. ยิง API ล้างข้อมูลที่หายไปจาก Sheet ประจำรอบการอัปเดตนี้
       if (!isHardSync) {
         setStatus({ type: '', msg: 'กำลังเคลียร์คำศัพท์ที่ถูกลบ...' });
+        // ส่งเฉพาะรายชื่อคำศัพท์ (eng) ทั้งหมดที่เพิ่งโหลดมา ไปเทียบเพื่อหาคำที่ต้องลบ
+        const activeKeys = allWords.map(w => w.eng);
         await fetch('/api/admin/vocab/cleanup', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ batchId })
+          body: JSON.stringify({ activeKeys })
         });
       }
 
