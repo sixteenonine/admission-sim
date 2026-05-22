@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useOutletContext, useNavigate } from 'react-router-dom';
+import { db } from '../../utils/db.js';
 
 export function HubHome() {
   const themeVals = useOutletContext();
@@ -53,6 +54,27 @@ export function HubFlashcards() {
       try {
         const recents = JSON.parse(localStorage.getItem('recent_decks') || '[]');
         setRecentDecks(recents.slice(0, 3));
+        if (themeVals?.currentUser?.id) {
+          try {
+            const res = await fetch(`/api/vocab/srs-sync?userId=${themeVals.currentUser.id}`);
+            const json = await res.json();
+            if (json.status === 'success' && json.data) {
+              const srsData = json.data.map(item => ({
+                eng: item.eng,
+                repetition: item.interval > 1 ? 2 : 1,
+                interval: item.interval,
+                ease_factor: item.ease_factor,
+                next_review: new Date(item.next_review_date).getTime()
+              }));
+              await db.vocab_srs.bulkPut(srsData);
+            }
+          } catch(e) { console.error('Sync GET error', e); }
+        }
+
+        const now = Date.now();
+        const localSrs = await db.vocab_srs.toArray();
+        const count = localSrs.filter(s => s.next_review <= now).length;
+        setDueCount(count);
       } catch (err) {
         console.error(err);
       }

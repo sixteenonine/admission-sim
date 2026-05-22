@@ -40,3 +40,22 @@ export async function onRequestPost(context) {
     });
   }
 }
+export async function onRequestGet(context) {
+  try {
+    const { searchParams } = new URL(context.request.url);
+    const userId = searchParams.get('userId');
+    if (!userId) return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400 });
+
+    const db = context.env.DB;
+    const { results } = await db.prepare(`
+      SELECT p.interval, p.ease_factor, p.next_review_date, v.eng 
+      FROM user_vocab_progress p 
+      JOIN vocab_repository v ON p.vocab_id = v.id 
+      WHERE p.user_id = ?
+    `).bind(userId).all();
+    
+    return new Response(JSON.stringify({ status: 'success', data: results }), { headers: { 'Content-Type': 'application/json' } });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+}
