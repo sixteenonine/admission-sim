@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Shuffle, Undo2, Star, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Shuffle, Undo2, Star, MessageSquare, Repeat } from 'lucide-react';
 import { db } from '../../utils/db.js';
 
 export default function FlashcardPlayer() {
@@ -9,22 +9,24 @@ export default function FlashcardPlayer() {
   const navigate = useNavigate();
   const location = useLocation();
   
+  const isSRS = location.state?.isSRS || false;
   const currentCategory = location.state?.deckTitle || 'SCIENCE, HEALTH & NATURE';
+  const currentLevel = location.state?.level || 1;
 
   const [deck, setDeck] = useState([]);
+  const [initialDeckSize, setInitialDeckSize] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredHistory, setMasteredHistory] = useState([]);
   
-  // States เลียนแบบพฤติกรรมดั้งเดิมของ Index.txt
   const [isChangingWord, setIsChangingWord] = useState(false);
   const [disableFlipTransition, setDisableFlipTransition] = useState(false);
   const [animClass, setAnimClass] = useState('translate-x-0 opacity-100');
   const [showExampleFront, setShowExampleFront] = useState(false);
-  const [showExampleBack, setShowExampleBack] = useState(false);
+  const [showSynAnt, setShowSynAnt] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
+  const [sessionStats, setSessionStats] = useState({ remembered: 0, forgotten: 0 });
 
-  // ระบบ Debounce & Visibility API
   const syncTimeoutRef = useRef(null);
   const pendingSyncRef = useRef(false);
   const latestStarsRef = useRef(starredWords);
@@ -54,23 +56,33 @@ export default function FlashcardPlayer() {
 
     const pendingActions = [...actionQueueRef.current];
     actionQueueRef.current = [];
-    const payload = { userId: user.id, syncActions: pendingActions };
+    
+    const srsUpdates = pendingActions.filter(a => a.type === 'srs_update').map(a => a.data);
+    const starUpdates = pendingActions.filter(a => a.type === 'star_vocab');
 
-    if (isEmergency) {
-      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      navigator.sendBeacon('/api/user/sync', blob);
-    } else {
-      try {
-        const response = await fetch('/api/user/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+    if (srsUpdates.length > 0) {
+      const srsPayload = { userId: user.id, updates: srsUpdates };
+      if (isEmergency) {
+        navigator.sendBeacon('/api/vocab/srs-sync', new Blob([JSON.stringify(srsPayload)], { type: 'application/json' }));
+      } else {
+        fetch('/api/vocab/srs-sync', { method: 'POST', body: JSON.stringify(srsPayload), headers: { 'Content-Type': 'application/json' } })
+        .catch(() => {
+           actionQueueRef.current = [...actionQueueRef.current, ...pendingActions.filter(a => a.type === 'srs_update')];
+           pendingSyncRef.current = true;
         });
-        if (!response.ok) throw new Error('Network error');
-      } catch (err) {
-        console.error('Sync failed:', err);
-        actionQueueRef.current = [...pendingActions, ...actionQueueRef.current];
-        pendingSyncRef.current = true;
+      }
+    }
+
+    if (starUpdates.length > 0) {
+      const starPayload = { userId: user.id, syncActions: starUpdates };
+      if (isEmergency) {
+        navigator.sendBeacon('/api/user/sync', new Blob([JSON.stringify(starPayload)], { type: 'application/json' }));
+      } else {
+        fetch('/api/user/sync', { method: 'POST', body: JSON.stringify(starPayload), headers: { 'Content-Type': 'application/json' } })
+        .catch(() => {
+           actionQueueRef.current = [...actionQueueRef.current, ...starUpdates];
+           pendingSyncRef.current = true;
+        });
       }
     }
   };
@@ -168,14 +180,21 @@ export default function FlashcardPlayer() {
         
         // 3. ดึงคำศัพท์มาแสดงผลรองรับหมวดพึงพอใจพิเศษ
         let rawDeck = [];
-        if (currentCategory === 'MY FAVORITE') {
+        if (isSRS) {
+          rawDeck = await db.flashcards.toArray();
+        } else if (currentCategory === 'MY FAVORITE') {
           rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
         } else {
           rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
         }
         rawDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-        // กรองด้วย SRS: คัดเฉพาะคำศัพท์ใหม่ หรือคำที่ถึงกำหนดเวลาทบทวน
+        if (!isSRS && currentCategory !== 'MY FAVORITE' && rawDeck.length > 0) {
+          const chunkSize = Math.ceil(rawDeck.length / 3);
+          const idx = currentLevel - 1;
+          rawDeck = rawDeck.slice(idx * chunkSize, (idx + 1) * chunkSize);
+        }
+
         const srsData = await db.vocab_srs.toArray();
         const srsMap = {};
         srsData.forEach(item => srsMap[item.eng] = item);
@@ -183,11 +202,12 @@ export default function FlashcardPlayer() {
         const now = Date.now();
         let localDeck = rawDeck.filter(card => {
           const srs = srsMap[card.eng];
-          if (!srs) return true; // ศัพท์ใหม่ที่ยังไม่เคยเรียน
-          return srs.next_review <= now; // ศัพท์ที่ถึงรอบทบทวน
+          if (!srs) return true;
+          return srs.next_review <= now;
         });
 
         setDeck(localDeck);
+        setInitialDeckSize(localDeck.length);
 
         // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา
         const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
@@ -200,24 +220,20 @@ export default function FlashcardPlayer() {
   }, [currentCategory, user?.id]);
 
   const currentWord = deck[currentIndex];
-  const progressPercent = deck.length > 0 ? ((currentIndex + 1) / deck.length) * 100 : 100;
+  const progressPercent = initialDeckSize > 0 ? ((initialDeckSize - deck.length) / initialDeckSize) * 100 : 100;
 
-  // ฟังก์ชันจำลองแอนิเมชันเปลี่ยนไพ่
   const triggerCardAnim = (direction, actionFn) => {
     if (isChangingWord) return;
     setIsChangingWord(true);
     setDisableFlipTransition(true);
     setIsFlipped(false);
     setShowExampleFront(false);
-    setShowExampleBack(false);
+    setShowSynAnt(false);
 
     setTimeout(() => {
         setDisableFlipTransition(false);
         
         if (direction === 'next') setAnimClass('-translate-x-[120%] opacity-0 transition-all duration-200');
-        else if (direction === 'prev') setAnimClass('translate-x-[120%] opacity-0 transition-all duration-200');
-        else if (direction === 'down') setAnimClass('translate-y-[120%] opacity-0 transition-all duration-200');
-        else if (direction === 'shuffle') setAnimClass('scale-50 opacity-0 transition-all duration-200');
         else if (direction === 'undo') setAnimClass('-translate-y-[120%] opacity-0 transition-all duration-200');
 
         setTimeout(() => {
@@ -225,9 +241,6 @@ export default function FlashcardPlayer() {
             setDisableFlipTransition(true);
             
             if (direction === 'next') setAnimClass('translate-x-[120%] opacity-0 transition-none');
-            else if (direction === 'prev') setAnimClass('-translate-x-[120%] opacity-0 transition-none');
-            else if (direction === 'down') setAnimClass('-translate-y-[120%] opacity-0 transition-none');
-            else if (direction === 'shuffle') setAnimClass('scale-150 opacity-0 transition-none');
             else if (direction === 'undo') setAnimClass('translate-y-[120%] opacity-0 transition-none');
 
             setTimeout(() => {
@@ -239,15 +252,19 @@ export default function FlashcardPlayer() {
     }, 20);
   };
 
-  const handleNext = () => { if (currentIndex < deck.length - 1) triggerCardAnim('next', () => setCurrentIndex(prev => prev + 1)); };
-  const handlePrev = () => { if (currentIndex > 0) triggerCardAnim('prev', () => setCurrentIndex(prev => prev - 1)); };
-  const handleShuffle = () => { triggerCardAnim('shuffle', () => { const shuffled = [...deck].sort(() => Math.random() - 0.5); setDeck(shuffled); setCurrentIndex(0); }); };
-  const handleSRSEvaluate = async (q) => {
+  const handleAnswer = async (isRemembered) => {
     if (!currentWord || isChangingWord) return;
     
+    setSessionStats(prev => ({
+      remembered: prev.remembered + (isRemembered ? 1 : 0),
+      forgotten: prev.forgotten + (!isRemembered ? 1 : 0)
+    }));
+
     const eng = currentWord.eng;
     const currentSrs = await db.vocab_srs.get(eng) || { eng, repetition: 0, interval: 0, ease_factor: 2.5 };
     let { repetition, interval, ease_factor } = currentSrs;
+
+    let q = isRemembered ? 4 : 1;
 
     if (q >= 3) {
       if (repetition === 0) interval = 1;
@@ -266,7 +283,15 @@ export default function FlashcardPlayer() {
     const newSrsData = { eng, repetition, interval, ease_factor, next_review };
     await db.vocab_srs.put(newSrsData);
 
-    actionQueueRef.current.push({ type: 'srs_update', word: eng, srsData: newSrsData, timestamp: Date.now() });
+    const syncData = {
+      vocab_id: currentWord.id,
+      status: isRemembered ? 'remembered' : 'forgotten',
+      interval,
+      ease_factor,
+      next_review_date: new Date(next_review).toISOString()
+    };
+
+    actionQueueRef.current.push({ type: 'srs_update', data: syncData, timestamp: Date.now() });
     pendingSyncRef.current = true;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
@@ -279,15 +304,7 @@ export default function FlashcardPlayer() {
       if (currentIndex >= newDeck.length && currentIndex > 0) setCurrentIndex(newDeck.length - 1);
     });
   };
-  const handleMastered = () => {
-    triggerCardAnim('down', () => {
-      setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
-      const newDeck = [...deck];
-      newDeck.splice(currentIndex, 1);
-      setDeck(newDeck);
-      if (currentIndex >= newDeck.length && currentIndex > 0) setCurrentIndex(newDeck.length - 1);
-    });
-  };
+
   const handleUndo = () => {
     if (masteredHistory.length === 0) return;
     triggerCardAnim('undo', () => {
@@ -298,32 +315,21 @@ export default function FlashcardPlayer() {
       setDeck(newDeck);
       setMasteredHistory(historyCopy);
       setCurrentIndex(lastMastered.originalIndex);
+      
+      setSessionStats(prev => ({
+        remembered: Math.max(0, prev.remembered - 1),
+        forgotten: prev.forgotten
+      }));
     });
   };
-  const handleRestart = async () => { 
-    triggerCardAnim('shuffle', async () => { 
-      let rawDeck = [];
-      if (currentCategory === 'MY FAVORITE') {
-        rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
-      } else {
-        rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
-      }
-      rawDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
-      const srsData = await db.vocab_srs.toArray();
-      const srsMap = {};
-      srsData.forEach(item => srsMap[item.eng] = item);
-      
-      const now = Date.now();
-      let localDeck = rawDeck.filter(card => {
-        const srs = srsMap[card.eng];
-        return !srs || srs.next_review <= now;
-      });
-
-      setDeck(localDeck);
-      setCurrentIndex(0); 
-      setMasteredHistory([]); 
-    }); 
+  const handleRestart = () => {
+    setSessionStats({ remembered: 0, forgotten: 0 });
+    setMasteredHistory([]);
+    // Force re-fetch from local DB
+    const event = new Event('visibilitychange');
+    document.dispatchEvent(event);
+    window.location.reload();
   };
 
   const toggleStar = async () => { 
@@ -334,7 +340,6 @@ export default function FlashcardPlayer() {
     setStarredWords(newStarredWords); 
     latestStarsRef.current = newStarredWords; 
     
-    // อัปเดตฐานข้อมูลในเครื่องทันทีด้วย where (เร็วกว่า filter)
     await db.flashcards.where('eng').equals(word).modify({ isStarred: isCurrentlyStarred ? 0 : 1 });
 
     actionQueueRef.current.push({
@@ -346,39 +351,39 @@ export default function FlashcardPlayer() {
 
     pendingSyncRef.current = true;
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    
-    syncTimeoutRef.current = setTimeout(() => {
-      syncToCloud();
-    }, 3000);
+    syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
   };
+
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
     <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
       
-      {/* Header */}
       <div className="w-full max-w-[500px] flex items-center justify-between mb-4 mt-2 px-4">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full transition-transform active:scale-90" style={{ background: btnBg, border: `1px solid ${borderColor}`, boxShadow: shadowSm, color: textMuted }}>
           <ChevronLeft size={24} strokeWidth={2.5} />
         </button>
-        <span className="font-bold tracking-tight text-center text-[1.1rem] px-2 flex-1 truncate" style={{ color: themeVals.textMain }}>{currentCategory}</span>
+        <div className="flex flex-col items-center flex-1 px-2 overflow-hidden">
+          <span className="font-bold tracking-tight text-center text-[1.1rem] truncate w-full" style={{ color: themeVals.textMain }}>{currentCategory}</span>
+          {!isSRS && currentCategory !== 'MY FAVORITE' && (
+            <span className="text-[0.7rem] font-bold uppercase tracking-wider text-[#FF9500]">Level {currentLevel}</span>
+          )}
+        </div>
         <div className="w-10 h-10"></div>
       </div>
 
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center">
           
-          {/* Progress */}
           <div className="w-full max-w-[340px] mb-4 text-center">
             <div className="text-[0.85rem] font-semibold mb-2" style={{ color: textMuted }}>
-              {currentIndex + 1} / {deck.length}
+              Remaining: {deck.length} words
             </div>
-            <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: borderColor }}>
+            <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: borderColor }}>
               <div className="h-full transition-all duration-300" style={{ width: `${progressPercent}%`, background: primaryColor }}></div>
             </div>
           </div>
 
-          {/* Scene */}
           <div className="w-full max-w-[340px] h-[420px] mb-[25px] mx-auto cursor-pointer" style={{ perspective: '1000px' }} onClick={() => { if(!isChangingWord) setIsFlipped(!isFlipped) }}>
             <div className={`relative w-full h-full ${disableFlipTransition ? 'transition-none' : ''} ${animClass}`} style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transitionProperty: 'transform', transitionDuration: disableFlipTransition ? '0ms' : '600ms', transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
               
@@ -392,10 +397,8 @@ export default function FlashcardPlayer() {
                 </button>
                 <div className="text-[2.4rem] font-bold mb-[10px] tracking-tight leading-[1.1] break-words" style={{ color: themeVals.textMain }}>{currentWord.eng}</div>
                 <div className="text-[0.85rem] font-semibold uppercase mb-[20px]" style={{ color: textMuted }}>{currentWord.pos}</div>
-                <div className="text-[1.8rem] font-semibold leading-[1.2]" style={{ color: themeVals.textMain }}>{currentWord.thai}</div>
                 <div className="absolute bottom-[20px] text-[0.75rem] font-medium" style={{ color: textMuted }}>Tap to flip</div>
                 
-                {/* Overlay Front */}
                 <div className={`absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center transition-opacity duration-300 z-40 ${showExampleFront ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} style={{ background: cardBg, borderRadius: '32px', border: `1px solid ${borderColor}` }} onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
                   <p className="text-[1.1rem] leading-[1.5] font-medium mb-5" style={{ color: themeVals.textMain }}>"{currentWord.example}"</p>
                   <span className="text-[0.8rem] font-semibold uppercase" style={{ color: primaryColor }}>Tap to close</span>
@@ -407,35 +410,34 @@ export default function FlashcardPlayer() {
                 <button className="absolute top-[20px] left-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30" style={{ background: btnBg, border: `1px solid ${isStarred ? '#FFD700' : borderColor}`, color: isStarred ? '#FFD700' : textMuted, boxShadow: shadowSm }} onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
                   <Star size={20} fill={isStarred ? '#FFD700' : 'none'} stroke={isStarred ? '#FFD700' : 'currentColor'} />
                 </button>
-                <button className="absolute top-[20px] right-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30" style={{ background: btnBg, border: `1px solid ${borderColor}`, color: textMuted, boxShadow: shadowSm }} onClick={(e) => { e.stopPropagation(); setShowExampleBack(true); }}>
-                  <MessageSquare size={20} strokeWidth={2} />
+                <button className="absolute top-[20px] right-[20px] px-3 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30 font-semibold text-xs" style={{ background: btnBg, border: `1px solid ${borderColor}`, color: themeVals.textMain, boxShadow: shadowSm }} onClick={(e) => { e.stopPropagation(); setShowSynAnt(!showSynAnt); }}>
+                  <Repeat size={14} className="mr-1.5" /> {showSynAnt ? 'Hide' : 'Syn / Ant'}
                 </button>
-                <div className="text-[1.8rem] font-semibold leading-[1.2]" style={{ color: themeVals.textMain }}>{currentWord.thai}</div>
-                <div className="absolute bottom-[20px] text-[0.75rem] font-medium" style={{ color: textMuted }}>Tap to flip</div>
                 
-                {/* Overlay Back */}
-                <div className={`absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center transition-opacity duration-300 z-40 ${showExampleBack ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} style={{ background: cardBg, borderRadius: '32px', border: `1px solid ${borderColor}` }} onClick={(e) => { e.stopPropagation(); setShowExampleBack(false); }}>
-                  <p className="text-[1.1rem] leading-[1.5] font-medium mb-5" style={{ color: themeVals.textMain }}>"{currentWord.example}"</p>
-                  <span className="text-[0.8rem] font-semibold uppercase" style={{ color: primaryColor }}>Tap to close</span>
-                </div>
+                {!showSynAnt ? (
+                  <div className="text-[1.8rem] font-semibold leading-[1.2]" style={{ color: themeVals.textMain }}>{currentWord.thai}</div>
+                ) : (
+                  <div className="flex flex-col gap-4 w-full px-2">
+                    <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <span className="text-[0.7rem] font-bold uppercase text-[#34C759] mb-1">Synonyms</span>
+                      <span className="font-semibold text-center" style={{ color: themeVals.textMain }}>{currentWord.synonyms || '-'}</span>
+                    </div>
+                    <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <span className="text-[0.7rem] font-bold uppercase text-[#FF3B30] mb-1">Antonyms</span>
+                      <span className="font-semibold text-center" style={{ color: themeVals.textMain }}>{currentWord.antonyms || '-'}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="absolute bottom-[20px] text-[0.75rem] font-medium" style={{ color: textMuted }}>Tap to flip</div>
               </div>
 
             </div>
           </div>
 
-          {/* Controls */}
           <div className="w-full max-w-[340px] grid grid-cols-4 gap-[8px]">
-            <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="col-span-1 py-[16px] flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: themeVals.textMain, boxShadow: shadowSm }}>
-              <Undo2 size={22} strokeWidth={2.5} />
-            </button>
-            <button onClick={handlePrev} disabled={isChangingWord} className="col-span-1 py-[16px] flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: themeVals.textMain, boxShadow: shadowSm }}>
-              <ChevronLeft size={22} strokeWidth={2.5} />
-            </button>
-            <button onClick={handleNext} disabled={isChangingWord} className="col-span-1 py-[16px] flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: themeVals.textMain, boxShadow: shadowSm }}>
-              <ChevronRight size={22} strokeWidth={2.5} />
-            </button>
-            <button onClick={handleShuffle} disabled={isChangingWord} className="col-span-1 py-[16px] flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: textMuted, boxShadow: shadowSm }}>
-              <Shuffle size={22} strokeWidth={2.5} />
+            <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="col-span-4 py-[16px] mb-2 flex justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed" style={{ background: btnBg, color: themeVals.textMain, boxShadow: shadowSm }}>
+              <Undo2 size={20} strokeWidth={2.5} className="mr-2" /> Undo Last Action
             </button>
             
             {!isFlipped ? (
@@ -443,18 +445,12 @@ export default function FlashcardPlayer() {
                 Show Answer
               </button>
             ) : (
-              <div className="col-span-4 grid grid-cols-4 gap-[8px]">
-                <button onClick={() => handleSRSEvaluate(1)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF3B30]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[0.85rem]">Again</span>
+              <div className="col-span-4 grid grid-cols-2 gap-[12px]">
+                <button onClick={() => handleAnswer(false)} disabled={isChangingWord} className="col-span-1 py-[16px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF3B30]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[1rem]">จำไม่ได้</span>
                 </button>
-                <button onClick={() => handleSRSEvaluate(3)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF9500]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[0.85rem]">Hard</span>
-                </button>
-                <button onClick={() => handleSRSEvaluate(4)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#007AFF]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[0.85rem]">Good</span>
-                </button>
-                <button onClick={() => handleSRSEvaluate(5)} disabled={isChangingWord} className="col-span-1 py-[12px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#34C759]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[0.85rem]">Easy</span>
+                <button onClick={() => handleAnswer(true)} disabled={isChangingWord} className="col-span-1 py-[16px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#34C759]" style={{ boxShadow: shadowSm }}>
+                  <span className="text-[1rem]">จำได้</span>
                 </button>
               </div>
             )}
@@ -463,10 +459,22 @@ export default function FlashcardPlayer() {
         </div>
       ) : (
         <div className="flex-1 w-full flex flex-col items-center justify-center text-center px-4">
-          <h2 className="text-[2rem] font-bold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>Completed!</h2>
-          <p className="font-medium mb-8" style={{ color: textMuted }}>You've finished this deck.</p>
-          <button onClick={handleRestart} disabled={isChangingWord} className="px-8 py-[16px] flex justify-center items-center rounded-[20px] transition-transform active:scale-95 font-semibold text-[1rem]" style={{ background: primaryColor, color: '#ffffff', boxShadow: shadowSm }}>
-            Study Again
+          <h2 className="text-[2rem] font-bold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>สรุปผลการทบทวน</h2>
+          <div className="flex flex-col gap-4 mb-8 w-full max-w-[280px] mt-4">
+            <div className="flex justify-between items-center p-4 rounded-[1rem] bg-white/5 border border-white/10">
+              <span className="font-semibold text-[#34C759]">จำได้ (Remembered)</span>
+              <span className="font-bold text-xl text-[#34C759]">{sessionStats.remembered}</span>
+            </div>
+            <div className="flex justify-between items-center p-4 rounded-[1rem] bg-white/5 border border-white/10">
+              <span className="font-semibold text-[#FF3B30]">จำไม่ได้ (Forgotten)</span>
+              <span className="font-bold text-xl text-[#FF3B30]">{sessionStats.forgotten}</span>
+            </div>
+          </div>
+          <button onClick={handleRestart} disabled={isChangingWord} className="w-full max-w-[280px] py-[16px] flex justify-center items-center rounded-[20px] transition-transform active:scale-95 font-semibold text-[1rem] mb-4" style={{ background: primaryColor, color: '#ffffff', boxShadow: shadowSm }}>
+            ทบทวนอีกครั้ง
+          </button>
+          <button onClick={() => navigate(-1)} className="w-full max-w-[280px] py-[16px] flex justify-center items-center rounded-[20px] transition-transform active:scale-95 font-semibold text-[1rem]" style={{ background: btnBg, color: themeVals.textMain, border: `1px solid ${borderColor}`, boxShadow: shadowSm }}>
+            กลับหน้าหลัก
           </button>
         </div>
       )}

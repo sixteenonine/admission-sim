@@ -78,9 +78,30 @@ CREATE TABLE vocab_repository (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     eng TEXT NOT NULL UNIQUE,
     thai TEXT NOT NULL,
-    type TEXT,
-    example TEXT,
+    pos TEXT,
     category TEXT,
-    level TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    example TEXT,
+    synonyms TEXT,
+    antonyms TEXT,
+    sync_batch_id TEXT,
+    is_deleted BOOLEAN DEFAULT 0,
+    sort_order INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+DROP TABLE IF EXISTS user_vocab_progress;
+CREATE TABLE user_vocab_progress (
+    user_id TEXT NOT NULL,
+    vocab_id INTEGER NOT NULL,
+    status TEXT DEFAULT 'learning',
+    interval INTEGER DEFAULT 0,
+    ease_factor REAL DEFAULT 2.5,
+    next_review_date DATETIME NOT NULL,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, vocab_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (vocab_id) REFERENCES vocab_repository(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_vocab_review ON user_vocab_progress(user_id, next_review_date);

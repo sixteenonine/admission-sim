@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import HubLayout from './components/layout/HubLayout.jsx';
-import { HubHome, HubFlashcards, HubSpeedRead } from './pages/hub/HubViews.jsx';
+import { HubHome, HubFlashcards, HubFlashcardDecks, HubSpeedRead } from './pages/hub/HubViews.jsx';
 import FlashcardPlayer from './pages/hub/FlashcardPlayer.jsx';
 import Simulator from './Simulator.jsx';
 import SpeedReadLobby from './pages/hub/SpeedReadLobby.jsx';
@@ -25,6 +25,7 @@ export default function App() {
       <Route element={<HubLayout />}>
         <Route path="/home" element={<HubHome />} />
         <Route path="/vocab" element={<HubFlashcards />} />
+        <Route path="/vocab/decks" element={<HubFlashcardDecks />} />
         <Route path="/vocab/play" element={<FlashcardPlayer />} />
         <Route path="/hub" element={<HubSpeedRead />} />
         <Route path="speedread" element={<SpeedReadLobby />} />
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/storydiary" element={<StoryLobby />} />
         <Route path="/storydiary/play" element={<StoryReader />} />
+        <Route path="decks" element={<HubFlashcardDecks />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />
