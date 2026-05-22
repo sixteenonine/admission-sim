@@ -202,8 +202,10 @@ export default function FlashcardPlayer() {
         const now = Date.now();
         let localDeck = rawDeck.filter(card => {
           const srs = srsMap[card.eng];
-          if (!srs) return true;
-          return srs.next_review <= now;
+          if (isSRS) {
+            return srs && srs.next_review <= now;
+          }
+          return !srs || srs.next_review <= now;
         });
 
         setDeck(localDeck);
