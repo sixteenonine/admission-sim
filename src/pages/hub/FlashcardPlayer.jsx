@@ -198,13 +198,30 @@ export default function FlashcardPlayer() {
         srsData.forEach(item => srsMap[item.eng] = item);
         
         const now = Date.now();
-        let localDeck = rawDeck.filter(card => {
-          const srs = srsMap[card.eng];
-          if (isSRS) {
-            return srs && srs.next_review <= now;
+        let localDeck = [];
+        
+        if (!isSRS && currentCategory !== 'MY FAVORITE') {
+          const sessionKey = `session_${currentCategory}_${currentLevel}`;
+          const savedSession = localStorage.getItem(sessionKey);
+          
+          if (savedSession) {
+            localDeck = JSON.parse(savedSession);
+          } else {
+            localDeck = rawDeck.filter(card => {
+              const srs = srsMap[card.eng];
+              return !srs || srs.interval === 0;
+            });
+            if (localDeck.length === 0) localDeck = [...rawDeck];
           }
-          return !srs || srs.next_review <= now;
-        });
+        } else {
+          localDeck = rawDeck.filter(card => {
+            const srs = srsMap[card.eng];
+            if (isSRS) {
+              return srs && srs.next_review <= now;
+            }
+            return !srs || srs.next_review <= now;
+          });
+        }
 
         setDeck(localDeck);
         setInitialDeckSize(localDeck.length);
@@ -340,6 +357,15 @@ export default function FlashcardPlayer() {
       newDeck.splice(currentIndex, 1);
       setDeck(newDeck);
       if (currentIndex >= newDeck.length && currentIndex > 0) setCurrentIndex(newDeck.length - 1);
+      
+      if (!isSRS && currentCategory !== 'MY FAVORITE') {
+        const sessionKey = `session_${currentCategory}_${currentLevel}`;
+        if (newDeck.length > 0) {
+          localStorage.setItem(sessionKey, JSON.stringify(newDeck));
+        } else {
+          localStorage.removeItem(sessionKey);
+        }
+      }
     });
   };
 
@@ -354,6 +380,10 @@ export default function FlashcardPlayer() {
       setMasteredHistory(historyCopy);
       setCurrentIndex(lastMastered.originalIndex);
       
+      if (!isSRS && currentCategory !== 'MY FAVORITE') {
+        localStorage.setItem(`session_${currentCategory}_${currentLevel}`, JSON.stringify(newDeck));
+      }
+      
       setSessionStats(prev => ({
         remembered: Math.max(0, prev.remembered - 1),
         forgotten: prev.forgotten
@@ -364,6 +394,9 @@ export default function FlashcardPlayer() {
   const handleRestart = () => {
     setSessionStats({ remembered: 0, forgotten: 0 });
     setMasteredHistory([]);
+    if (!isSRS && currentCategory !== 'MY FAVORITE') {
+      localStorage.removeItem(`session_${currentCategory}_${currentLevel}`);
+    }
     const event = new Event('visibilitychange');
     document.dispatchEvent(event);
     window.location.reload();
