@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Shuffle, Undo2, Star, MessageSquare, Repeat } from 'lucide-react';
+import { ChevronLeft, Undo2, Star, MessageSquare, Repeat } from 'lucide-react';
 import { db } from '../../utils/db.js';
 
 export default function FlashcardPlayer() {
@@ -26,6 +26,11 @@ export default function FlashcardPlayer() {
   const [showSynAnt, setShowSynAnt] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
   const [sessionStats, setSessionStats] = useState({ remembered: 0, forgotten: 0 });
+
+  // Swipe & Touch State
+  const [swipeDirection, setSwipeDirection] = useState(null);
+  const touchStartY = useRef(null);
+  const touchEndY = useRef(null);
 
   const syncTimeoutRef = useRef(null);
   const pendingSyncRef = useRef(false);
@@ -87,7 +92,6 @@ export default function FlashcardPlayer() {
     }
   };
 
-  // ดึงค่าสีพื้นฐานมาใช้เป็น Apple-like design เหมือนต้นฉบับ
   const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
   const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
   const btnBg = isDark ? '#2C2C2E' : '#FFFFFF';
@@ -112,7 +116,6 @@ export default function FlashcardPlayer() {
             let data = cloudVocab.data || [];
             
             if (!lastSync || localCount === 0) {
-              // โหลดครั้งแรกทั้งหมด
               const activeData = data.filter(v => v.is_deleted !== 1);
               const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
               const starSet = new Set(currentStars.map(w => w.eng));
@@ -121,7 +124,6 @@ export default function FlashcardPlayer() {
               await db.flashcards.clear();
               await db.flashcards.bulkAdd(newData);
             } else {
-              // โหลดเฉพาะส่วนต่าง (Delta Sync พร้อมคำสั่งลบ)
               if (data.length > 0) {
                 const toDelete = data.filter(v => v.is_deleted === 1).map(v => v.eng);
                 const toUpsert = data.filter(v => v.is_deleted !== 1);
@@ -134,7 +136,6 @@ export default function FlashcardPlayer() {
                 if (upsertData.length > 0) await db.flashcards.bulkPut(upsertData);
               }
               
-              // ตรวจสอบเช็คยอดหลังอัปเดต ถ้าฐานข้อมูลพังจะบังคับโหลดใหม่ให้อัตโนมัติ
               const newLocalCount = await db.flashcards.count();
               if (cloudVocab.total !== undefined && newLocalCount !== cloudVocab.total) {
                 const fullRes = await fetch(`/api/vocab/list?t=${Date.now()}`);
@@ -159,7 +160,6 @@ export default function FlashcardPlayer() {
           console.warn('Offline mode: using local database');
         }
         
-        // 2.5 ดึงข้อมูลดาวล่าสุดจาก Cloud มาทับในเครื่อง (ซิงก์ข้อมูลเวลาเปลี่ยนเครื่อง)
         if (user?.id) {
           try {
             const res = await fetch(`/api/user/sync?userId=${user.id}`);
@@ -169,7 +169,6 @@ export default function FlashcardPlayer() {
               fullFavsRef.current = favData;
               const cloudVocabFavs = favData.vocab || [];
               
-              // ล้างดาวเก่าในเครื่อง และอัปเดตดาวใหม่จากคลาวด์
               await db.flashcards.toCollection().modify({ isStarred: 0 });
               if (cloudVocabFavs.length > 0) {
                 await db.flashcards.where('eng').anyOf(cloudVocabFavs).modify({ isStarred: 1 });
@@ -178,7 +177,6 @@ export default function FlashcardPlayer() {
           } catch(e) { console.error('Cloud sync error', e); }
         }
         
-        // 3. ดึงคำศัพท์มาแสดงผลรองรับหมวดพึงพอใจพิเศษ
         let rawDeck = [];
         if (isSRS) {
           rawDeck = await db.flashcards.toArray();
@@ -211,7 +209,6 @@ export default function FlashcardPlayer() {
         setDeck(localDeck);
         setInitialDeckSize(localDeck.length);
 
-        // 4. ดึงคำศัพท์ที่เคยกดดาว (Favorite) ไว้ขึ้นมา
         const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
         setStarredWords(starred.map(w => w.eng));
       } catch (error) {
@@ -224,6 +221,44 @@ export default function FlashcardPlayer() {
   const currentWord = deck[currentIndex];
   const progressPercent = initialDeckSize > 0 ? ((initialDeckSize - deck.length) / initialDeckSize) * 100 : 100;
 
+  // Touch & Mouse Handlers for Swipe
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.targetTouches ? e.targetTouches[0].clientY : e.clientY;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndY.current = e.targetTouches ? e.targetTouches[0].clientY : e.clientY;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartY.current || !touchEndY.current || !isFlipped || isChangingWord) return;
+    
+    const distance = touchStartY.current - touchEndY.current;
+    const isUpSwipe = distance > 50;
+    const isDownSwipe = distance < -50;
+
+    if (isUpSwipe) {
+      handleAnswer(true);
+    } else if (isDownSwipe) {
+      handleAnswer(false);
+    }
+    
+    touchStartY.current = null;
+    touchEndY.current = null;
+  };
+
+  // Keyboard Handlers
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!isFlipped || isChangingWord) return;
+      if (e.key === 'ArrowUp') handleAnswer(true);
+      if (e.key === 'ArrowDown') handleAnswer(false);
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped, isChangingWord, currentIndex]);
+
   const triggerCardAnim = (direction, actionFn) => {
     if (isChangingWord) return;
     setIsChangingWord(true);
@@ -235,15 +270,16 @@ export default function FlashcardPlayer() {
     setTimeout(() => {
         setDisableFlipTransition(false);
         
-        if (direction === 'next') setAnimClass('-translate-x-[120%] opacity-0 transition-all duration-200');
-        else if (direction === 'undo') setAnimClass('-translate-y-[120%] opacity-0 transition-all duration-200');
+        if (direction === 'up') setAnimClass('-translate-y-[150%] opacity-0 transition-all duration-200');
+        else if (direction === 'down') setAnimClass('translate-y-[150%] opacity-0 transition-all duration-200');
+        else if (direction === 'undo') setAnimClass('-translate-x-[120%] opacity-0 transition-all duration-200');
 
         setTimeout(() => {
             actionFn();
             setDisableFlipTransition(true);
             
-            if (direction === 'next') setAnimClass('translate-x-[120%] opacity-0 transition-none');
-            else if (direction === 'undo') setAnimClass('translate-y-[120%] opacity-0 transition-none');
+            if (direction === 'up' || direction === 'down') setAnimClass('translate-y-[150%] opacity-0 transition-none');
+            else if (direction === 'undo') setAnimClass('translate-x-[120%] opacity-0 transition-none');
 
             setTimeout(() => {
                 setDisableFlipTransition(false);
@@ -298,7 +334,7 @@ export default function FlashcardPlayer() {
     if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
     syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
 
-    triggerCardAnim('next', () => {
+    triggerCardAnim(isRemembered ? 'up' : 'down', () => {
       setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
       const newDeck = [...deck];
       newDeck.splice(currentIndex, 1);
@@ -328,7 +364,6 @@ export default function FlashcardPlayer() {
   const handleRestart = () => {
     setSessionStats({ remembered: 0, forgotten: 0 });
     setMasteredHistory([]);
-    // Force re-fetch from local DB
     const event = new Event('visibilitychange');
     document.dispatchEvent(event);
     window.location.reload();
@@ -386,11 +421,22 @@ export default function FlashcardPlayer() {
             </div>
           </div>
 
-          <div className="w-full max-w-[340px] h-[420px] mb-[25px] mx-auto cursor-pointer" style={{ perspective: '1000px' }} onClick={() => { if(!isChangingWord) setIsFlipped(!isFlipped) }}>
+          <div 
+            className="w-full max-w-[340px] h-[420px] mb-[25px] mx-auto cursor-pointer" 
+            style={{ perspective: '1000px' }} 
+            onClick={() => { if(!isChangingWord) setIsFlipped(!isFlipped) }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleTouchStart}
+            onMouseMove={(e) => { if (e.buttons === 1) handleTouchMove(e); }}
+            onMouseUp={handleTouchEnd}
+            onMouseLeave={handleTouchEnd}
+          >
             <div className={`relative w-full h-full ${disableFlipTransition ? 'transition-none' : ''} ${animClass}`} style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transitionProperty: 'transform', transitionDuration: disableFlipTransition ? '0ms' : '600ms', transitionTimingFunction: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}>
               
               {/* Front */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center" style={{ backfaceVisibility: 'hidden', background: cardBg, border: `1px solid ${borderColor}`, borderRadius: '32px', boxShadow: shadowMd }}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center select-none" style={{ backfaceVisibility: 'hidden', background: cardBg, border: `1px solid ${borderColor}`, borderRadius: '32px', boxShadow: shadowMd }}>
                 <button className="absolute top-[20px] left-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30" style={{ background: btnBg, border: `1px solid ${isStarred ? '#FFD700' : borderColor}`, color: isStarred ? '#FFD700' : textMuted, boxShadow: shadowSm }} onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
                   <Star size={20} fill={isStarred ? '#FFD700' : 'none'} stroke={isStarred ? '#FFD700' : 'currentColor'} />
                 </button>
@@ -408,7 +454,7 @@ export default function FlashcardPlayer() {
               </div>
 
               {/* Back */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center" style={{ backfaceVisibility: 'hidden', background: cardBg, border: `1px solid ${borderColor}`, borderRadius: '32px', boxShadow: shadowMd, transform: 'rotateY(180deg)' }}>
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center select-none" style={{ backfaceVisibility: 'hidden', background: cardBg, border: `1px solid ${borderColor}`, borderRadius: '32px', boxShadow: shadowMd, transform: 'rotateY(180deg)' }}>
                 <button className="absolute top-[20px] left-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30" style={{ background: btnBg, border: `1px solid ${isStarred ? '#FFD700' : borderColor}`, color: isStarred ? '#FFD700' : textMuted, boxShadow: shadowSm }} onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
                   <Star size={20} fill={isStarred ? '#FFD700' : 'none'} stroke={isStarred ? '#FFD700' : 'currentColor'} />
                 </button>
@@ -430,8 +476,6 @@ export default function FlashcardPlayer() {
                     </div>
                   </div>
                 )}
-
-                <div className="absolute bottom-[20px] text-[0.75rem] font-medium" style={{ color: textMuted }}>Tap to flip</div>
               </div>
 
             </div>
@@ -443,17 +487,13 @@ export default function FlashcardPlayer() {
             </button>
             
             {!isFlipped ? (
-              <button onClick={() => setIsFlipped(true)} disabled={isChangingWord} className="col-span-4 py-[16px] flex justify-center items-center rounded-[16px] font-semibold text-[1rem] transition-transform active:scale-95 disabled:opacity-80 disabled:cursor-not-allowed" style={{ background: primaryColor, color: '#FFF', boxShadow: shadowSm }}>
-                Show Answer
-              </button>
+              <div className="col-span-4 flex flex-col items-center justify-center gap-1 opacity-60 pointer-events-none mt-2 text-sm font-medium" style={{ color: textMuted }}>
+                Tap card to show answer
+              </div>
             ) : (
-              <div className="col-span-4 grid grid-cols-2 gap-[12px]">
-                <button onClick={() => handleAnswer(false)} disabled={isChangingWord} className="col-span-1 py-[16px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#FF3B30]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[1rem]">จำไม่ได้</span>
-                </button>
-                <button onClick={() => handleAnswer(true)} disabled={isChangingWord} className="col-span-1 py-[16px] flex flex-col justify-center items-center rounded-[16px] font-semibold transition-transform active:scale-95 disabled:opacity-80 text-[#FFF] bg-[#34C759]" style={{ boxShadow: shadowSm }}>
-                  <span className="text-[1rem]">จำได้</span>
-                </button>
+              <div className="col-span-4 flex flex-col items-center justify-center gap-1 opacity-60 pointer-events-none mt-2 text-sm font-medium" style={{ color: textMuted }}>
+                <span className="flex items-center gap-1"><span className="text-xl">↑</span> Swipe UP to Remember</span>
+                <span className="flex items-center gap-1"><span className="text-xl">↓</span> Swipe DOWN to Forget</span>
               </div>
             )}
           </div>
