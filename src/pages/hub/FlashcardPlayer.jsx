@@ -412,6 +412,7 @@ export default function FlashcardPlayer() {
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">
           
+          // The Context Above
           {/* Header Layout (อิงจากโค้ด index) */}
           <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
             <h1 className="text-2xl font-extrabold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>
@@ -426,9 +427,9 @@ export default function FlashcardPlayer() {
               <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
             </div>
           </div>
-
+// The Code to Insert
           {/* Area การ์ดแนวนอน แบบ 3D Layering */}
-          <div className="relative w-full max-w-lg h-72 mx-auto perspective transition-all duration-300" style={{ perspective: '1000px' }}>
+          <div className="relative w-full max-w-lg h-72 mx-auto transition-all duration-300">
             
             {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
             {deck.length > 1 && (
@@ -439,14 +440,15 @@ export default function FlashcardPlayer() {
               </div>
             )}
 
-            {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
+            {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ (ย้าย perspective มาไว้ที่นี่เพื่อแก้บั๊ก 3D แบน) */}
             <div 
               className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none ${animClass}`}
+              style={{ perspective: '1000px' }}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
               onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
             >
-              {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
+              {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) เป็น Direct Child ของ Perspective */}
               <div 
                 className="relative w-full h-full text-center transition-transform duration-500 cursor-pointer" 
                 style={{ 
@@ -547,7 +549,7 @@ export default function FlashcardPlayer() {
               </div>
             </div>
           </div>
-
+// The Context Below
           {/* ปุ่ม Undo ด้านล่าง */}
           <div className="w-full max-w-md flex justify-center mt-10">
             <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-3 px-8 flex justify-center items-center rounded-full font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
