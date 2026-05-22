@@ -412,32 +412,30 @@ export default function FlashcardPlayer() {
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">
           
-          {/* Header Layout (อิงตามที่ออกแบบเป๊ะๆ ชื่ออยู่ซ้าย ยอดอยู่ขวา) */}
-          <div className="w-full max-w-md flex flex-col items-center mb-6 text-center">
-            <div className="w-full flex justify-between items-end mb-2">
-              <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-left max-w-[70%] truncate" style={{ color: themeVals.textMain }}>
-                {currentCategory}
-              </h1>
-              <div className="flex items-center text-sm md:text-base font-bold pb-1" style={{ color: themeVals.textMain }}>
-                <span>{initialDeckSize - deck.length}</span>
-                <span className="mx-2 font-normal opacity-40">|</span>
-                <span>{initialDeckSize}</span>
-              </div>
+          {/* Header Layout (อิงจากโค้ด index) */}
+          <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
+            <h1 className="text-2xl font-extrabold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>
+              {currentCategory}
+            </h1>
+            <div className="flex items-center text-base font-bold mb-3" style={{ color: themeVals.textMain }}>
+              <span>{initialDeckSize - deck.length + 1}</span>
+              <span className="mx-3 font-normal opacity-40">|</span>
+              <span>{initialDeckSize}</span>
             </div>
-            
-            {/* Progress Bar หลอดด้านล่าง */}
-            <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
+            <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+              <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
             </div>
           </div>
 
           {/* Area การ์ดแนวนอน แบบ 3D Layering */}
-          <div className="relative w-full max-w-md h-72 mx-auto perspective" style={{ perspective: '1000px' }}>
+          <div className="relative w-full max-w-lg h-72 mx-auto perspective transition-all duration-300" style={{ perspective: '1000px' }}>
             
-            {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด (แอบอยู่ด้านหลังเสมอ) */}
+            {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
             {deck.length > 1 && (
               <div className="absolute inset-0 rounded-3xl shadow-lg pointer-events-none" style={{ backgroundColor: currentStyle.color, transform: 'translateY(12px) scale(0.95)', zIndex: 0 }}>
-                {currentStyle.diamonds}
+                <div className="opacity-[0.05] w-full h-full rounded-3xl overflow-hidden relative">
+                  {currentStyle.diamonds}
+                </div>
               </div>
             )}
 
@@ -449,10 +447,20 @@ export default function FlashcardPlayer() {
               onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
             >
               {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
-              <div className="relative w-full h-full" style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', transformStyle: 'preserve-3d' }}>
+              <div 
+                className="relative w-full h-full text-center transition-transform duration-500 cursor-pointer" 
+                style={{ 
+                  transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', 
+                  transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', 
+                  transformStyle: 'preserve-3d' 
+                }}
+              >
                 
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
-                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                <div 
+                  className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  style={{ backgroundColor: currentStyle.color, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
                   <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
@@ -460,17 +468,23 @@ export default function FlashcardPlayer() {
                   </div>
                   
                   {/* ลาย Watermark Background */}
-                  {currentStyle.diamonds}
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] select-none text-black z-0 rounded-3xl overflow-hidden">
+                    {currentStyle.diamonds}
+                  </div>
                   
                   {/* ปุ่ม Info / Close (ขวาบน) */}
-                  <button onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" style={{ color: currentStyle.color }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} 
+                    className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" 
+                    style={{ color: currentStyle.color }}
+                  >
                     {showExampleFront ? 'x' : 'i'}
                   </button>
 
                   {/* หน้าหลัก - คำศัพท์ & ประเภท */}
                   {!showExampleFront ? (
                     <div className="flex flex-col items-center z-10">
-                      <h2 className="text-4xl md:text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
+                      <h2 className="text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
                       <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: currentStyle.color }}>
                         {currentWord.pos}
                       </div>
@@ -478,13 +492,16 @@ export default function FlashcardPlayer() {
                   ) : (
                     /* หน้าตัวอย่างประโยค (Overlay ดำ) */
                     <div className="absolute inset-0 bg-black/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center z-10 pointer-events-auto" onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
-                      <p className="text-xl md:text-2xl font-semibold leading-relaxed">"{currentWord.example}"</p>
+                      <p className="text-2xl font-semibold leading-relaxed">"{currentWord.example || '-'}"</p>
                     </div>
                   )}
                 </div>
 
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
-                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                <div 
+                  className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  style={{ backgroundColor: currentStyle.color, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
                   <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
@@ -493,27 +510,34 @@ export default function FlashcardPlayer() {
 
                   {/* iOS Style Switch ขวาบน */}
                   <div className="absolute top-6 right-6 flex items-center gap-2 z-20" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => setShowSynAnt(!showSynAnt)} className="w-11 h-6 rounded-full relative transition-all duration-300" style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(255, 255, 255, 0.3)' }}>
-                      <div className="w-5 h-5 bg-white rounded-full absolute top-[2px] transition-transform duration-300" style={{ left: showSynAnt ? '22px' : '2px' }}></div>
+                    <button 
+                      onClick={() => setShowSynAnt(!showSynAnt)} 
+                      className="w-11 h-6 rounded-full relative transition-all duration-300" 
+                      style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(255, 255, 255, 0.3)' }}
+                    >
+                      <div 
+                        className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform duration-300" 
+                        style={{ transform: showSynAnt ? 'translateX(20px)' : 'translateX(0px)' }}
+                      ></div>
                     </button>
                   </div>
 
                   {/* เนื้อหาหลังการ์ด */}
-                  <div className="w-full h-full flex items-center justify-center z-10 pt-2">
+                  <div className="w-full h-full flex items-center justify-center z-10">
                     {!showSynAnt ? (
                       /* แปลไทย */
-                      <h2 className="text-4xl md:text-5xl font-prompt font-normal tracking-wide px-4">{currentWord.thai}</h2>
+                      <h2 className="text-4xl font-prompt font-normal px-4">{currentWord.thai}</h2>
                     ) : (
                       /* Synonyms / Antonyms Layout */
                       <div className="w-full h-full flex flex-col items-center justify-center gap-3">
                         <div className="flex flex-col items-center">
                           <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Synonym</span>
-                          <span className="text-3xl font-bold">{currentWord.synonyms || '-'}</span>
+                          <span className="text-4xl font-bold">{currentWord.synonyms || '-'}</span>
                         </div>
                         <div className="w-24 h-[1px] bg-white/20 my-1"></div>
                         <div className="flex flex-col items-center">
                           <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Antonym</span>
-                          <span className="text-3xl font-bold">{currentWord.antonyms || '-'}</span>
+                          <span className="text-4xl font-bold">{currentWord.antonyms || '-'}</span>
                         </div>
                       </div>
                     )}
