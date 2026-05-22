@@ -411,12 +411,7 @@ export default function FlashcardPlayer() {
   return (
     <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
       
-      {/* Top Nav Back Button */}
-      <div className="w-full max-w-[512px] flex items-center mt-4 mb-2 px-4">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full transition-transform active:scale-90 bg-slate-200/50 dark:bg-white/10" style={{ color: themeVals.textMain }}>
-          <ChevronLeft size={24} strokeWidth={2.5} />
-        </button>
-      </div>
+      
 
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">

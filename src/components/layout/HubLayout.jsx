@@ -34,14 +34,14 @@ export default function HubLayout() {
   };
   if (isAuthChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
+      <div className="h-screen flex items-center justify-center font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
         <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
+    <div className="h-screen overflow-y-auto font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
       <TopBar 
         setIsAuthModalOpen={setIsAuthModalOpen}
         setIsProfileModalOpen={setIsProfileModalOpen}
@@ -51,7 +51,7 @@ export default function HubLayout() {
       />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} themeVals={themeVals} />
       
-      <main className="max-w-6xl mx-auto px-6 pt-32 pb-12 relative z-10">
+      <main className="max-w-6xl mx-auto px-6 pt-20 pb-12 relative z-10">
         <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />
       </main>
 
