@@ -56,6 +56,7 @@ export default function App() {
 
   const [mode, setMode] = useState(savedState.mode || 'full');
   const initialTime = MODES[savedState.mode || 'full'].time;
+  const totalTime = useRef(initialTime);
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [isRunning, setIsRunning] = useState(false);
   const [ambientOn, setAmbientOn] = useState(false);
@@ -109,7 +110,7 @@ export default function App() {
   }, [currentUser?.id]);
 
 
-  const totalTime = useRef(initialTime);
+  
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   
   const [customTags, setCustomTags] = useState(savedState.customTags || ['#ลังเลศัพท์', '#ทำไม่ทัน', '#เดา']);
@@ -394,7 +395,7 @@ export default function App() {
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
                   <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center relative border border-white/10 group" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowCap }}>
-                    <Gamepad2 size={14} className="opacity-60 group-hover:text-blue-400 group-hover:opacity-100 transition-colors" color={themeVals.theme.textMain} />
+                    <Gamepad2 size={14} className="opacity-60 group-hover:text-blue-400 group-hover:opacity-100 transition-colors" color={themeVals.textMain} />
                   </div>
                 </div>
               </div>
@@ -410,7 +411,7 @@ export default function App() {
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
                   <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center relative border border-white/10 group" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowCap }}>
-                    <Clock size={14} className="opacity-60 group-hover:text-blue-400 group-hover:opacity-100 transition-colors" color={themeVals.theme.textMain} />
+                    <Clock size={14} className="opacity-60 group-hover:text-blue-400 group-hover:opacity-100 transition-colors" color={themeVals.textMain} />
                   </div>
                 </div>
               </div>
@@ -426,7 +427,7 @@ export default function App() {
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
                   <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center relative border border-white/10 group" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowCap }}>
-                    <BookOpen size={14} className="opacity-60 group-hover:text-emerald-400 group-hover:opacity-100 transition-colors" color={themeVals.theme.textMain} />
+                    <BookOpen size={14} className="opacity-60 group-hover:text-emerald-400 group-hover:opacity-100 transition-colors" color={themeVals.textMain} />
                   </div>
                 </div>
               </div>
@@ -545,18 +546,18 @@ export default function App() {
       
       {isLogoutModalOpen && (
         <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/20 backdrop-blur-sm px-4 animate-in fade-in duration-300">
-          <div className="w-full max-w-sm p-8 rounded-[2.5rem] text-center border border-white/10" style={{ background: themeVals.theme.bg, boxShadow: themeVals.shadowOuter }}>
+          <div className="w-full max-w-sm p-8 rounded-[2.5rem] text-center border border-white/10" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
             <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-full bg-red-500/10 text-red-500">
               <AlertTriangle size={40} />
             </div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: themeVals.theme.textMain }}>Log Out?</h3>
-            <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.theme.textSub }}>หนูต้องการออกจากระบบใช่หรือไม่?</p>
+            <h3 className="text-xl font-bold mb-2" style={{ color: themeVals.textMain }}>Log Out?</h3>
+            <p className="text-sm mb-8 opacity-70" style={{ color: themeVals.textSub }}>หนูต้องการออกจากระบบใช่หรือไม่?</p>
             
             <div className="grid grid-cols-2 gap-4">
               <button 
                 onClick={() => setIsLogoutModalOpen(false)}
                 className="py-4 rounded-2xl font-bold text-[13px] uppercase tracking-widest transition-all active:scale-95"
-                style={{ background: themeVals.indentedGradient, color: themeVals.theme.textMain, boxShadow: themeVals.shadowDeepInset }}
+                style={{ background: themeVals.indentedGradient, color: themeVals.textMain, boxShadow: themeVals.shadowDeepInset }}
               >
                 Cancel
               </button>
@@ -574,7 +575,7 @@ export default function App() {
 
       {countdown !== null && countdown > 0 && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent backdrop-blur-md animate-in fade-in duration-300">
-          <div key={countdown} className="text-[10rem] font-extralight animate-in zoom-in duration-500" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif", color: themeVals.theme.textMain, textShadow: `0 0 40px ${themeVals.theme.textSub}` }}>{countdown}</div>
+          <div key={countdown} className="text-[10rem] font-extralight animate-in zoom-in duration-500" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif", color: themeVals.textMain, textShadow: `0 0 40px ${themeVals.textSub}` }}>{countdown}</div>
         </div>
       )}
     </div>

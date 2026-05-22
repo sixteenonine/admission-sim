@@ -129,7 +129,7 @@ export default function SpeedReadLobby() {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[500px] mx-auto animate-in fade-in duration-300 min-h-screen px-4 pb-24 relative">
+    <div className="flex flex-col items-center w-full max-w-[500px] mx-auto animate-in fade-in duration-300 px-4 pb-24 relative">
       {/* Header */}
       <div className="w-full flex items-center justify-between mb-8 mt-2">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full" style={{ background: isDark ? '#2C2C2E' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, color: '#8E8E93' }}>

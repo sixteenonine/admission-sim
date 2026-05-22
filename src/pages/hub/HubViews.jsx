@@ -254,7 +254,7 @@ export function HubFlashcardLevels() {
   };
 
   return (
-    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-0 pb-12 overflow-hidden relative min-h-[80vh]">
+    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-0 pb-12 overflow-hidden relative">
       <div className="flex items-center justify-between w-full max-w-xl px-4 mt-2 z-10">
         <button onClick={() => navigate('/vocab/decks')} className="w-12 h-12 flex items-center justify-center rounded-full border border-white/10" style={{ background: themeVals.raisedGradient, color: themeVals.textMain }}>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
@@ -331,7 +331,7 @@ export function HubFlashcardLevels() {
 export function HubSpeedRead() {
   const themeVals = useOutletContext();
   return (
-    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-2 relative min-h-[65vh]">
+    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-2 relative">
       <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: themeVals.textMain }}>ULTRA SPEED READ</h1>
       {/* ใช้ flex และ justify-center กรณีการ์ดเหลือเศษ จะตกลงมาอยู่ตรงกลางเป๊ะ */}
       <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl mx-auto">

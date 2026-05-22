@@ -409,14 +409,14 @@ export default function FlashcardPlayer() {
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
-    <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
+    <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
       
       
 
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">
           
-          // The Context Above
+          
           {/* Header Layout (อิงจากโค้ด index) */}
           <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
             <h1 className="text-2xl font-extrabold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>

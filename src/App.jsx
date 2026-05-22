@@ -38,7 +38,7 @@ export default function App() {
         <Route path="/admissim" element={<Simulator />} />
       </Route>
 
-      <Route path="/admissim" element={<Simulator />} />
+      
     </Routes>
     </ThemeProvider>
     </AuthProvider>

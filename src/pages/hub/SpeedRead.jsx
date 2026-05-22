@@ -64,7 +64,7 @@ export default function SpeedRead() {
   const focusIdx = getFocusIndex(currentWord);
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center w-full max-w-[500px] mx-auto min-h-screen px-4" style={{ color: themeVals.textMain }}>
+      <div className="flex flex-col items-center justify-center w-full max-w-[500px] mx-auto px-4" style={{ color: themeVals.textMain }}>
         <Loader2 className="animate-spin mb-2" size={32} />
         <span className="text-sm font-bold opacity-70">กำลังโหลดเนื้อหา...</span>
       </div>
@@ -72,7 +72,7 @@ export default function SpeedRead() {
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[500px] mx-auto min-h-screen px-4 overflow-hidden">
+    <div className="flex flex-col items-center w-full max-w-[500px] mx-auto px-4 overflow-hidden">
       {/* Header */}
       <div className="w-full flex items-center justify-between mb-20 mt-2">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full" style={{ background: isDark ? '#2C2C2E' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, color: '#8E8E93' }}>
