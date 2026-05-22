@@ -427,7 +427,7 @@ export default function FlashcardPlayer() {
               <div className="h-1.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
             </div>
           </div>
-// The Code to Insert
+
           {/* Area การ์ดแนวนอน แบบ 3D Layering */}
           <div className="relative w-full max-w-lg h-72 mx-auto transition-all duration-300">
             
@@ -465,7 +465,12 @@ export default function FlashcardPlayer() {
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
-                  <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
+                  <div 
+                    className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" 
+                    onClick={(e) => { e.stopPropagation(); toggleStar(); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                  >
                     <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
                   
@@ -477,6 +482,8 @@ export default function FlashcardPlayer() {
                   {/* ปุ่ม Info / Close (ขวาบน) */}
                   <button 
                     onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} 
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
                     className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" 
                     style={{ color: currentStyle.color }}
                   >
@@ -506,12 +513,22 @@ export default function FlashcardPlayer() {
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
-                  <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
+                 <div 
+                    className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" 
+                    onClick={(e) => { e.stopPropagation(); toggleStar(); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                  >
                     <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
 
                   {/* iOS Style Switch ขวาบน */}
-                  <div className="absolute top-6 right-6 flex items-center gap-2 z-20" onClick={(e) => e.stopPropagation()}>
+                  <div 
+                    className="absolute top-6 right-6 flex items-center gap-2 z-20" 
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                  >
                     <button 
                       onClick={() => setShowSynAnt(!showSynAnt)} 
                       className="w-11 h-6 rounded-full relative transition-all duration-300" 
@@ -549,7 +566,7 @@ export default function FlashcardPlayer() {
               </div>
             </div>
           </div>
-// The Context Below
+
           {/* ปุ่ม Undo ด้านล่าง */}
           <div className="w-full max-w-md flex justify-center mt-10">
             <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-3 px-8 flex justify-center items-center rounded-full font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
