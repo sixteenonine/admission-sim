@@ -34,14 +34,14 @@ export default function HubLayout() {
   };
   if (isAuthChecking) {
     return (
-      <div className="h-screen flex items-center justify-center font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
+      <div className="h-[100dvh] flex items-center justify-center font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
         <div className="w-10 h-10 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen overflow-y-auto font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
+    <div className="h-[100dvh] overflow-y-auto font-['Outfit','Prompt',sans-serif]" style={{ backgroundColor: themeVals.bg }}>
       <TopBar 
         setIsAuthModalOpen={setIsAuthModalOpen}
         setIsProfileModalOpen={setIsProfileModalOpen}
