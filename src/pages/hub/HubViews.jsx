@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useOutletContext, useNavigate } from 'react-router-dom';
+import { Link, useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../utils/db.js';
 
 export function HubHome() {
@@ -132,12 +132,12 @@ export function HubFlashcardDecks() {
   const [decksData, setDecksData] = React.useState(null);
 
   const categories = [
-    { name: 'SCIENCE, HEALTH & NATURE', color: '#22c55e' },
-    { name: 'BUSINESS & TECHNOLOGIES', color: '#0070fb' },
-    { name: 'ACADEMIC & CAREER', color: '#ff2e57' },
-    { name: 'LIFESTYLE & MEDIA', color: '#8c52ff' },
-    { name: 'SOCIETY & CULTURE', color: '#505e72' },
-    { name: 'MY FAVORITE', color: '#ff8301' }
+    { name: 'SCIENCE, HEALTH & NATURE', color: '#22c55e', image: '/decks/science.png' },
+    { name: 'BUSINESS & TECHNOLOGIES', color: '#0070fb', image: '/decks/business.png' },
+    { name: 'ACADEMIC & CAREER', color: '#ff2e57', image: '/decks/academic.png' },
+    { name: 'LIFESTYLE & MEDIA', color: '#8c52ff', image: '/decks/lifestyle.png' },
+    { name: 'SOCIETY & CULTURE', color: '#505e72', image: '/decks/society.png' },
+    { name: 'MY FAVORITE', color: '#ff8301', image: '/decks/favorite.png' }
   ];
 
   React.useEffect(() => {
@@ -153,13 +153,8 @@ export function HubFlashcardDecks() {
     loadDecks();
   }, []);
 
-  const goToDeck = (catName, levelIdx, color) => {
-    const recent = JSON.parse(localStorage.getItem('recent_decks') || '[]');
-    const newDeck = { deckTitle: catName, level: levelIdx + 1, color: color };
-    const updated = [newDeck, ...recent.filter(d => d.deckTitle !== catName || d.level !== levelIdx + 1)].slice(0, 3);
-    localStorage.setItem('recent_decks', JSON.stringify(updated));
-    
-    navigate('/vocab/play', { state: newDeck });
+  const goToLevelSelection = (catName, color) => {
+    navigate('/vocab/levels', { state: { category: catName, color: color, decksData: decksData ? decksData[catName] : null } });
   };
 
   return (
@@ -172,31 +167,158 @@ export function HubFlashcardDecks() {
         <div className="w-12 h-12"></div>
       </div>
       
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-4">
-        {categories.map((cat, i) => (
-          <div key={i} className="flex flex-col gap-4 rounded-[2rem] p-6 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
-            <h2 className="text-md font-black uppercase tracking-wider text-center" style={{ color: cat.color }}>{cat.name}</h2>
-            <div className="flex flex-col gap-3 mt-2">
-              {[0, 1, 2].map(levelIdx => {
-                const levelData = decksData ? decksData[cat.name]?.levels[levelIdx] : [];
-                const wordCount = levelData ? levelData.length : 0;
-                const progress = 0; 
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
+        {categories.map((cat, i) => {
+          const wordCount = decksData && decksData[cat.name] ? decksData[cat.name].levels.flat().length : 0;
+          
+          return (
+            <div key={i} onClick={() => goToLevelSelection(cat.name, cat.color)} className="relative w-full aspect-[21/9] md:aspect-[16/9] cursor-pointer group" style={{ perspective: '1000px' }}>
+              {/* Layer 1 (Bottom Card) */}
+              <div className="absolute inset-0 rounded-[2rem] translate-y-4 scale-[0.92] opacity-30 transition-all duration-300 group-hover:translate-y-5 group-hover:scale-[0.88]" style={{ background: cat.color }}></div>
+              
+              {/* Layer 2 (Middle Card) */}
+              <div className="absolute inset-0 rounded-[2rem] translate-y-2 scale-[0.96] opacity-60 transition-all duration-300 group-hover:translate-y-2.5 group-hover:scale-[0.94]" style={{ background: cat.color }}></div>
+              
+              {/* Layer 3 (Top Image Box) */}
+              <div className="absolute inset-0 rounded-[2rem] flex flex-col justify-center transition-all duration-300 group-hover:-translate-y-1 group-active:scale-95 border border-white/10 z-10 overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${cat.image})`, boxShadow: `0 10px 25px -5px ${cat.color}60` }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent pointer-events-none"></div>
                 
-                return (
-                  <div key={levelIdx} onClick={() => goToDeck(cat.name, levelIdx, cat.color)} className="w-full bg-black/5 rounded-[1.5rem] p-4 flex flex-col gap-3 cursor-pointer transition-transform active:scale-95 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 border border-black/5 dark:border-white/5">
-                    <div className="flex justify-between items-center px-1">
-                      <span className="font-bold text-sm uppercase tracking-wide" style={{ color: themeVals.textMain }}>LEVEL {levelIdx + 1}</span>
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md" style={{ background: cat.color, color: '#fff' }}>{wordCount} Words</span>
-                    </div>
-                    <div className="w-full h-2.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: cat.color }}></div>
-                    </div>
-                  </div>
-                );
-              })}
+                <div className="p-6 md:p-8 relative z-20 flex flex-col items-start h-full justify-center w-[80%] md:w-[70%]">
+                  <h2 className="text-md md:text-xl font-black uppercase tracking-wider leading-tight text-white drop-shadow-md mb-3">{cat.name}</h2>
+                  <span className="text-[10px] md:text-xs font-bold px-4 py-1.5 rounded-full text-white shadow-sm" style={{ background: cat.color }}>{wordCount > 0 ? `${wordCount} WORDS` : 'LOADING...'}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function HubFlashcardLevels() {
+  const themeVals = useOutletContext();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const category = location.state?.category || 'SCIENCE, HEALTH & NATURE';
+  const color = location.state?.color || '#22c55e';
+  
+  const [levelProgress, setLevelProgress] = React.useState([0, 0, 0]);
+  const [levelCounts, setLevelCounts] = React.useState([0, 0, 0]);
+  const [activeLevel, setActiveLevel] = React.useState(0);
+
+  React.useEffect(() => {
+    async function loadLevelData() {
+      try {
+        const res = await fetch('/api/vocab/decks');
+        const json = await res.json();
+        if (json.status !== 'success' || !json.data[category]) return;
+        
+        const catData = json.data[category];
+        const counts = catData.levels.map(lvl => lvl.length);
+        setLevelCounts(counts);
+
+        const localSrs = await db.vocab_srs.toArray();
+        const rememberedWords = new Set(localSrs.filter(s => s.interval > 0).map(s => s.eng));
+
+        const progressArr = catData.levels.map((lvlWords) => {
+          if (lvlWords.length === 0) return 0;
+          const matched = lvlWords.filter(w => rememberedWords.has(w.eng)).length;
+          return Math.round((matched / lvlWords.length) * 100);
+        });
+
+        setLevelProgress(progressArr);
+        
+        if (progressArr[0] === 100 && progressArr[1] < 100) setActiveLevel(1);
+        else if (progressArr[0] === 100 && progressArr[1] === 100) setActiveLevel(2);
+        else setActiveLevel(0);
+
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    loadLevelData();
+  }, [category]);
+
+  const handleStartLevel = (lvlIdx) => {
+    const recent = JSON.parse(localStorage.getItem('recent_decks') || '[]');
+    const newDeck = { deckTitle: category, level: lvlIdx + 1, color: color };
+    const updated = [newDeck, ...recent.filter(d => d.deckTitle !== category || d.level !== lvlIdx + 1)].slice(0, 3);
+    localStorage.setItem('recent_decks', JSON.stringify(updated));
+    navigate('/vocab/play', { state: newDeck });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-0 pb-12 overflow-hidden relative min-h-[80vh]">
+      <div className="flex items-center justify-between w-full max-w-xl px-4 mt-2 z-10">
+        <button onClick={() => navigate('/vocab/decks')} className="w-12 h-12 flex items-center justify-center rounded-full border border-white/10" style={{ background: themeVals.raisedGradient, color: themeVals.textMain }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h1 className="text-xl font-black tracking-widest uppercase text-center truncate max-w-[250px]" style={{ color: themeVals.textMain }}>{category}</h1>
+        <div className="w-12 h-12"></div>
+      </div>
+
+      <div className="relative w-full max-w-md flex flex-col items-center justify-center px-6 mt-8">
+        <div className="flex transition-transform duration-500 ease-out gap-8 w-full justify-center">
+          {[0, 1, 2].map((lvlIdx) => {
+            const isLocked = lvlIdx > activeLevel;
+            const progress = levelProgress[lvlIdx];
+            const total = levelCounts[lvlIdx];
+            const currentDone = Math.round((progress / 100) * total);
+
+            return (
+              <div 
+                key={lvlIdx} 
+                className={`w-[280px] shrink-0 rounded-[2.5rem] p-6 border border-white/10 flex flex-col items-center transition-all duration-300 ${lvlIdx === activeLevel ? 'scale-100 opacity-100' : 'scale-90 opacity-40 pointer-events-none'}`}
+                style={{ background: themeVals.raisedGradient, boxShadow: `0 20px 40px -10px ${color}30` }}
+              >
+                <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-black text-2xl mb-4 shadow-md" style={{ background: isLocked ? '#505e72' : `linear-gradient(135deg, ${color} 0%, ${color}aa 100%)` }}>
+                  {isLocked ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  ) : lvlIdx + 1}
+                </div>
+
+                <h3 className="font-black text-lg mb-1" style={{ color: themeVals.textMain }}>LEVEL {lvlIdx + 1}</h3>
+                <span className="text-xs font-bold uppercase tracking-wider mb-6" style={{ color: color }}>
+                  {isLocked ? 'Locked' : progress === 100 ? 'Completed' : 'In Progress'}
+                </span>
+
+                <div className="w-full flex flex-col gap-2 mb-6">
+                  <div className="flex justify-between text-xs font-bold px-1" style={{ color: themeVals.textMain }}>
+                    <span>PROGRESS</span>
+                    <span>{currentDone}/{total} WORDS</span>
+                  </div>
+                  <div className="w-full h-3 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: color }}></div>
+                  </div>
+                </div>
+
+                {!isLocked && (
+                  <button 
+                    onClick={() => handleStartLevel(lvlIdx)}
+                    className="w-full py-4 rounded-2xl font-bold text-white text-sm transition-transform active:scale-95 shadow-md"
+                    style={{ background: color }}
+                  >
+                    START LEVEL
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-4 mt-10">
+          {[0, 1, 2].map((i) => (
+            <button 
+              key={i} 
+              onClick={() => i <= activeLevel && setActiveLevel(i)}
+              disabled={i > activeLevel}
+              className={`h-2.5 rounded-full transition-all ${i === activeLevel ? 'w-8' : 'w-2.5'} disabled:opacity-20`}
+              style={{ background: i === activeLevel ? color : '#505e72' }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
