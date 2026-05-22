@@ -275,7 +275,7 @@ export default function FlashcardPlayer() {
       repetition += 1;
     } else {
       repetition = 0;
-      interval = 1;
+      interval = 0;
     }
 
     ease_factor = ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
