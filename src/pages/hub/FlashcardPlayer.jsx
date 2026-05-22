@@ -201,7 +201,9 @@ export default function FlashcardPlayer() {
         const now = Date.now();
         let localDeck = [];
         
-        if (!isSRS && currentCategory !== 'MY FAVORITE') {
+        if (currentCategory === 'MY FAVORITE') {
+          localDeck = [...rawDeck];
+        } else if (!isSRS) {
           const sessionKey = `session_${currentCategory}_${currentLevel}`;
           const savedSession = localStorage.getItem(sessionKey);
           if (savedSession) {
@@ -216,8 +218,7 @@ export default function FlashcardPlayer() {
         } else {
           localDeck = rawDeck.filter(card => {
             const srs = srsMap[card.eng];
-            if (isSRS) return srs && srs.next_review <= now;
-            return !srs || srs.next_review <= now;
+            return srs && srs.next_review <= now;
           });
         }
 
@@ -232,6 +233,14 @@ export default function FlashcardPlayer() {
   }, [currentCategory, user?.id]);
 
   const currentWord = deck[currentIndex];
+  // คำนวณสีและลายแบบไดนามิกตามหมวดหมู่จริงของคำศัพท์คำนั้น ๆ (สลับสีส้มออกเมื่อเป็นหมวดหมู่ย่อย)
+  const cardColor = (currentCategory === 'MY FAVORITE' && currentWord)
+    ? (CATEGORY_STYLES[currentWord.category]?.color || currentStyle.color)
+    : currentStyle.color;
+
+  const cardDiamonds = (currentCategory === 'MY FAVORITE' && currentWord)
+    ? (CATEGORY_STYLES[currentWord.category]?.diamonds || currentStyle.diamonds)
+    : currentStyle.diamonds;
   
   // Progress Bar Calculation
   const progressPercent = initialDeckSize > 0 ? (((initialDeckSize - deck.length) / initialDeckSize) * 100) : 100;
@@ -433,14 +442,14 @@ export default function FlashcardPlayer() {
             
             {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
             {deck.length > 1 && (
-              <div className="absolute inset-0 rounded-3xl shadow-lg pointer-events-none" style={{ backgroundColor: currentStyle.color, transform: 'translateY(12px) scale(0.95)', zIndex: 0 }}>
+              <div className="absolute inset-0 rounded-3xl shadow-lg pointer-events-none" style={{ backgroundColor: cardColor, transform: 'translateY(12px) scale(0.95)', zIndex: 0 }}>
                 <div className="opacity-[0.05] w-full h-full rounded-3xl overflow-hidden relative">
-                  {currentStyle.diamonds}
+                  {cardDiamonds}
                 </div>
               </div>
             )}
 
-            {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ (ย้าย perspective มาไว้ที่นี่เพื่อแก้บั๊ก 3D แบน) */}
+            {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
             <div 
               className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none ${animClass}`}
               style={{ perspective: '1000px' }}
@@ -448,7 +457,7 @@ export default function FlashcardPlayer() {
               onPointerUp={handlePointerUp}
               onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
             >
-              {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) เป็น Direct Child ของ Perspective */}
+              {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
               <div 
                 className="relative w-full h-full text-center transition-transform duration-500 cursor-pointer" 
                 style={{ 
@@ -461,7 +470,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: currentStyle.color, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
@@ -476,7 +485,7 @@ export default function FlashcardPlayer() {
                   
                   {/* ลาย Watermark Background */}
                   <div className="absolute inset-0 pointer-events-none opacity-[0.05] select-none text-black z-0 rounded-3xl overflow-hidden">
-                    {currentStyle.diamonds}
+                    {cardDiamonds}
                   </div>
                   
                   {/* ปุ่ม Info / Close (ขวาบน) */}
@@ -485,7 +494,7 @@ export default function FlashcardPlayer() {
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                     className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" 
-                    style={{ color: currentStyle.color }}
+                    style={{ color: cardColor }}
                   >
                     {showExampleFront ? 'x' : 'i'}
                   </button>
@@ -494,7 +503,7 @@ export default function FlashcardPlayer() {
                   {!showExampleFront ? (
                     <div className="flex flex-col items-center z-10">
                       <h2 className="text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
-                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: currentStyle.color }}>
+                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: cardColor }}>
                         {currentWord.pos}
                       </div>
                     </div>
@@ -509,11 +518,11 @@ export default function FlashcardPlayer() {
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: currentStyle.color, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: cardColor, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
-                 <div 
+                  <div 
                     className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" 
                     onClick={(e) => { e.stopPropagation(); toggleStar(); }}
                     onPointerDown={(e) => e.stopPropagation()}
