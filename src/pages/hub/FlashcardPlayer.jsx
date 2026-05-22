@@ -13,35 +13,35 @@ export default function FlashcardPlayer() {
   const currentCategory = location.state?.deckTitle || 'SCIENCE, HEALTH & NATURE';
   const currentLevel = location.state?.level || 1;
 
-  // นำเข้าสีและลวดลาย SVG ของแต่ละหมวดหมู่ตาม HTML ต้นฉบับ
+  // ลวดลายและสีจากโค้ด HTML ต้นฉบับ
   const CATEGORY_STYLES = {
     'SCIENCE, HEALTH & NATURE': {
       color: '#4bdd31',
-      diamonds: <svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg>
+      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
     },
     'BUSINESS & TECHNOLOGIES': {
       color: '#0070fb',
-      diamonds: <><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></>
+      diamonds: <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
     },
     'ACADEMIC & CAREER': {
       color: '#ff2e57',
-      diamonds: <div className="flex space-x-10 items-center"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+      diamonds: <div className="absolute inset-0 flex items-center justify-center space-x-10 pointer-events-none select-none text-black z-0"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
     },
     'LIFESTYLE & MEDIA': {
       color: '#8c52ff',
-      diamonds: <div className="flex flex-col justify-between py-6 h-full"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+      diamonds: <div className="absolute inset-0 flex flex-col items-center justify-between py-6 pointer-events-none select-none text-black z-0"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
     },
     'SOCIETY & CULTURE': {
       color: '#505e72',
-      diamonds: <svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg>
+      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
     },
     'MY FAVORITE': {
       color: '#ff8301',
       diamonds: null
     }
   };
-  
-  const currentStyle = CATEGORY_STYLES[currentCategory] || CATEGORY_STYLES['MY FAVORITE'];
+
+  const currentStyle = CATEGORY_STYLES[isSRS ? 'MY FAVORITE' : currentCategory] || CATEGORY_STYLES['MY FAVORITE'];
 
   const [deck, setDeck] = useState([]);
   const [initialDeckSize, setInitialDeckSize] = useState(0);
@@ -80,10 +80,8 @@ export default function FlashcardPlayer() {
     if (!user?.id || actionQueueRef.current.length === 0) return;
     pendingSyncRef.current = false;
     
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-      syncTimeoutRef.current = null;
-    }
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = null;
 
     const pendingActions = [...actionQueueRef.current];
     actionQueueRef.current = [];
@@ -234,9 +232,11 @@ export default function FlashcardPlayer() {
   }, [currentCategory, user?.id]);
 
   const currentWord = deck[currentIndex];
-  const progressPercent = initialDeckSize > 0 ? ((initialDeckSize - deck.length) / initialDeckSize) * 100 : 100;
+  
+  // Progress Bar Calculation
+  const progressPercent = initialDeckSize > 0 ? (((initialDeckSize - deck.length) / initialDeckSize) * 100) : 100;
 
-  // Pointer Events (แยกการ Click กับ Swipe ออกจากกัน)
+  // Pointer & Swipe Events (แยกระหว่างลาก กับ คลิกพลิกการ์ด)
   const handlePointerDown = (e) => {
     if (isChangingWord) return;
     touchStartY.current = e.clientY || (e.touches && e.touches[0].clientY);
@@ -254,14 +254,11 @@ export default function FlashcardPlayer() {
     const distanceY = touchStartY.current - endY;
     const distanceX = touchStartX.current - endX;
     
-    // ถ้าระยะลากแกน Y มากกว่า 50px ถือว่าเป็นการปัด (Swipe)
-    if (Math.abs(distanceY) > 50) {
-      if (distanceY > 50) handleAnswer(true); // ปัดขึ้น
-      else handleAnswer(false); // ปัดลง
-    } 
-    // ถ้าระยะขยับน้อยกว่า 10px ถือว่าเป็นการคลิก (Click) เพื่อพลิกการ์ด
-    else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
-      setIsFlipped(!isFlipped);
+    if (Math.abs(distanceY) > Math.abs(distanceX) && Math.abs(distanceY) > 50) {
+      if (distanceY > 50) handleAnswer(true); // ปัดขึ้น (จำได้)
+      else handleAnswer(false); // ปัดลง (จำไม่ได้)
+    } else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
+      setIsFlipped(!isFlipped); // แตะธรรมดาเพื่อพลิกการ์ด
     }
     
     touchStartY.current = null;
@@ -278,22 +275,34 @@ export default function FlashcardPlayer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isChangingWord, currentIndex, deck]);
 
+  // ระบบ Animation โครงสร้างใหม่ การ์ดสไลด์ออกแล้วโผล่ขึ้นมาทันที (Stacking Wait Effect)
   const triggerCardAnim = (direction, actionFn) => {
     if (isChangingWord) return;
     setIsChangingWord(true);
     setShowExampleFront(false);
     setShowSynAnt(false);
 
-    // การ์ดปลิวออก
+    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง
     if (direction === 'up') setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
     else if (direction === 'down') setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-300 ease-in');
     else if (direction === 'undo') setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
 
     setTimeout(() => {
+      // ขั้นที่ 2: เปลี่ยนคำศัพท์และล้างสถานะการพลิกตอนที่มองไม่เห็นแล้ว
       actionFn();
       setIsFlipped(false);
-      setAnimClass('transition-none'); // ดึงการ์ดกลับมาจุดศูนย์กลางทันทีแบบไม่มีแอนิเมชัน
-      setTimeout(() => { setIsChangingWord(false); }, 50);
+      
+      // ขั้นที่ 3: ดึงการ์ดให้มาย่อหลบอยู่ในตำแหน่ง "เตรียมเด้งขึ้น" (เลียนแบบท่าของการ์ดใบล่างที่รออยู่)
+      setAnimClass('translate-y-3 scale-[0.95] opacity-100 transition-none');
+      
+      // ขั้นที่ 4: สั่งขยายและสไลด์การ์ดขึ้นมาแบบเด้งๆ ให้ความรู้สึกเป็นใบใหม่
+      setTimeout(() => {
+        setAnimClass('translate-y-0 scale-100 opacity-100 transition-transform duration-300 ease-out');
+        setTimeout(() => {
+          setAnimClass('');
+          setIsChangingWord(false);
+        }, 300);
+      }, 20);
     }, 300);
   };
 
@@ -393,105 +402,109 @@ export default function FlashcardPlayer() {
   return (
     <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
       
-      {/* Top Nav */}
-      <div className="w-full max-w-[512px] flex items-center justify-between mt-4 mb-4 px-4">
+      {/* Top Nav Back Button */}
+      <div className="w-full max-w-[512px] flex items-center mt-4 mb-2 px-4">
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full transition-transform active:scale-90 bg-slate-200/50 dark:bg-white/10" style={{ color: themeVals.textMain }}>
           <ChevronLeft size={24} strokeWidth={2.5} />
         </button>
-        <div className="w-10 h-10"></div>
       </div>
 
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">
           
-          {/* Header Layout ตาม HTML ต้นฉบับ */}
-          <div className="w-full max-w-[512px] flex flex-col items-center mb-8 text-center">
-            <h1 className="text-xl md:text-2xl font-extrabold mb-2 tracking-tight uppercase truncate max-w-full px-2" style={{ color: themeVals.textMain }}>
-              {currentCategory}
-            </h1>
-            <div className="flex items-center text-base font-bold mb-3" style={{ color: themeVals.textMain }}>
-              <span>{initialDeckSize - deck.length}</span>
-              <span className="mx-3 font-normal opacity-40">|</span>
-              <span>{initialDeckSize}</span>
+          {/* Header Layout (อิงตามที่ออกแบบเป๊ะๆ ชื่ออยู่ซ้าย ยอดอยู่ขวา) */}
+          <div className="w-full max-w-md flex flex-col items-center mb-6 text-center">
+            <div className="w-full flex justify-between items-end mb-2">
+              <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-left max-w-[70%] truncate" style={{ color: themeVals.textMain }}>
+                {currentCategory}
+              </h1>
+              <div className="flex items-center text-sm md:text-base font-bold pb-1" style={{ color: themeVals.textMain }}>
+                <span>{initialDeckSize - deck.length}</span>
+                <span className="mx-2 font-normal opacity-40">|</span>
+                <span>{initialDeckSize}</span>
+              </div>
             </div>
             
-            <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+            {/* Progress Bar หลอดด้านล่าง */}
+            <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
             </div>
           </div>
 
-          {/* Card Stack Area แนวนอน */}
-          <div className="relative w-full max-w-[512px] h-72 mx-auto perspective">
+          {/* Area การ์ดแนวนอน แบบ 3D Layering */}
+          <div className="relative w-full max-w-md h-72 mx-auto perspective" style={{ perspective: '1000px' }}>
             
-            {/* Layer 0: การ์ดใบถัดไป "รออยู่แล้ว" ด้านหลังสุด */}
+            {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด (แอบอยู่ด้านหลังเสมอ) */}
             {deck.length > 1 && (
-              <div className="absolute inset-0 rounded-3xl opacity-[0.65] scale-[0.95] translate-y-3 z-0 shadow-sm pointer-events-none" style={{ backgroundColor: currentStyle.color }}>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] text-black">
-                  {currentStyle.diamonds}
-                </div>
+              <div className="absolute inset-0 rounded-3xl shadow-lg pointer-events-none" style={{ backgroundColor: currentStyle.color, transform: 'translateY(12px) scale(0.95)', zIndex: 0 }}>
+                {currentStyle.diamonds}
               </div>
             )}
 
-            {/* Layer 1: การ์ดปัจจุบัน (Interactive) */}
+            {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
             <div 
-              className={`absolute inset-0 z-10 w-full h-full cursor-pointer transform ${animClass}`}
+              className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none ${animClass}`}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
               onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
             >
-              <div className="relative w-full h-full preserve-3d" style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)' }}>
+              {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
+              <div className="relative w-full h-full" style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', transformStyle: 'preserve-3d' }}>
                 
-                {/* ---------------- FRONT ---------------- */}
-                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white backface-hidden shadow-lg p-8 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color }}>
+                {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
+                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                   
-                  {/* Star */}
+                  {/* ปุ่ม Star ซ้ายบน */}
                   <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
                     <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
                   
-                  {/* SVG Background */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0">
-                    {currentStyle.diamonds}
-                  </div>
+                  {/* ลาย Watermark Background */}
+                  {currentStyle.diamonds}
                   
-                  {/* Info 'i' Button */}
+                  {/* ปุ่ม Info / Close (ขวาบน) */}
                   <button onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" style={{ color: currentStyle.color }}>
                     {showExampleFront ? 'x' : 'i'}
                   </button>
 
-                  {/* Front Main Content */}
+                  {/* หน้าหลัก - คำศัพท์ & ประเภท */}
                   {!showExampleFront ? (
                     <div className="flex flex-col items-center z-10">
                       <h2 className="text-4xl md:text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
-                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: currentStyle.color }}>{currentWord.pos}</div>
+                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: currentStyle.color }}>
+                        {currentWord.pos}
+                      </div>
                     </div>
                   ) : (
-                    <div className="absolute inset-0 bg-black/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center z-10">
+                    /* หน้าตัวอย่างประโยค (Overlay ดำ) */
+                    <div className="absolute inset-0 bg-black/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center z-10 pointer-events-auto" onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
                       <p className="text-xl md:text-2xl font-semibold leading-relaxed">"{currentWord.example}"</p>
                     </div>
                   )}
                 </div>
 
-                {/* ---------------- BACK ---------------- */}
-                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white backface-hidden rotate-y-180 shadow-lg p-8 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color }}>
+                {/* ---------------- BACK (หลังการ์ด) ---------------- */}
+                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                   
-                  {/* Star */}
+                  {/* ปุ่ม Star ซ้ายบน */}
                   <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
                     <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
 
-                  {/* iOS Style Switch */}
-                  <div className="absolute top-6 right-6 flex items-center z-20" onClick={(e) => e.stopPropagation()}>
+                  {/* iOS Style Switch ขวาบน */}
+                  <div className="absolute top-6 right-6 flex items-center gap-2 z-20" onClick={(e) => e.stopPropagation()}>
                     <button onClick={() => setShowSynAnt(!showSynAnt)} className="w-11 h-6 rounded-full relative transition-all duration-300" style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(255, 255, 255, 0.3)' }}>
-                      <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform duration-300" style={{ transform: showSynAnt ? 'translateX(20px)' : 'translateX(2px)' }}></div>
+                      <div className="w-5 h-5 bg-white rounded-full absolute top-[2px] transition-transform duration-300" style={{ left: showSynAnt ? '22px' : '2px' }}></div>
                     </button>
                   </div>
 
-                  {/* Back Content */}
-                  <div className="w-full h-full flex items-center justify-center pt-2">
+                  {/* เนื้อหาหลังการ์ด */}
+                  <div className="w-full h-full flex items-center justify-center z-10 pt-2">
                     {!showSynAnt ? (
-                      <h2 className="text-3xl md:text-4xl font-prompt font-normal px-4">{currentWord.thai}</h2>
+                      /* แปลไทย */
+                      <h2 className="text-4xl md:text-5xl font-prompt font-normal tracking-wide px-4">{currentWord.thai}</h2>
                     ) : (
+                      /* Synonyms / Antonyms Layout */
                       <div className="w-full h-full flex flex-col items-center justify-center gap-3">
                         <div className="flex flex-col items-center">
                           <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Synonym</span>
@@ -511,7 +524,8 @@ export default function FlashcardPlayer() {
             </div>
           </div>
 
-          <div className="w-full max-w-[512px] flex justify-center mt-10">
+          {/* ปุ่ม Undo ด้านล่าง */}
+          <div className="w-full max-w-md flex justify-center mt-10">
             <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-3 px-8 flex justify-center items-center rounded-full font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
               <Undo2 size={18} strokeWidth={2.5} className="mr-2" /> UNDO
             </button>
