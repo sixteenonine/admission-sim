@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Undo2, Star, MessageSquare, Repeat } from 'lucide-react';
+import { ChevronLeft, Undo2, Star } from 'lucide-react';
 import { db } from '../../utils/db.js';
 
 export default function FlashcardPlayer() {
@@ -13,15 +13,35 @@ export default function FlashcardPlayer() {
   const currentCategory = location.state?.deckTitle || 'SCIENCE, HEALTH & NATURE';
   const currentLevel = location.state?.level || 1;
 
-  const categoryColors = {
-    'SCIENCE, HEALTH & NATURE': '#22c55e',
-    'BUSINESS & TECHNOLOGIES': '#0070fb',
-    'ACADEMIC & CAREER': '#ff2e57',
-    'LIFESTYLE & MEDIA': '#8c52ff',
-    'SOCIETY & CULTURE': '#505e72',
-    'MY FAVORITE': '#ff8301'
+  // นำเข้าสีและลวดลาย SVG ของแต่ละหมวดหมู่ตาม HTML ต้นฉบับ
+  const CATEGORY_STYLES = {
+    'SCIENCE, HEALTH & NATURE': {
+      color: '#4bdd31',
+      diamonds: <svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg>
+    },
+    'BUSINESS & TECHNOLOGIES': {
+      color: '#0070fb',
+      diamonds: <><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></>
+    },
+    'ACADEMIC & CAREER': {
+      color: '#ff2e57',
+      diamonds: <div className="flex space-x-10 items-center"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    'LIFESTYLE & MEDIA': {
+      color: '#8c52ff',
+      diamonds: <div className="flex flex-col justify-between py-6 h-full"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    'SOCIETY & CULTURE': {
+      color: '#505e72',
+      diamonds: <svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg>
+    },
+    'MY FAVORITE': {
+      color: '#ff8301',
+      diamonds: null
+    }
   };
-  const deckColor = isSRS ? '#FF9500' : (location.state?.color || categoryColors[currentCategory] || '#8c52ff');
+  
+  const currentStyle = CATEGORY_STYLES[currentCategory] || CATEGORY_STYLES['MY FAVORITE'];
 
   const [deck, setDeck] = useState([]);
   const [initialDeckSize, setInitialDeckSize] = useState(0);
@@ -37,7 +57,7 @@ export default function FlashcardPlayer() {
   const [sessionStats, setSessionStats] = useState({ remembered: 0, forgotten: 0 });
 
   const touchStartY = useRef(null);
-  const touchEndY = useRef(null);
+  const touchStartX = useRef(null);
   const syncTimeoutRef = useRef(null);
   const pendingSyncRef = useRef(false);
   const latestStarsRef = useRef(starredWords);
@@ -98,20 +118,14 @@ export default function FlashcardPlayer() {
     }
   };
 
-  const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
-  const shadowSm = '0 2px 8px rgba(0, 0, 0, 0.04)';
-  const shadowMd = '0 12px 32px rgba(0, 0, 0, 0.12)';
-
   useEffect(() => {
     async function initLocalDB() {
       try {
         const localCount = await db.flashcards.count();
-        
         try {
           const lastSync = localStorage.getItem('vocabLastSync') || '';
           let res = await fetch(`/api/vocab/list?t=${Date.now()}${lastSync ? `&lastSync=${encodeURIComponent(lastSync)}` : ''}`);
           let cloudVocab = await res.json();
-          
           if (cloudVocab.status === 'success') {
             let data = cloudVocab.data || [];
             if (!lastSync || localCount === 0) {
@@ -192,7 +206,6 @@ export default function FlashcardPlayer() {
         if (!isSRS && currentCategory !== 'MY FAVORITE') {
           const sessionKey = `session_${currentCategory}_${currentLevel}`;
           const savedSession = localStorage.getItem(sessionKey);
-          
           if (savedSession) {
             localDeck = JSON.parse(savedSession);
           } else {
@@ -223,20 +236,41 @@ export default function FlashcardPlayer() {
   const currentWord = deck[currentIndex];
   const progressPercent = initialDeckSize > 0 ? ((initialDeckSize - deck.length) / initialDeckSize) * 100 : 100;
 
-  const handleTouchStart = (e) => { touchStartY.current = e.targetTouches ? e.targetTouches[0].clientY : e.clientY; };
-  const handleTouchMove = (e) => { touchEndY.current = e.targetTouches ? e.targetTouches[0].clientY : e.clientY; };
-  const handleTouchEnd = () => {
-    if (!touchStartY.current || !touchEndY.current || isChangingWord) return;
-    const distance = touchStartY.current - touchEndY.current;
-    if (distance > 50) handleAnswer(true);
-    else if (distance < -50) handleAnswer(false);
+  // Pointer Events (แยกการ Click กับ Swipe ออกจากกัน)
+  const handlePointerDown = (e) => {
+    if (isChangingWord) return;
+    touchStartY.current = e.clientY || (e.touches && e.touches[0].clientY);
+    touchStartX.current = e.clientX || (e.touches && e.touches[0].clientX);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!touchStartY.current || isChangingWord) return;
+    
+    const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : null);
+    const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : null);
+    
+    if (endY === null || endX === null) return;
+    
+    const distanceY = touchStartY.current - endY;
+    const distanceX = touchStartX.current - endX;
+    
+    // ถ้าระยะลากแกน Y มากกว่า 50px ถือว่าเป็นการปัด (Swipe)
+    if (Math.abs(distanceY) > 50) {
+      if (distanceY > 50) handleAnswer(true); // ปัดขึ้น
+      else handleAnswer(false); // ปัดลง
+    } 
+    // ถ้าระยะขยับน้อยกว่า 10px ถือว่าเป็นการคลิก (Click) เพื่อพลิกการ์ด
+    else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
+      setIsFlipped(!isFlipped);
+    }
+    
     touchStartY.current = null;
-    touchEndY.current = null;
+    touchStartX.current = null;
   };
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (isChangingWord) return;
+      if (isChangingWord || deck.length === 0) return;
       if (e.key === 'ArrowUp') handleAnswer(true);
       if (e.key === 'ArrowDown') handleAnswer(false);
     };
@@ -250,6 +284,7 @@ export default function FlashcardPlayer() {
     setShowExampleFront(false);
     setShowSynAnt(false);
 
+    // การ์ดปลิวออก
     if (direction === 'up') setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
     else if (direction === 'down') setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-300 ease-in');
     else if (direction === 'undo') setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
@@ -257,7 +292,7 @@ export default function FlashcardPlayer() {
     setTimeout(() => {
       actionFn();
       setIsFlipped(false);
-      setAnimClass('transition-none'); // ดึงการ์ดกลับมาจุดศูนย์กลางทันทีแบบไม่มีแอนิเมชัน ให้ความรู้สึกเหมือนเป็นใบถัดไปที่รออยู่
+      setAnimClass('transition-none'); // ดึงการ์ดกลับมาจุดศูนย์กลางทันทีแบบไม่มีแอนิเมชัน
       setTimeout(() => { setIsChangingWord(false); }, 50);
     }, 300);
   };
@@ -356,107 +391,128 @@ export default function FlashcardPlayer() {
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
-    <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10 pt-4" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
+    <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 min-h-[100vh] pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
       
-      {/* Top Navigation */}
-      <div className="w-full max-w-[420px] flex items-center mb-6 px-4 relative">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full transition-transform active:scale-90 bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
+      {/* Top Nav */}
+      <div className="w-full max-w-[512px] flex items-center justify-between mt-4 mb-4 px-4">
+        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full transition-transform active:scale-90 bg-slate-200/50 dark:bg-white/10" style={{ color: themeVals.textMain }}>
           <ChevronLeft size={24} strokeWidth={2.5} />
         </button>
+        <div className="w-10 h-10"></div>
       </div>
 
       {deck.length > 0 ? (
         <div className="w-full flex flex-col items-center px-4">
           
-          {/* Header & Progress Bar */}
-          <div className="w-full max-w-[420px] mb-6">
-            <div className="flex justify-between items-end mb-3 px-1">
-              <span className="font-black text-lg md:text-xl tracking-tight uppercase truncate mr-4" style={{ color: themeVals.textMain }}>
-                {currentCategory}
-              </span>
-              <span className="text-xs md:text-sm font-bold opacity-60 whitespace-nowrap" style={{ color: themeVals.textMain }}>
-                {initialDeckSize - deck.length} / {initialDeckSize} WORDS
-              </span>
+          {/* Header Layout ตาม HTML ต้นฉบับ */}
+          <div className="w-full max-w-[512px] flex flex-col items-center mb-8 text-center">
+            <h1 className="text-xl md:text-2xl font-extrabold mb-2 tracking-tight uppercase truncate max-w-full px-2" style={{ color: themeVals.textMain }}>
+              {currentCategory}
+            </h1>
+            <div className="flex items-center text-base font-bold mb-3" style={{ color: themeVals.textMain }}>
+              <span>{initialDeckSize - deck.length}</span>
+              <span className="mx-3 font-normal opacity-40">|</span>
+              <span>{initialDeckSize}</span>
             </div>
-            <div className="w-full h-2 md:h-2.5 rounded-full overflow-hidden bg-black/10 dark:bg-white/10">
-              <div className="h-full transition-all duration-300" style={{ width: `${progressPercent}%`, background: deckColor }}></div>
+            
+            <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progressPercent}%`, backgroundColor: currentStyle.color }}></div>
             </div>
           </div>
 
-          {/* Card Area */}
-          <div 
-            className="relative w-full max-w-[420px] aspect-[4/3] sm:aspect-[3/2] mb-[25px] mx-auto cursor-pointer" 
-            style={{ perspective: '1200px' }} 
-          >
-            {/* Dummy Card underneath to look like a stack */}
+          {/* Card Stack Area แนวนอน */}
+          <div className="relative w-full max-w-[512px] h-72 mx-auto perspective">
+            
+            {/* Layer 0: การ์ดใบถัดไป "รออยู่แล้ว" ด้านหลังสุด */}
             {deck.length > 1 && (
-              <div className="absolute inset-0 rounded-[2rem] opacity-40 scale-95 translate-y-3 z-0" style={{ background: deckColor }} />
+              <div className="absolute inset-0 rounded-3xl opacity-[0.65] scale-[0.95] translate-y-3 z-0 shadow-sm pointer-events-none" style={{ backgroundColor: currentStyle.color }}>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] text-black">
+                  {currentStyle.diamonds}
+                </div>
+              </div>
             )}
 
-            {/* Animating Wrapper */}
+            {/* Layer 1: การ์ดปัจจุบัน (Interactive) */}
             <div 
-              className={`absolute inset-0 z-10 w-full h-full ${animClass}`}
-              onClick={() => { if(!isChangingWord) setIsFlipped(!isFlipped) }}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onMouseDown={handleTouchStart}
-              onMouseMove={(e) => { if (e.buttons === 1) handleTouchMove(e); }}
-              onMouseUp={handleTouchEnd}
-              onMouseLeave={handleTouchEnd}
+              className={`absolute inset-0 z-10 w-full h-full cursor-pointer transform ${animClass}`}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
             >
-              {/* 3D Flipper */}
-              <div className="relative w-full h-full" style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)' }}>
+              <div className="relative w-full h-full preserve-3d" style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)' }}>
                 
-                {/* Front Side */}
-                <div className={`absolute inset-0 flex flex-col items-center justify-center p-6 md:p-[30px] text-center select-none rounded-[2rem] ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backfaceVisibility: 'hidden', background: deckColor, boxShadow: shadowMd }}>
-                  <button className="absolute top-[20px] left-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30 bg-black/10 text-white" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
-                    <Star size={20} fill={isStarred ? '#FFD700' : 'none'} stroke={isStarred ? '#FFD700' : 'currentColor'} />
-                  </button>
-                  <button className="absolute top-[20px] right-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30 bg-black/10 text-white" onClick={(e) => { e.stopPropagation(); setShowExampleFront(true); }}>
-                    <MessageSquare size={20} strokeWidth={2} />
-                  </button>
+                {/* ---------------- FRONT ---------------- */}
+                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white backface-hidden shadow-lg p-8 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color }}>
                   
-                  <div className="text-[2.2rem] md:text-[2.6rem] font-bold mb-2 tracking-tight leading-[1.1] break-words text-white drop-shadow-sm">{currentWord.eng}</div>
-                  <div className="text-[0.85rem] font-bold uppercase text-white/70">{currentWord.pos}</div>
-                  
-                  <div className={`absolute inset-0 flex flex-col items-center justify-center p-[30px] text-center transition-opacity duration-300 z-40 rounded-[2rem] ${showExampleFront ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} style={{ background: deckColor }} onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
-                    <p className="text-[1.1rem] leading-[1.5] font-medium mb-5 text-white drop-shadow-sm">"{currentWord.example}"</p>
-                    <span className="text-[0.8rem] font-bold uppercase text-white/70">Tap to close</span>
+                  {/* Star */}
+                  <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
+                    <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
-                </div>
-
-                {/* Back Side */}
-                <div className={`absolute inset-0 flex flex-col items-center justify-center p-6 md:p-[30px] text-center select-none rounded-[2rem] ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backfaceVisibility: 'hidden', background: deckColor, boxShadow: shadowMd, transform: 'rotateY(180deg)' }}>
-                  <button className="absolute top-[20px] left-[20px] w-10 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30 bg-black/10 text-white" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
-                    <Star size={20} fill={isStarred ? '#FFD700' : 'none'} stroke={isStarred ? '#FFD700' : 'currentColor'} />
-                  </button>
-                  <button className="absolute top-[20px] right-[20px] px-4 h-10 rounded-full flex justify-center items-center transition-transform active:scale-90 z-30 font-bold text-xs bg-black/10 text-white" onClick={(e) => { e.stopPropagation(); setShowSynAnt(!showSynAnt); }}>
-                    <Repeat size={14} className="mr-2" /> {showSynAnt ? 'HIDE' : 'SYN / ANT'}
-                  </button>
                   
-                  {!showSynAnt ? (
-                    <div className="text-[2rem] font-bold leading-[1.2] text-white drop-shadow-sm">{currentWord.thai}</div>
+                  {/* SVG Background */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0">
+                    {currentStyle.diamonds}
+                  </div>
+                  
+                  {/* Info 'i' Button */}
+                  <button onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" style={{ color: currentStyle.color }}>
+                    {showExampleFront ? 'x' : 'i'}
+                  </button>
+
+                  {/* Front Main Content */}
+                  {!showExampleFront ? (
+                    <div className="flex flex-col items-center z-10">
+                      <h2 className="text-4xl md:text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
+                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: currentStyle.color }}>{currentWord.pos}</div>
+                    </div>
                   ) : (
-                    <div className="flex flex-col gap-4 w-full px-2">
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-black/10">
-                        <span className="text-[0.7rem] font-bold uppercase text-white/80 mb-1">Synonyms</span>
-                        <span className="font-bold text-center text-white">{currentWord.synonyms || '-'}</span>
-                      </div>
-                      <div className="flex flex-col items-center p-3 rounded-2xl bg-black/10">
-                        <span className="text-[0.7rem] font-bold uppercase text-white/80 mb-1">Antonyms</span>
-                        <span className="font-bold text-center text-white">{currentWord.antonyms || '-'}</span>
-                      </div>
+                    <div className="absolute inset-0 bg-black/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center z-10">
+                      <p className="text-xl md:text-2xl font-semibold leading-relaxed">"{currentWord.example}"</p>
                     </div>
                   )}
+                </div>
+
+                {/* ---------------- BACK ---------------- */}
+                <div className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white backface-hidden rotate-y-180 shadow-lg p-8 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} style={{ backgroundColor: currentStyle.color }}>
+                  
+                  {/* Star */}
+                  <div className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" onClick={(e) => { e.stopPropagation(); toggleStar(); }}>
+                    <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
+                  </div>
+
+                  {/* iOS Style Switch */}
+                  <div className="absolute top-6 right-6 flex items-center z-20" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => setShowSynAnt(!showSynAnt)} className="w-11 h-6 rounded-full relative transition-all duration-300" style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(255, 255, 255, 0.3)' }}>
+                      <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform duration-300" style={{ transform: showSynAnt ? 'translateX(20px)' : 'translateX(2px)' }}></div>
+                    </button>
+                  </div>
+
+                  {/* Back Content */}
+                  <div className="w-full h-full flex items-center justify-center pt-2">
+                    {!showSynAnt ? (
+                      <h2 className="text-3xl md:text-4xl font-prompt font-normal px-4">{currentWord.thai}</h2>
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Synonym</span>
+                          <span className="text-3xl font-bold">{currentWord.synonyms || '-'}</span>
+                        </div>
+                        <div className="w-24 h-[1px] bg-white/20 my-1"></div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Antonym</span>
+                          <span className="text-3xl font-bold">{currentWord.antonyms || '-'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
               </div>
             </div>
           </div>
 
-          <div className="w-full max-w-[420px] flex justify-center mt-4">
-            <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-[14px] px-8 flex justify-center items-center rounded-[1rem] font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
+          <div className="w-full max-w-[512px] flex justify-center mt-10">
+            <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-3 px-8 flex justify-center items-center rounded-full font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
               <Undo2 size={18} strokeWidth={2.5} className="mr-2" /> UNDO
             </button>
           </div>
@@ -475,10 +531,10 @@ export default function FlashcardPlayer() {
               <span className="font-black text-2xl text-[#FF3B30]">{sessionStats.forgotten}</span>
             </div>
           </div>
-          <button onClick={handleRestart} disabled={isChangingWord} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-[1.5rem] transition-transform active:scale-95 font-black text-[1.1rem] mb-4 shadow-md text-white" style={{ background: deckColor }}>
+          <button onClick={handleRestart} disabled={isChangingWord} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-black text-[1.1rem] mb-4 shadow-md text-white" style={{ backgroundColor: currentStyle.color }}>
             REVIEW AGAIN
           </button>
-          <button onClick={() => navigate(-1)} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-[1.5rem] transition-transform active:scale-95 font-bold text-[1rem] bg-black/5 dark:bg-white/5" style={{ color: themeVals.textMain }}>
+          <button onClick={() => navigate(-1)} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
             BACK TO MENU
           </button>
         </div>
