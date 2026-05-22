@@ -154,7 +154,11 @@ export function HubFlashcardDecks() {
   }, []);
 
   const goToLevelSelection = (catName, color) => {
-    navigate('/vocab/levels', { state: { category: catName, color: color, decksData: decksData ? decksData[catName] : null } });
+    if (catName === 'MY FAVORITE') {
+      navigate('/vocab/play', { state: { deckTitle: catName, level: 1, color: color } });
+    } else {
+      navigate('/vocab/levels', { state: { category: catName, color: color, decksData: decksData ? decksData[catName] : null } });
+    }
   };
 
   return (

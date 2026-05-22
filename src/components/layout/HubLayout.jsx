@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TopBar from './TopBar';
 import AuthModal from '../../components/AuthModal';
+import Sidebar from './Sidebar';
 import ProfileModal from '../../components/ProfileModal';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
@@ -25,6 +26,7 @@ export default function HubLayout() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogoutLocal = () => {
     handleLogout();
@@ -45,7 +47,9 @@ export default function HubLayout() {
         setIsProfileModalOpen={setIsProfileModalOpen}
         setIsLogoutModalOpen={setIsLogoutModalOpen}
         isSimulator={false}
+        setIsSidebarOpen={setIsSidebarOpen}
       />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} themeVals={themeVals} />
       
       <main className="max-w-6xl mx-auto px-6 pt-32 pb-12 relative z-10">
         <Outlet context={{ ...themeVals, currentUser, handleRefreshUser }} />

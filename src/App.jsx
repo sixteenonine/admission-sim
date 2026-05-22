@@ -35,6 +35,7 @@ export default function App() {
         <Route path="/storydiary" element={<StoryLobby />} />
         <Route path="/storydiary/play" element={<StoryReader />} />
         <Route path="decks" element={<HubFlashcardDecks />} />
+        <Route path="/admissim" element={<Simulator />} />
       </Route>
 
       <Route path="/admissim" element={<Simulator />} />

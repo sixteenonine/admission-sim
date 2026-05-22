@@ -82,6 +82,8 @@ export default function App() {
   const [activePresetId, setActivePresetId] = useState(savedState.activePresetId || 'recommend');
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
+  const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
+  const isTimerStarted = isRunning && timeLeft < totalTime.current;
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -340,33 +342,41 @@ export default function App() {
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
-      
-      <TopBar 
-        setIsAuthModalOpen={setIsAuthModalOpen}
-        setIsProfileModalOpen={setIsProfileModalOpen}
-        setIsLogoutModalOpen={setIsLogoutModalOpen}
-        isSimulator={true}
-        simulatorProps={{ isRunning, isTimerStarted: isRunning && timeLeft < totalTime.current, mode, MODES, handleModeSelect }}
-      />
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        onLoginSuccess={handleLoginSuccess}
-        themeVals={themeVals}
-      />
-      <ProfileModal 
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        user={currentUser}
-        themeVals={themeVals}
-        onUpdateUser={handleLoginSuccess}
-        onRefreshUser={handleRefreshUser}
-      />
-
+            
       {currentView === 'timer' && (
         <div className="mt-16 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 z-0 w-full max-w-6xl px-4 relative animate-in fade-in duration-300">
           <div className="flex flex-col items-center relative">
+            {/* สวิตช์เลือกโหมด (ย้ายจาก TopBar มาไว้ที่นี่) */}
+            <div className="absolute top-[-40px] z-50 flex justify-center w-full">
+              <div className="relative">
+                {isModeDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsModeDropdownOpen(false)}></div>}
+                <button 
+                  onClick={() => !isTimerStarted && setIsModeDropdownOpen(!isModeDropdownOpen)}
+                  disabled={isTimerStarted}
+                  className={`flex items-center gap-3 px-5 py-2.5 rounded-[1rem] transition-all border border-white/10 ${isTimerStarted ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
+                  style={{ boxShadow: themeVals.shadowOuter, background: themeVals.raisedGradient, color: themeVals.textSub }}
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">{MODES?.[mode]?.label}</span>
+                  <ChevronDown size={14} className={`transition-transform duration-300 ${isModeDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                <div 
+                  className={`absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[260px] rounded-[1.5rem] p-2.5 border border-white/20 transition-all duration-300 origin-top z-50 flex flex-col gap-1
+                    ${isModeDropdownOpen ? 'opacity-100 scale-100 pointer-events-auto translate-y-0' : 'opacity-0 scale-95 pointer-events-none -translate-y-2'}`}
+                  style={{ boxShadow: themeVals.shadowPlateau, background: themeVals.raisedGradient }}
+                >
+                  {MODES && Object.entries(MODES).map(([key, { label }]) => {
+                    const isSelected = mode === key;
+                    return (
+                      <button key={key} onClick={() => { handleModeSelect(key); setIsModeDropdownOpen(false); }} className="w-full text-left px-5 py-3.5 text-[13px] font-medium tracking-wide transition-all flex items-center justify-between rounded-[1rem]" style={{ background: isSelected ? themeVals.bg : 'transparent', boxShadow: isSelected ? themeVals.shadowDeepInset : 'none', color: isSelected ? themeVals.textMain : themeVals.textSub }}>
+                        <span>{label}</span>
+                        <div className={`w-1.5 h-1.5 rounded-full transition-opacity ${isSelected ? 'bg-blue-400 opacity-100 shadow-[0_0_8px_#60a5fa]' : 'bg-transparent opacity-0'}`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
             <div onClick={() => { if (!isRunning && mode === 'full') setIsSettingOpen(true); }} className={`absolute z-10 flex items-center justify-center transition-all ${(isRunning || mode !== 'full') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ width: '100px', height: '100px', borderRadius: '24px', background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, transform: `scale(${cfg.settingBtnScale}) translate(${cfg.settingBtnX}px, ${cfg.settingBtnY}px)`, transformOrigin: 'center center' }} title={mode !== 'full' ? "Settings available in ALL PARTS mode only" : "Settings"}>
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
