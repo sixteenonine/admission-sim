@@ -1,6 +1,14 @@
 import React from 'react';
 import { Link, useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../utils/db.js';
+export const FLASHCARD_CATEGORIES = [
+  { name: 'SCIENCE, HEALTH & NATURE', color: '#4bdd31', diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
+  { name: 'BUSINESS & TECHNOLOGIES', color: '#0070fb', diamonds: <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
+  { name: 'ACADEMIC & CAREER', color: '#ff2e57', diamonds: <div className="absolute inset-0 flex items-center justify-center space-x-10 pointer-events-none select-none text-black z-0"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
+  { name: 'LIFESTYLE & MEDIA', color: '#8c52ff', diamonds: <div className="absolute inset-0 flex flex-col items-center justify-between py-6 pointer-events-none select-none text-black z-0"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
+  { name: 'SOCIETY & CULTURE', color: '#505e72', diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
+  { name: 'MY FAVORITE', color: '#ff8301', diamonds: null }
+];
 
 export function HubHome() {
   const themeVals = useOutletContext();
@@ -109,12 +117,20 @@ export function HubFlashcards() {
         <div className="w-full flex flex-col gap-4 mt-6">
           <h2 className="text-lg font-bold tracking-wider uppercase text-left ml-4" style={{ color: themeVals.textMain, opacity: 0.8 }}>RECENTLY STUDIED</h2>
           <div className="flex flex-col md:flex-row gap-6 w-full h-auto md:h-[140px]">
-            {recentDecks.length > 0 ? recentDecks.map((deck, idx) => (
-              <div key={idx} onClick={() => navigate('/vocab/play', { state: deck })} className="flex-1 rounded-[2rem] flex flex-col items-center justify-center p-4 cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
-                <span className="text-md font-bold uppercase text-center leading-tight mb-3" style={{ color: themeVals.textMain }}>{deck.deckTitle}</span>
-                <span className="text-xs font-bold px-4 py-1.5 rounded-full" style={{ background: deck.color || '#8c52ff', color: '#fff' }}>LEVEL {deck.level}</span>
-              </div>
-            )) : (
+            {recentDecks.length > 0 ? recentDecks.map((deck, idx) => {
+              const catDef = FLASHCARD_CATEGORIES.find(c => c.name === deck.deckTitle) || { color: deck.color || '#8c52ff', diamonds: null };
+              return (
+                <div key={idx} onClick={() => navigate('/vocab/play', { state: deck })} className="flex-1 relative rounded-[2rem] flex flex-col items-center justify-center p-4 cursor-pointer border border-white/10 transition-transform duration-300 hover:-translate-y-1 active:scale-95 overflow-hidden min-h-[120px]" style={{ backgroundColor: catDef.color, boxShadow: `0 10px 25px -5px ${catDef.color}60` }}>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0 scale-[0.6]">
+                    {catDef.diamonds}
+                  </div>
+                  <div className="flex flex-col items-center z-10">
+                    <span className="text-sm md:text-base font-black uppercase text-center leading-tight mb-3 text-white drop-shadow-sm">{deck.deckTitle}</span>
+                    <span className="text-[11px] font-black px-4 py-1.5 rounded-full bg-white shadow-sm" style={{ color: catDef.color }}>LEVEL {deck.level}</span>
+                  </div>
+                </div>
+              );
+            }) : (
               <div className="flex-1 rounded-[2rem] flex items-center justify-center p-4 border border-white/10 opacity-60" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
                 <span className="text-sm font-medium" style={{ color: themeVals.textMain }}>No recent decks yet. Let's study!</span>
               </div>
@@ -132,39 +148,7 @@ export function HubFlashcardDecks() {
   const [decksData, setDecksData] = React.useState(null);
   const [favCount, setFavCount] = React.useState(null);
 
-  const categories = [
-    { 
-      name: 'SCIENCE, HEALTH & NATURE', 
-      color: '#4bdd31', 
-      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
-    },
-    { 
-      name: 'BUSINESS & TECHNOLOGIES', 
-      color: '#0070fb', 
-      diamonds: <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
-    },
-    { 
-      name: 'ACADEMIC & CAREER', 
-      color: '#ff2e57', 
-      diamonds: <div className="absolute inset-0 flex items-center justify-center space-x-10 pointer-events-none select-none text-black z-0"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
-    },
-    { 
-      name: 'LIFESTYLE & MEDIA', 
-      color: '#8c52ff', 
-      diamonds: <div className="absolute inset-0 flex flex-col items-center justify-between py-6 pointer-events-none select-none text-black z-0"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
-    },
-    { 
-      name: 'SOCIETY & CULTURE', 
-      color: '#505e72', 
-      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
-    },
-    { 
-      name: 'MY FAVORITE', 
-      color: '#ff8301', 
-      diamonds: null
-    }
-  ];
-
+  // ลบตัวแปร categories เดิมออก และใช้ FLASHCARD_CATEGORIES ที่ประกาศไว้ด้านบนแทน
   React.useEffect(() => {
     async function loadDecks() {
        try {
@@ -204,7 +188,7 @@ export function HubFlashcardDecks() {
       </div>
       
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
-        {categories.map((cat, i) => {
+        {FLASHCARD_CATEGORIES.map((cat, i) => {
           let wordCount = 0;
           let isDataLoaded = false;
 
