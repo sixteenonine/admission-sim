@@ -414,18 +414,16 @@ export default function FlashcardPlayer() {
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
-    <div className="flex flex-col items-center w-full mx-auto animate-in fade-in duration-300 pb-10" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
-      
-      
+    <div className="flex flex-col items-center w-full h-[calc(100dvh-110px)] mx-auto animate-in fade-in duration-300 pb-8" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
 
       {!isReady ? (
-        <div className="w-full flex flex-col items-center px-4 animate-pulse pointer-events-none mt-6">
-          <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
+        <div className="w-full flex flex-col items-center px-4 animate-pulse pointer-events-none mt-2 h-full">
+          <div className="w-full max-w-md flex flex-col items-center mb-4 md:mb-6 shrink-0 text-center">
             <div className="h-8 w-48 bg-black/10 dark:bg-white/10 rounded-full mb-3"></div>
             <div className="h-4 w-24 bg-black/10 dark:bg-white/10 rounded-full mb-4"></div>
             <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full"></div>
           </div>
-          <div className="relative w-full max-w-4xl aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/9] max-h-[65vh] min-h-[380px] mx-auto">
+          <div className="relative w-full max-w-5xl flex-1 min-h-[300px] mx-auto">
             <div className="absolute inset-0 rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center p-8" style={{ backgroundColor: currentStyle.color }}>
               <div className="w-2/3 h-16 md:h-20 bg-white/20 rounded-full mb-6"></div>
               <div className="w-1/3 h-8 md:h-10 bg-white/20 rounded-full"></div>
@@ -433,11 +431,10 @@ export default function FlashcardPlayer() {
           </div>
         </div>
       ) : deck.length > 0 ? (
-        <div className="w-full flex flex-col items-center px-4 mt-6">
-          
+        <div className="w-full flex flex-col items-center px-4 mt-2 h-full">
           
           {/* Header Layout (อิงจากโค้ด index) */}
-          <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
+          <div className="w-full max-w-md flex flex-col items-center mb-4 md:mb-6 shrink-0 text-center">
             <h1 className="text-2xl font-extrabold mb-2 tracking-tight" style={{ color: themeVals.textMain }}>
               {currentCategory}
             </h1>
@@ -452,7 +449,7 @@ export default function FlashcardPlayer() {
           </div>
 
           {/* Area การ์ดแนวนอน แบบ 3D Layering */}
-          <div className="relative w-full max-w-4xl aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/9] max-h-[65vh] min-h-[380px] mx-auto transition-all duration-300">
+          <div className="relative w-full max-w-5xl flex-1 min-h-[300px] mx-auto transition-all duration-300">
             
             {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
             {deck.length > 1 && (
@@ -593,7 +590,7 @@ export default function FlashcardPlayer() {
           </div>
 
           {/* ปุ่ม Undo ด้านล่าง */}
-          <div className="w-full max-w-md flex justify-center mt-10">
+          <div className="w-full max-w-md flex justify-center mt-6 shrink-0">
             <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="py-3 px-8 flex justify-center items-center rounded-full font-bold transition-transform active:scale-95 disabled:opacity-20 disabled:cursor-not-allowed bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
               <Undo2 size={18} strokeWidth={2.5} className="mr-2" /> UNDO
             </button>
