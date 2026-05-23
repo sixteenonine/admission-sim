@@ -91,6 +91,7 @@ export default function SpeedRead() {
 
   const renderContent = () => {
     if (words.length === 0) return null;
+    const justifyClass = alignment === 'left' ? 'justify-start' : alignment === 'right' ? 'justify-end' : 'justify-center';
 
     if (readMode === 'serial') {
       const currentChunk = words.slice(globalWordIndex, globalWordIndex + (numLines * wordsPerLine));
@@ -99,7 +100,7 @@ export default function SpeedRead() {
         lines.push(currentChunk.slice(i, i + wordsPerLine).join(" "));
       }
       return (
-        <div className="flex flex-col justify-center w-full px-8 md:px-16 lg:px-24">
+        <div className="flex flex-col justify-center w-full px-8 md:px-16 lg:px-24" style={{ textAlign: alignment }}>
           {lines.map((line, i) => <div key={i}>{line}</div>)}
         </div>
       );
@@ -112,9 +113,9 @@ export default function SpeedRead() {
       const activeIdxInPage = globalWordIndex - pageStart;
 
       return (
-        <div className="w-full max-w-4xl px-8 md:px-16 lg:px-24 flex flex-wrap justify-center gap-x-2 gap-y-1">
+        <div className={`w-full max-w-4xl px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 ${justifyClass}`}>
           {pageWords.map((word, i) => (
-            <span key={i} className={`transition-all duration-150 ${i === activeIdxInPage ? 'opacity-100 font-bold drop-shadow-md' : 'opacity-20'}`} style={{ color: i === activeIdxInPage ? '#007AFF' : undefined }}>
+            <span key={i} className={`transition-opacity duration-150 ${i === activeIdxInPage ? 'opacity-100' : 'opacity-20'}`}>
               {word}
             </span>
           ))}
@@ -130,10 +131,10 @@ export default function SpeedRead() {
       const activeLineIdx = Math.floor(globalWordIndex / wordsPerLine);
 
       return (
-        <div className="relative w-full h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical">
+        <div className="relative w-full h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical" style={{ textAlign: alignment }}>
           <div className="absolute w-full transition-transform duration-300 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))` }}>
             {lines.map((line, i) => (
-              <div key={i} className={`w-full transition-all duration-300 ${i === activeLineIdx ? 'opacity-100 drop-shadow-md' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px`, color: i === activeLineIdx ? (isDark ? '#FFF' : '#000') : undefined }}>
+              <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineIdx ? 'opacity-100' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px` }}>
                 {line.text}
               </div>
             ))}
@@ -185,47 +186,60 @@ export default function SpeedRead() {
         </div>
       </div>
 
-      {/* Settings Modal (Compact) */}
+      {/* Settings Modal (Centered) */}
       {isSettingsOpen && (
-        <div className="absolute bottom-0 left-0 w-full p-5 z-50 rounded-t-3xl border-t shadow-2xl backdrop-blur-3xl transition-all" style={{ background: isDark ? 'rgba(20, 20, 20, 0.9)' : 'rgba(245, 245, 245, 0.95)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }} onClick={(e) => e.stopPropagation()}>
-          <div className="max-w-sm mx-auto">
-            <div className="flex justify-between items-center mb-5"><h3 className="font-bold text-sm uppercase tracking-wider opacity-80">Settings</h3><button onClick={() => setIsSettingsOpen(false)}><X size={20} /></button></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setIsSettingsOpen(false)}>
+          <div className="w-full max-w-md p-6 rounded-3xl shadow-2xl transition-all" style={{ background: themeVals.bg, color: themeVals.textMain, border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'Inter, sans-serif' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="font-bold text-sm uppercase tracking-wider opacity-80">Settings</h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="opacity-60 hover:opacity-100 transition-opacity"><X size={20} /></button>
+            </div>
             
-            <div className="space-y-5 text-sm">
+            <div className="space-y-6 text-sm">
               {/* Reading Mode */}
-              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+              <div className="flex p-1 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
                 {[ {id: 'serial', label: 'Serial'}, {id: 'highlight', label: 'Highlight'}, {id: 'teleprompter', label: 'Scroll'} ].map(m => (
-                  <button key={m.id} onClick={() => setReadMode(m.id)} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${readMode === m.id ? 'bg-white dark:bg-[#333] shadow-sm' : 'opacity-50'}`}>{m.label}</button>
+                  <button key={m.id} onClick={() => setReadMode(m.id)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${readMode !== m.id && 'opacity-60 shadow-none'}`} style={readMode === m.id ? { background: isDark ? 'rgba(255,255,255,0.1)' : '#FFF', color: '#007AFF' } : {}}>{m.label}</button>
                 ))}
               </div>
 
-              {/* Sliders (Only show in Serial/Teleprompter) */}
-              {readMode !== 'highlight' && (
-                <div className="flex gap-4">
-                  {readMode === 'serial' && (
-                    <div className="flex-1 space-y-2"><div className="flex justify-between opacity-80 text-xs"><span>Lines</span><span>{numLines}</span></div><input type="range" min="1" max="5" value={numLines} onChange={(e) => setNumLines(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none bg-black/10 dark:bg-white/10" style={{accentColor: '#007AFF'}} /></div>
-                  )}
-                  <div className="flex-1 space-y-2"><div className="flex justify-between opacity-80 text-xs"><span>Words / Line</span><span>{wordsPerLine}</span></div><input type="range" min="1" max="5" value={wordsPerLine} onChange={(e) => setWordsPerLine(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none bg-black/10 dark:bg-white/10" style={{accentColor: '#007AFF'}} /></div>
+              {/* Layout Sliders */}
+              <div className="space-y-4">
+                {readMode === 'serial' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between opacity-80 text-xs font-medium"><span>Lines</span><span>{numLines}</span></div>
+                    <input type="range" min="1" max="5" value={numLines} onChange={(e) => setNumLines(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
+                  </div>
+                )}
+                {readMode !== 'highlight' && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between opacity-80 text-xs font-medium"><span>Words / Line</span><span>{wordsPerLine}</span></div>
+                    <input type="range" min="1" max="5" value={wordsPerLine} onChange={(e) => setWordsPerLine(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <div className="flex justify-between opacity-80 text-xs font-medium"><span>Font Size</span><span>{fontSize}px</span></div>
+                  <input type="range" min="24" max="120" step="4" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
                 </div>
-              )}
+              </div>
 
               {/* Font & Alignment */}
               <div className="flex gap-4 items-center">
-                <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="flex-1 p-2 rounded-lg bg-black/5 dark:bg-white/5 outline-none font-medium cursor-pointer text-xs" style={{ fontFamily }}>
-                  <option value="Inter, sans-serif">Google Sans (Inter)</option>
-                  <option value="'Baskervville', serif">Baskervville</option>
-                  <option value="'Space Mono', monospace">Space Mono</option>
+                <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="flex-1 p-2.5 rounded-xl outline-none font-medium cursor-pointer text-xs appearance-none" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: themeVals.textMain, fontFamily, border: 'none' }}>
+                  <option value="Inter, sans-serif" style={{ background: themeVals.bg }}>Google Sans</option>
+                  <option value="'Baskervville', serif" style={{ background: themeVals.bg }}>Baskervville</option>
+                  <option value="'Space Mono', monospace" style={{ background: themeVals.bg }}>Space Mono</option>
                 </select>
-                <div className="flex gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-lg">
-                  {[ {icon: AlignLeft, v: 'left'}, {icon: AlignCenter, v: 'center'}, {icon: AlignRight, v: 'right'} ].map(a => <button key={a.v} onClick={() => setAlignment(a.v)} className={`p-1.5 rounded ${alignment === a.v ? 'bg-white dark:bg-[#333] shadow-sm text-[#007AFF]' : 'opacity-50'}`}><a.icon size={16} /></button>)}
+                <div className="flex gap-1 p-1 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }}>
+                  {[ {icon: AlignLeft, v: 'left'}, {icon: AlignCenter, v: 'center'}, {icon: AlignRight, v: 'right'} ].map(a => <button key={a.v} onClick={() => setAlignment(a.v)} className={`p-2 rounded-lg transition-all shadow-sm ${alignment !== a.v && 'opacity-50 shadow-none'}`} style={alignment === a.v ? { background: isDark ? 'rgba(255,255,255,0.1)' : '#FFF', color: '#007AFF' } : {}}><a.icon size={16} /></button>)}
                 </div>
               </div>
 
               {/* Adaptive WPM Toggle */}
-              <div className="flex justify-between items-center py-1">
+              <div className="flex justify-between items-center py-2 border-t" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }}>
                 <div className="flex flex-col"><span className="font-bold opacity-90 text-xs">Adaptive Speed</span><span className="text-[10px] opacity-50">Slow down for larger words</span></div>
-                <button onClick={() => setAdaptiveWpm(!adaptiveWpm)} className={`w-11 h-6 rounded-full p-1 transition-colors ${adaptiveWpm ? 'bg-[#007AFF]' : 'bg-black/20 dark:bg-white/20'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${adaptiveWpm ? 'translate-x-5' : 'translate-x-0'}`} />
+                <button onClick={() => setAdaptiveWpm(!adaptiveWpm)} className={`w-12 h-7 rounded-full p-1 transition-colors`} style={{ background: adaptiveWpm ? '#007AFF' : isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }}>
+                  <div className={`w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${adaptiveWpm ? 'translate-x-5' : 'translate-x-0'}`} />
                 </button>
               </div>
             </div>
