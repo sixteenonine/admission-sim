@@ -141,7 +141,7 @@ export default function SpeedRead() {
       
       const activeLineFloat = globalWordIndex / 12; 
       const activeLineInt = Math.floor(globalWordIndex / 12);
-      const lineSpacing = fontSize * 2.5; // ให้พื้นที่เผื่อสำหรับการตัดขึ้นบรรทัดใหม่
+      const lineSpacing = fontSize * 5; // เพิ่มระยะเผื่อการตัดขึ้นบรรทัดใหม่บนมือถือสูงสุด 3-4 บรรทัด
 
       return (
         <div className="relative w-full max-w-6xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
@@ -152,13 +152,13 @@ export default function SpeedRead() {
           }}>
             {lines.map((line, i) => (
               <div key={i} className={`w-full transition-opacity duration-150 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
-                height: `${lineSpacing}px`, // ล็อคความสูงให้คงที่เพื่อให้คำนวณระยะ Scroll ได้แม่นยำ
+                height: `${lineSpacing}px`, 
                 display: 'flex', 
-                flexDirection: 'column', // จัดให้อยู่กึ่งกลางแนวตั้งเสมอ ไม่ว่าจะเป็น 1 หรือ 2 บรรทัด
+                flexDirection: 'column', 
                 justifyContent: 'center',
                 textAlign: alignment 
               }}>
-                <div>{line.text}</div>
+                <div style={{ wordBreak: 'break-word' }}>{line.text}</div>
               </div>
             ))}
           </div>
