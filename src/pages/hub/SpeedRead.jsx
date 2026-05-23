@@ -56,9 +56,8 @@ export default function SpeedRead() {
       chunkWords = 1;
       chunkChars = words[globalWordIndex]?.length || 5;
     } else if (readMode === 'teleprompter') {
-      const wordsToRead = Math.min(words.length - globalWordIndex, 12); // บังคับเป็นประโยคยาว 12 คำ
-      chunkWords = wordsToRead;
-      chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+      chunkWords = 1; // อัปเดตทีละคำเพื่อความสมูทและตอบสนองทันที
+      chunkChars = words[globalWordIndex]?.length || 5;
     }
 
     let delay = (60 / wpm) * 1000 * chunkWords;
@@ -77,7 +76,7 @@ export default function SpeedRead() {
       } else if (readMode === 'highlight') {
         chunkWords = 1;
       } else if (readMode === 'teleprompter') {
-        chunkWords = Math.min(words.length - globalWordIndex, 12); // บังคับเป็นประโยคยาว 12 คำ
+        chunkWords = 1; // เลื่อนทีละคำ
       }
 
       timerRef.current = setTimeout(() => {
@@ -139,14 +138,26 @@ export default function SpeedRead() {
       for (let i = 0; i < words.length; i += 12) {
         lines.push({ text: words.slice(i, i + 12).join(" "), index: i });
       }
-      const activeLineIdx = Math.floor(globalWordIndex / 12);
+      const activeLineFloat = globalWordIndex / 12; // ใช้ทศนิยมเพื่อให้เลื่อนขึ้นแบบไหลลื่น
+      const activeLineInt = Math.floor(globalWordIndex / 12);
+      const lineSpacing = fontSize * 3; // เผื่อพื้นที่ให้ข้อความตัดบรรทัด (wrap) ได้สูงสุด 3 บรรทัด
 
       return (
-        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical pb-8" style={{ textAlign: alignment }}>
-          <div className="absolute left-0 right-0 px-8 md:px-16 lg:px-24 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))`, transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 300ms ease' }}>
+        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
+          <div className="absolute left-0 right-0 px-8 md:px-16 lg:px-24" style={{ 
+            top: '50%', 
+            transform: `translateY(calc(-${(activeLineFloat + 0.5) * lineSpacing}px))`, 
+            transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 150ms ease-out' 
+          }}>
             {lines.map((line, i) => (
-              <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineIdx ? 'opacity-100' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px` }}>
-                {line.text}
+              <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
+                minHeight: `${lineSpacing}px`, 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'center',
+                textAlign: alignment 
+              }}>
+                <div>{line.text}</div>
               </div>
             ))}
           </div>
