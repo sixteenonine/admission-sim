@@ -73,7 +73,7 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
                       <span className="text-[10px] font-mono font-medium" style={{ color: theme.textSub }}>{Math.round(trackHue)}°</span>
                     </div>
                   </div>
-                  <input type="range" min="0" max="360" value={trackHue} onChange={(e) => { setTrackHue(e.target.value); setIsAutoTrackHue(false); }} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench, touchAction: 'none' }} />
+                  <input type="range" min="0" max="360" step="1" value={Math.round(Number(trackHue) || 0)} onChange={(e) => setTrackHue(Number(e.target.value))} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => { e.stopPropagation(); setIsAutoTrackHue(false); }} onTouchStart={(e) => { e.stopPropagation(); setIsAutoTrackHue(false); }} onTouchMove={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
                 </div>
             </div>
           )}
