@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Plus, Edit3, Trash2, X, BookOpen, User } from 'lucide-react';
+import { useOutletContext, useNavigate, Link } from 'react-router-dom';
+import { Plus, Edit3, Trash2, X, BookOpen, User, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function SpeedReadLobby() {
   const themeVals = useOutletContext();
+  const { bg, textMain, shadowOuter } = themeVals;
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
+  const isDark = textMain === '#ffffff' || textMain === '#FFFFFF';
   
+  const [activeTab, setActiveTab] = useState('SYSTEM');
   const [systemArticles, setSystemArticles] = useState([]);
   const [customArticles, setCustomArticles] = useState([]);
   
@@ -129,89 +131,139 @@ export default function SpeedReadLobby() {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[500px] mx-auto animate-in fade-in duration-300 px-4 pb-24 relative">
-      {/* Header */}
-      <div className="w-full flex items-center justify-between mb-8 mt-2">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full" style={{ background: isDark ? '#2C2C2E' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`, color: '#8E8E93' }}>
-          <ChevronLeft size={24} />
-        </button>
-        <span className="font-bold text-[1.1rem]" style={{ color: themeVals.textMain }}>ULTRA SPEED READ</span>
-        <div className="w-10"></div>
+    <div className="w-full max-w-5xl mx-auto animate-in fade-in duration-300">
+      
+      <div className="mb-10 px-2">
+        <h2 className="text-3xl font-black mb-2" style={{ color: textMain }}>Ultra Speed Read</h2>
+        <p className="text-sm opacity-60 font-prompt font-normal" style={{ color: textMain }}>ฝึกฝนทักษะการอ่านเร็วและทดสอบความเข้าใจ</p>
       </div>
 
-      <div className="w-full flex flex-col gap-8">
-        {/* System Articles Section */}
-        <div className="w-full">
-          <div className="flex items-center gap-2 mb-4 px-2 opacity-80" style={{ color: themeVals.textMain }}>
-            <BookOpen size={16} />
-            <h2 className="text-sm font-bold tracking-wider uppercase">System Articles</h2>
-          </div>
-          <div className="grid grid-cols-1 gap-3 w-full">
-            {systemArticles.length === 0 ? (
-              <div className="text-center p-4 text-xs font-bold opacity-50" style={{ color: themeVals.textMain }}>ยังไม่มีบทความในระบบ</div>
-            ) : (
-              systemArticles.map((art) => (
+      <div className="flex gap-3 mb-6 px-2">
+        <button 
+          onClick={() => setActiveTab('SYSTEM')}
+          className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'SYSTEM' ? 'bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+        >
+          <BookOpen size={16} /> <span className="font-prompt font-normal">บทความระบบ</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('CUSTOM')}
+          className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'CUSTOM' ? 'bg-[#FF9500] text-white shadow-[0_4px_12px_rgba(255,149,0,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+        >
+          <User size={16} /> <span className="font-prompt font-normal">บทความส่วนตัว</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {(() => {
+          if (activeTab === 'SYSTEM') {
+            if (systemArticles.length === 0) {
+              return (
+                <div className="col-span-full text-center py-16 rounded-[2rem] border border-dashed border-gray-200" style={{ background: bg }}>
+                  <BookOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
+                  <p className="text-sm opacity-50 font-prompt font-normal" style={{ color: textMain }}>ยังไม่มีบทความในระบบ</p>
+                </div>
+              );
+            }
+            return systemArticles.map(art => {
+              const isLocked = art.is_premium === 1 && currentUser?.plan_tier !== 'pro' && currentUser?.plan_tier !== 'premium';
+              return (
                 <div 
                   key={art.id} 
-                  onClick={() => handlePlay(art, true)}
-                  className="p-5 rounded-2xl cursor-pointer transition-transform active:scale-[0.98] flex items-center justify-between"
-                  style={{ background: isDark ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}` }}
+                  className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden flex flex-col relative group transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                  style={{ boxShadow: shadowOuter }}
+                  onClick={() => !isLocked && handlePlay(art, true)}
                 >
-                  <div className="font-bold text-base line-clamp-1" style={{ color: themeVals.textMain }}>{art.title}</div>
-                  {art.is_premium === 1 && <span className="text-[10px] font-black tracking-widest text-white bg-purple-500 px-2 py-0.5 rounded-full">PRO</span>}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Custom Articles Section */}
-        <div className="w-full">
-          <div className="flex items-center gap-2 mb-4 px-2 opacity-80" style={{ color: themeVals.textMain }}>
-            <User size={16} />
-            <h2 className="text-sm font-bold tracking-wider uppercase">My Articles</h2>
-          </div>
-          {!currentUser ? (
-            <div className="text-center p-6 rounded-2xl border-dashed border-2 text-sm font-bold opacity-50" style={{ borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', color: themeVals.textMain }}>
-              กรุณาเข้าสู่ระบบเพื่อเพิ่มบทความของคุณ
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 w-full">
-              {customArticles.length === 0 ? (
-                <div className="text-center p-4 text-xs font-bold opacity-50" style={{ color: themeVals.textMain }}>คุณยังไม่ได้เพิ่มบทความส่วนตัว</div>
-              ) : (
-                customArticles.map((art) => (
-                  <div 
-                    key={art.id} 
-                    onClick={() => handlePlay(art, false)}
-                    className="p-5 rounded-2xl cursor-pointer transition-transform active:scale-[0.98] flex items-center justify-between group"
-                    style={{ background: isDark ? '#1C1C1E' : '#FFFFFF', border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}` }}
-                  >
-                    <div className="font-bold text-base line-clamp-1 pr-4" style={{ color: themeVals.textMain }}>{art.title}</div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={(e) => openEditModal(e, art)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-full transition-colors"><Edit3 size={16}/></button>
-                      <button onClick={(e) => handleDeleteCustom(e, art.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"><Trash2 size={16}/></button>
+                  <div className="h-[180px] w-full bg-blue-50 relative overflow-hidden flex items-center justify-center text-blue-300 transition-colors group-hover:bg-blue-100">
+                    <BookOpen size={48} className="transition-transform duration-500 group-hover:scale-110" />
+                    {art.is_premium === 1 && (
+                      <span className="absolute top-4 right-4 bg-purple-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full tracking-widest shadow-md z-10">PRO</span>
+                    )}
+                  </div>
+                  <div className="p-6 flex flex-col flex-grow bg-white">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4 line-clamp-2">{art.title}</h3>
+                    <div className="mt-auto flex items-center justify-between">
+                      {isLocked ? (
+                        <div className="flex items-center gap-2 text-purple-600 text-xs bg-purple-50 px-3 py-2 rounded-xl">
+                          <Lock size={14} />
+                          <span className="font-prompt font-normal">เฉพาะสมาชิก</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl font-prompt font-normal">พร้อมอ่าน</span>
+                      )}
+                      
+                      {isLocked ? (
+                        <Link to="/subscription" onClick={e => e.stopPropagation()} className="flex items-center gap-1 text-xs text-gray-400 hover:text-purple-600 transition-colors">
+                          <span className="font-prompt font-normal">ปลดล็อก</span>
+                          <ChevronRight size={14} />
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs text-blue-600 hover:gap-2 transition-all font-prompt font-normal">
+                          <span>เริ่มอ่าน</span>
+                          <ChevronRight size={14} />
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            });
+          } else {
+            if (!currentUser) {
+              return (
+                <div className="col-span-full text-center py-16 rounded-[2rem] border border-dashed border-gray-200" style={{ background: bg }}>
+                  <User size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
+                  <p className="text-sm opacity-50 font-prompt font-normal" style={{ color: textMain }}>กรุณาเข้าสู่ระบบเพื่อเพิ่มบทความ</p>
+                </div>
+              );
+            }
+            if (customArticles.length === 0) {
+              return (
+                <div className="col-span-full text-center py-16 rounded-[2rem] border border-dashed border-gray-200" style={{ background: bg }}>
+                  <User size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
+                  <p className="text-sm opacity-50 font-prompt font-normal" style={{ color: textMain }}>คุณยังไม่ได้เพิ่มบทความส่วนตัว</p>
+                </div>
+              );
+            }
+            return customArticles.map(art => (
+              <div 
+                key={art.id} 
+                className="bg-white rounded-[2rem] border border-gray-100 overflow-hidden flex flex-col relative group transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                style={{ boxShadow: shadowOuter }}
+                onClick={() => handlePlay(art, false)}
+              >
+                <div className="h-[180px] w-full bg-orange-50 relative overflow-hidden flex items-center justify-center text-orange-300 transition-colors group-hover:bg-orange-100">
+                  <User size={48} className="transition-transform duration-500 group-hover:scale-110" />
+                  <div className="absolute top-4 right-4 flex gap-2 z-10">
+                    <button onClick={(e) => { e.stopPropagation(); openEditModal(e, art); }} className="p-2 bg-white/80 hover:bg-white text-blue-500 rounded-full shadow-sm backdrop-blur-sm transition-colors"><Edit3 size={14}/></button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCustom(e, art.id); }} className="p-2 bg-white/80 hover:bg-white text-red-500 rounded-full shadow-sm backdrop-blur-sm transition-colors"><Trash2 size={14}/></button>
+                  </div>
+                </div>
+                <div className="p-6 flex flex-col flex-grow bg-white">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 line-clamp-2">{art.title}</h3>
+                  <div className="mt-auto flex items-center justify-between">
+                    <span className="text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded-xl font-prompt font-normal">บทความส่วนตัว</span>
+                    <div className="flex items-center gap-1 text-xs text-blue-600 hover:gap-2 transition-all font-prompt font-normal">
+                      <span>เริ่มอ่าน</span>
+                      <ChevronRight size={14} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ));
+          }
+        })()}
       </div>
 
-      {/* Floating Add Button */}
-      {currentUser && (
+      {currentUser && activeTab === 'CUSTOM' && (
         <button 
           onClick={() => setShowModal(true)}
-          className="fixed bottom-10 right-6 md:right-1/2 md:translate-x-[200px] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform z-30" 
+          className="fixed bottom-10 right-6 md:right-10 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-transform z-30" 
           style={{ background: '#FF9500' }}
         >
           <Plus size={30} />
         </button>
       )}
 
-      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-[400px] bg-white rounded-[32px] overflow-hidden shadow-2xl flex flex-col transform transition-all">
@@ -225,7 +277,7 @@ export default function SpeedReadLobby() {
                 <input 
                   value={formData.title} 
                   onChange={e => setFormData({...formData, title: e.target.value})}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-bold text-gray-700 transition-all"
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-prompt font-normal text-gray-700 transition-all"
                   placeholder="ตั้งชื่อบทความของคุณ..."
                 />
               </div>
@@ -234,7 +286,7 @@ export default function SpeedReadLobby() {
                 <textarea 
                   value={formData.content} 
                   onChange={e => setFormData({...formData, content: e.target.value})}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-gray-700 min-h-[160px] resize-none transition-all"
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-prompt font-normal text-gray-700 min-h-[160px] resize-none transition-all"
                   placeholder="วางเนื้อหาบทความภาษาอังกฤษที่นี่..."
                 />
               </div>
@@ -244,7 +296,7 @@ export default function SpeedReadLobby() {
                 className="w-full mt-2 py-4 rounded-2xl font-black text-white shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                 style={{ background: '#FF9500', opacity: isLoading ? 0.7 : 1 }}
               >
-                {isLoading ? 'SAVING...' : (editingId ? 'UPDATE ARTICLE' : 'SAVE TO MY LIST')}
+                <span className="font-prompt font-normal">{isLoading ? 'กำลังบันทึก...' : (editingId ? 'อัปเดตบทความ' : 'บันทึกลงคลังส่วนตัว')}</span>
               </button>
             </div>
           </div>

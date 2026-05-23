@@ -64,7 +64,7 @@ export default function StoryLobby() {
       {/* Header ของหน้า Lobby */}
       <div className="mb-10 px-2">
         <h2 className="text-3xl font-black mb-2" style={{ color: textMain }}>StoryDiary</h2>
-        <p className="text-sm opacity-60 font-medium" style={{ color: textMain }}>ฝึกอ่านเรื่องสั้นระดับพรีเมียมและสะสมคลังคำศัพท์ประจำวัน</p>
+        <p className="text-sm opacity-60 font-prompt font-normal" style={{ color: textMain }}>ฝึกอ่านเรื่องสั้นระดับพรีเมียมและสะสมคลังคำศัพท์ประจำวัน</p>
       </div>
 
       {/* แท็บตัวเลือกหมวดหมู่ */}
@@ -73,22 +73,22 @@ export default function StoryLobby() {
           onClick={() => setActiveTab('ALL')}
           className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'ALL' ? 'bg-blue-600 text-white shadow-[0_4px_12px_rgba(37,99,235,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
         >
-          <BookOpen size={16} /> ทั้งหมด
+          <BookOpen size={16} /> <span className="font-prompt font-normal">ทั้งหมด</span>
         </button>
         <button 
           onClick={() => setActiveTab('FAVORITE')}
           className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeTab === 'FAVORITE' ? 'bg-[#FFD700] text-gray-900 shadow-[0_4px_12px_rgba(255,215,0,0.3)]' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
         >
-          <Star size={16} fill={activeTab === 'FAVORITE' ? "currentColor" : "none"} /> ที่ถูกใจ
+          <Star size={16} fill={activeTab === 'FAVORITE' ? "currentColor" : "none"} /> <span className="font-prompt font-normal">ที่ถูกใจ</span>
         </button>
       </div>
 
-      {error && <div className="p-4 mb-8 text-[14px] text-red-500 bg-red-500/10 rounded-2xl border border-red-500/20 text-center font-bold">เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว</div>}
+      {error && <div className="p-4 mb-8 text-[14px] text-red-500 bg-red-500/10 rounded-2xl border border-red-500/20 text-center font-prompt font-normal">เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว</div>}
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 className="animate-spin text-blue-500" size={32} />
-          <span className="text-sm font-medium opacity-60" style={{ color: textMain }}>กำลังเตรียมคลังเรื่องสั้น...</span>
+          <span className="text-sm opacity-60 font-prompt font-normal" style={{ color: textMain }}>กำลังเตรียมคลังเรื่องสั้น...</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -105,7 +105,7 @@ export default function StoryLobby() {
                   ) : (
                     <BookOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: textMain }} />
                   )}
-                  <p className="text-sm font-bold opacity-50" style={{ color: textMain }}>
+                  <p className="text-sm opacity-50 font-prompt font-normal" style={{ color: textMain }}>
                     {activeTab === 'FAVORITE' ? 'คุณยังไม่ได้กดถูกใจเรื่องสั้นใดเลย' : 'ยังไม่มีเรื่องสั้นในระบบขณะนี้'}
                   </p>
                 </div>
@@ -147,22 +147,22 @@ export default function StoryLobby() {
                     
                     <div className="mt-auto flex items-center justify-between">
                       {isLocked ? (
-                        <div className="flex items-center gap-2 text-purple-600 font-bold text-xs bg-purple-50 px-3 py-2 rounded-xl">
+                        <div className="flex items-center gap-2 text-purple-600 text-xs bg-purple-50 px-3 py-2 rounded-xl">
                           <Lock size={14} />
-                          <span>เฉพาะสมาชิก Premium</span>
+                          <span className="font-prompt font-normal">เฉพาะสมาชิก Premium</span>
                         </div>
                       ) : (
-                        <span className="text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl font-bold">พร้อมอ่าน</span>
+                        <span className="text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl font-prompt font-normal">พร้อมอ่าน</span>
                       )}
 
                       {isLocked ? (
-                        <Link to="/subscription" className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-purple-600 transition-colors">
-                          <span>ปลดล็อก</span>
+                        <Link to="/subscription" className="flex items-center gap-1 text-xs text-gray-400 hover:text-purple-600 transition-colors">
+                          <span className="font-prompt font-normal">ปลดล็อก</span>
                           <ChevronRight size={14} />
                         </Link>
                       ) : (
-                        <Link to={`/storydiary/play?id=${story.id}`} className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:gap-2 transition-all">
-                          <span>เริ่มอ่านเรื่องสั้น</span>
+                        <Link to={`/storydiary/play?id=${story.id}`} className="flex items-center gap-1 text-xs text-blue-600 hover:gap-2 transition-all">
+                          <span className="font-prompt font-normal">เริ่มอ่านเรื่องสั้น</span>
                           <ChevronRight size={14} />
                         </Link>
                       )}
