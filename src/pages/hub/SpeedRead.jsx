@@ -14,6 +14,9 @@ export default function SpeedRead() {
   const [text, setText] = useState(initialContent || "");
   const [loading, setLoading] = useState(isSystem && !initialContent);
   const timerRef = useRef(null);
+  const teleprompterRef = useRef(null);
+  const requestRef = useRef();
+  const previousTimeRef = useRef();
 
   // Settings State
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -66,27 +69,58 @@ export default function SpeedRead() {
     }
     return delay;
   }, [globalWordIndex, wpm, words, readMode, numLines, wordsPerLine, adaptiveWpm]);
-
-  // Main Loop
+// Main Loop (Serial & Highlight)
   useEffect(() => {
-    if (isPlaying && globalWordIndex < words.length) {
+    if (isPlaying && readMode !== 'teleprompter' && globalWordIndex < words.length) {
       let chunkWords = 1;
       if (readMode === 'serial') {
         chunkWords = Math.min(words.length - globalWordIndex, numLines * wordsPerLine);
       } else if (readMode === 'highlight') {
         chunkWords = 1;
-      } else if (readMode === 'teleprompter') {
-        chunkWords = 1; // เลื่อนทีละคำ
       }
 
       timerRef.current = setTimeout(() => {
         setGlobalWordIndex(prev => Math.min(words.length, prev + chunkWords));
       }, currentDelay);
-    } else if (globalWordIndex >= words.length) {
+    } else if (readMode !== 'teleprompter' && globalWordIndex >= words.length) {
       setIsPlaying(false);
     }
     return () => clearTimeout(timerRef.current);
   }, [isPlaying, globalWordIndex, words, readMode, numLines, wordsPerLine, currentDelay]);
+
+  // Teleprompter Smooth Scroll Loop
+  useEffect(() => {
+    const animateScroll = time => {
+      if (previousTimeRef.current != undefined) {
+        const deltaTime = time - previousTimeRef.current;
+        if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
+          // คำนวณความเร็ว (ปรับสเกลตามขนาดฟอนต์เพื่อให้รู้สึกถึงความเร็วที่สม่ำเสมอ)
+          const speedFactor = (wpm / 120) * (fontSize / 24); 
+          const scrollPixels = speedFactor * (deltaTime / 16.66);
+          
+          teleprompterRef.current.scrollTop += scrollPixels;
+          
+          // หยุดเมื่อเลื่อนสุดขอบล่าง
+          const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
+          if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
+            setIsPlaying(false);
+          }
+        }
+      }
+      previousTimeRef.current = time;
+      if (isPlaying && readMode === 'teleprompter') {
+        requestRef.current = requestAnimationFrame(animateScroll);
+      }
+    };
+
+    if (isPlaying && readMode === 'teleprompter') {
+      requestRef.current = requestAnimationFrame(animateScroll);
+    } else {
+      previousTimeRef.current = undefined; // รีเซ็ตเวลาเพื่อป้องกันการกระตุกเมื่อกดเล่นต่อ
+    }
+
+    return () => cancelAnimationFrame(requestRef.current);
+  }, [isPlaying, readMode, wpm, fontSize]);
   // Click background to pause
   const handleBackgroundClick = (e) => {
     if (isPlaying) {
@@ -95,10 +129,31 @@ export default function SpeedRead() {
     }
   };
 
-  const skipForward = () => setGlobalWordIndex(prev => Math.min(words.length - 1, prev + (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? 12 : 1))));
-  const skipBackward = () => setGlobalWordIndex(prev => Math.max(0, prev - (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? 12 : 1))));
-  const showUI = !isPlaying && !isSettingsOpen;
+  const skipForward = () => {
+    if (readMode === 'teleprompter' && teleprompterRef.current) {
+      teleprompterRef.current.scrollBy({ top: 300, behavior: 'smooth' });
+    } else {
+      setGlobalWordIndex(prev => Math.min(words.length - 1, prev + (readMode === 'serial' ? numLines * wordsPerLine : 1)));
+    }
+  };
+  
+  const skipBackward = () => {
+    if (readMode === 'teleprompter' && teleprompterRef.current) {
+      teleprompterRef.current.scrollBy({ top: -300, behavior: 'smooth' });
+    } else {
+      setGlobalWordIndex(prev => Math.max(0, prev - (readMode === 'serial' ? numLines * wordsPerLine : 1)));
+    }
+  };
+  
+  const resetPosition = () => {
+    if (readMode === 'teleprompter' && teleprompterRef.current) {
+      teleprompterRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setGlobalWordIndex(0);
+    }
+  };
 
+  const showUI = !isPlaying && !isSettingsOpen;
   const renderContent = () => {
     if (words.length === 0) return null;
     const justifyClass = alignment === 'left' ? 'justify-start' : alignment === 'right' ? 'justify-end' : 'justify-center';
@@ -134,33 +189,24 @@ export default function SpeedRead() {
     }
 
     if (readMode === 'teleprompter') {
-      const lines = [];
-      for (let i = 0; i < words.length; i += 12) {
-        lines.push({ text: words.slice(i, i + 12).join(" "), index: i });
-      }
-      
-      const activeLineFloat = globalWordIndex / 12; 
-      const activeLineInt = Math.floor(globalWordIndex / 12);
-      const lineSpacing = fontSize * 5; // เพิ่มระยะเผื่อการตัดขึ้นบรรทัดใหม่บนมือถือสูงสุด 3-4 บรรทัด
-
       return (
-        <div className="relative w-full max-w-6xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
-          <div className="absolute left-0 right-0 px-6 md:px-12 lg:px-16" style={{ 
-            top: '50%', 
-            transform: `translateY(calc(-${(activeLineFloat + 0.5) * lineSpacing}px))`, 
-            transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 150ms ease-out' 
-          }}>
-            {lines.map((line, i) => (
-              <div key={i} className={`w-full transition-opacity duration-150 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
-                height: `${lineSpacing}px`, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                justifyContent: 'center',
-                textAlign: alignment 
-              }}>
-                <div style={{ wordBreak: 'break-word' }}>{line.text}</div>
-              </div>
-            ))}
+        <div 
+          ref={teleprompterRef}
+          className="relative w-full max-w-6xl mx-auto h-[60vh] overflow-y-auto mask-image-vertical hide-scrollbar"
+          style={{
+            scrollBehavior: 'auto',
+            paddingTop: '30vh',
+            paddingBottom: '30vh',
+          }}
+        >
+          <div 
+            className="w-full px-6 md:px-12 lg:px-16" 
+            style={{ 
+              whiteSpace: 'pre-wrap', 
+              textAlign: alignment 
+            }}
+          >
+            {text}
           </div>
         </div>
       );
@@ -189,12 +235,14 @@ export default function SpeedRead() {
       <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-12 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center space-y-3">
-            <div className="text-[11px] font-bold tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>SPEED: {wpm} WPM</div>
+            <div className="text-[11px] font-bold tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>
+              {readMode === 'teleprompter' ? `SCROLL SPEED: ${wpm}` : `SPEED: ${wpm} WPM`}
+            </div>
             <input type="range" min="50" max="1000" step="10" value={wpm} onChange={(e) => setWpm(e.target.value)} onClick={(e) => e.stopPropagation()} className="w-80 h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
           </div>
 
           <div className="flex justify-between items-center px-6 w-full">
-            <button onClick={(e) => { e.stopPropagation(); setGlobalWordIndex(0); }} className="active:scale-90 opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={22} /></button>
+            <button onClick={(e) => { e.stopPropagation(); resetPosition(); }} className="active:scale-90 opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={22} /></button>
             <button onClick={(e) => { e.stopPropagation(); skipBackward(); }} className="active:scale-90 opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipBack size={24} /></button>
             <button 
               onClick={(e) => { e.stopPropagation(); setIsPlaying(!isPlaying); }} 
@@ -275,6 +323,13 @@ export default function SpeedRead() {
         .mask-image-vertical {
           -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
           mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+        }
+          .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </div>
