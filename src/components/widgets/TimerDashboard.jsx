@@ -52,13 +52,14 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
                 <filter id="neonDrop" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000000" floodOpacity="0.15" />
                   <feDropShadow dx="0" dy="0" stdDeviation="8" floodColor={trackGlowColor} floodOpacity="0.8" />
+                  <feColorMatrix type="hueRotate" values={trackHue} />
                 </filter>
               </defs>
               <circle cx={trackSize/2} cy={trackSize/2} r={cfg.trackRadius} fill="none" stroke={theme.trackBg} strokeWidth={cfg.bgTrackStroke} />
               
               <g mask="url(#progressMask)" filter="url(#neonDrop)">
                 <foreignObject x="0" y="0" width={trackSize} height={trackSize}>
-                  <div className={isAutoTrackHue ? "rgb-loop-anim" : ""} style={{ width: '100%', height: '100%', background: 'conic-gradient(from 90deg, #3b82f6 0%, #3b82f6 40%, #f97316 75%, #ef4444 100%)', filter: isAutoTrackHue ? undefined : `hue-rotate(${trackHue}deg)` }} />
+                  <div style={{ width: '100%', height: '100%', background: 'conic-gradient(from 90deg, #3b82f6 0%, #3b82f6 40%, #f97316 75%, #ef4444 100%)' }} />
                 </foreignObject>
               </g>
               
