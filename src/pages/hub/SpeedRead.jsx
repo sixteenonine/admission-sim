@@ -1,31 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useOutletContext, useLocation } from 'react-router-dom';
-import { Play, Pause, RotateCcw, SkipBack, SkipForward, Loader2, Settings, X, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
+import { Play, Pause, RotateCcw, SkipBack, SkipForward, Loader2, Settings, X, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, Gauge, ListMinus } from 'lucide-react';
 
 export default function SpeedRead() {
   const themeVals = useOutletContext();
   const location = useLocation();
   const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
-
   const { id, content: initialContent, isSystem } = location.state || {};
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [wpm, setWpm] = useState(300);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [globalWordIndex, setGlobalWordIndex] = useState(0);
   const [text, setText] = useState(initialContent || "");
   const [loading, setLoading] = useState(isSystem && !initialContent);
-  
   const timerRef = useRef(null);
-  const [showUI, setShowUI] = useState(true);
-  const idleTimerRef = useRef(null);
 
-  // Settings State (ย้ายออกมาอยู่นอก useEffect)
+  // Settings State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [readMode, setReadMode] = useState('serial'); // serial | highlight | teleprompter
   const [numLines, setNumLines] = useState(1);
   const [wordsPerLine, setWordsPerLine] = useState(1);
   const [alignment, setAlignment] = useState('center');
+  const [fontFamily, setFontFamily] = useState('Inter, sans-serif');
   const [fontSize, setFontSize] = useState(48);
   const [fontColor, setFontColor] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [adaptiveWpm, setAdaptiveWpm] = useState(false);
 
   useEffect(() => {
     if (isSystem && !initialContent && id) {
@@ -36,172 +35,211 @@ export default function SpeedRead() {
         body: JSON.stringify({ storyId: id })
       })
         .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success' && data.story) {
-            setText(data.story.content || "");
-          }
-        })
-        .catch(err => console.error("โหลดเนื้อหาล้มเหลว", err))
+        .then(data => { if (data.status === 'success' && data.story) setText(data.story.content || ""); })
+        .catch(err => console.error(err))
         .finally(() => setLoading(false));
     }
   }, [id, isSystem, initialContent]);
 
-  const words = React.useMemo(() => text ? text.split(/\s+/) : [], [text]);
-  
-  const chunks = React.useMemo(() => {
-    const res = [];
-    const chunkSize = numLines * wordsPerLine;
-    if (chunkSize <= 0) return res;
-    for (let i = 0; i < words.length; i += chunkSize) {
-      res.push(words.slice(i, i + chunkSize));
-    }
-    return res;
-  }, [words, numLines, wordsPerLine]);
+  const words = useMemo(() => text ? text.split(/\s+/) : [], [text]);
 
+  // Main Loop
   useEffect(() => {
-    if (isPlaying && currentIndex < chunks.length) {
-      const currentChunkWords = chunks[currentIndex]?.length || 1;
-      const delay = (60 / wpm) * 1000 * currentChunkWords;
+    if (isPlaying && globalWordIndex < words.length) {
+      let chunkWords = 1;
+      let chunkChars = 5; // Default average
+
+      if (readMode === 'serial') {
+        const wordsToRead = Math.min(words.length - globalWordIndex, numLines * wordsPerLine);
+        chunkWords = wordsToRead;
+        chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+      } else if (readMode === 'highlight') {
+        chunkWords = 1;
+        chunkChars = words[globalWordIndex]?.length || 5;
+      } else if (readMode === 'teleprompter') {
+        const wordsToRead = Math.min(words.length - globalWordIndex, wordsPerLine);
+        chunkWords = wordsToRead;
+        chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+      }
+
+      // Adaptive WPM Logic: adjust delay based on character density (assume avg 5 chars = 1 word)
+      let delay = (60 / wpm) * 1000 * chunkWords;
+      if (adaptiveWpm) {
+        delay = (60 / wpm) * 1000 * (Math.max(1, chunkChars) / 5);
+      }
+
       timerRef.current = setTimeout(() => {
-        setCurrentIndex(prev => prev + 1);
+        setGlobalWordIndex(prev => Math.min(words.length, prev + chunkWords));
       }, delay);
-    } else {
+    } else if (globalWordIndex >= words.length) {
       setIsPlaying(false);
     }
     return () => clearTimeout(timerRef.current);
-  }, [isPlaying, currentIndex, wpm, chunks]);
+  }, [isPlaying, globalWordIndex, wpm, words, readMode, numLines, wordsPerLine, adaptiveWpm]);
 
-  useEffect(() => {
-    const handleActivity = () => {
-      setShowUI(true);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      if (isPlaying) {
-        idleTimerRef.current = setTimeout(() => setShowUI(false), 2500);
+  // Click background to pause
+  const handleBackgroundClick = (e) => {
+    if (isPlaying) {
+      e.stopPropagation();
+      setIsPlaying(false);
+    }
+  };
+
+  const skipForward = () => setGlobalWordIndex(prev => Math.min(words.length - 1, prev + (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? wordsPerLine : 1))));
+  const skipBackward = () => setGlobalWordIndex(prev => Math.max(0, prev - (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? wordsPerLine : 1))));
+  const showUI = !isPlaying && !isSettingsOpen;
+
+  const renderContent = () => {
+    if (words.length === 0) return null;
+
+    if (readMode === 'serial') {
+      const currentChunk = words.slice(globalWordIndex, globalWordIndex + (numLines * wordsPerLine));
+      const lines = [];
+      for (let i = 0; i < currentChunk.length; i += wordsPerLine) {
+        lines.push(currentChunk.slice(i, i + wordsPerLine).join(" "));
       }
-    };
+      return (
+        <div className="flex flex-col justify-center w-full px-8 md:px-16 lg:px-24">
+          {lines.map((line, i) => <div key={i}>{line}</div>)}
+        </div>
+      );
+    }
 
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
-    window.addEventListener('click', handleActivity);
+    if (readMode === 'highlight') {
+      const pageSize = 30;
+      const pageStart = Math.floor(globalWordIndex / pageSize) * pageSize;
+      const pageWords = words.slice(pageStart, pageStart + pageSize);
+      const activeIdxInPage = globalWordIndex - pageStart;
 
-    handleActivity(); 
+      return (
+        <div className="w-full max-w-4xl px-8 md:px-16 lg:px-24 flex flex-wrap justify-center gap-x-2 gap-y-1">
+          {pageWords.map((word, i) => (
+            <span key={i} className={`transition-all duration-150 ${i === activeIdxInPage ? 'opacity-100 font-bold drop-shadow-md' : 'opacity-20'}`} style={{ color: i === activeIdxInPage ? '#007AFF' : undefined }}>
+              {word}
+            </span>
+          ))}
+        </div>
+      );
+    }
 
-    return () => {
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('touchstart', handleActivity);
-      window.removeEventListener('click', handleActivity);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    };
-  }, [isPlaying]);
+    if (readMode === 'teleprompter') {
+      const lines = [];
+      for (let i = 0; i < words.length; i += wordsPerLine) {
+        lines.push({ text: words.slice(i, i + wordsPerLine).join(" "), index: i });
+      }
+      const activeLineIdx = Math.floor(globalWordIndex / wordsPerLine);
 
-  const currentChunk = chunks[currentIndex] || [];
-  const linesToRender = [];
-  for (let i = 0; i < currentChunk.length; i += wordsPerLine) {
-    linesToRender.push(currentChunk.slice(i, i + wordsPerLine).join(" "));
-  }
+      return (
+        <div className="relative w-full h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical">
+          <div className="absolute w-full transition-transform duration-300 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))` }}>
+            {lines.map((line, i) => (
+              <div key={i} className={`w-full transition-all duration-300 ${i === activeLineIdx ? 'opacity-100 drop-shadow-md' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px`, color: i === activeLineIdx ? (isDark ? '#FFF' : '#000') : undefined }}>
+                {line.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center w-full min-h-screen px-4" style={{ color: themeVals.textMain, background: themeVals.bg }}>
-        <Loader2 className="animate-spin mb-2 text-[#007AFF]" size={32} />
-        <span className="text-sm font-regular opacity-70 font-prompt">กำลังโหลด...</span>
-      </div>
-    );
-  }
+  if (loading) return <div className="flex flex-col items-center justify-center w-full min-h-screen px-4" style={{ color: themeVals.textMain, background: themeVals.bg }}><Loader2 className="animate-spin mb-2" size={32} /></div>;
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: themeVals.bg }}>
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: themeVals.bg, fontFamily }} onClick={handleBackgroundClick}>
       
-      {/* Header (Fadable) */}
-      <div className={`absolute top-8 left-0 w-full flex items-center justify-center pt-12 pb-6 transition-opacity duration-500 z-10 ${showUI && !isSettingsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <span className="font-inter font-bold text-sm tracking-[0.2em] uppercase opacity-40" style={{ color: themeVals.textMain }}>{location.state?.title || "SPEED READING"}</span>
+      {/* Header */}
+      <div className={`absolute top-8 left-0 w-full flex items-center justify-center pt-12 pb-6 transition-opacity duration-300 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <span className="font-bold text-sm tracking-[0.2em] uppercase opacity-40" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>{location.state?.title || "SPEED READING"}</span>
       </div>
 
-      {/* Reader Display */}
+      {/* Reader Area */}
       <div 
-        className="relative w-full flex flex-col justify-center font-regular tracking-tight z-0 pb-24 px-4 font-inter"
-        style={{ 
-          color: fontColor || themeVals.textMain, 
-          fontSize: `${fontSize}px`, 
-          textAlign: alignment,
-          lineHeight: 1.4
-        }}
+        className="relative w-full flex flex-col justify-center z-0 tracking-tight"
+        style={{ color: fontColor || themeVals.textMain, fontSize: `${fontSize}px`, textAlign: alignment, lineHeight: 1.5 }}
       >
-        {linesToRender.map((lineText, idx) => (
-          <div key={idx} className="w-full">{lineText}</div>
-        ))}
+        {renderContent()}
       </div>
 
-      {/* Controls (Fadable) */}
-      <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-16 md:pb-20 transition-opacity duration-500 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* Controls */}
+      <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-12 transition-opacity duration-300 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center space-y-3">
-            <div className="text-[11px] font-regular font-inter tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain }}>SPEED: {wpm} WPM</div>
-            <input 
-              type="range" min="50" max="1000" step="10" value={wpm} 
-              onChange={(e) => setWpm(e.target.value)}
-              className="w-80 h-0.5 rounded-full appearance-none cursor-pointer"
-              style={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }}
-            />
+            <div className="text-[11px] font-bold tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>SPEED: {wpm} WPM</div>
+            <input type="range" min="50" max="1000" step="10" value={wpm} onChange={(e) => setWpm(e.target.value)} onClick={(e) => e.stopPropagation()} className="w-80 h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
           </div>
 
-          <div className="flex justify-between items-center px-8 w-full">
-            <button onClick={() => setCurrentIndex(0)} className="active:scale-90 transition-all opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={24} /></button>
-            <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipBack size={24} /></button>
+          <div className="flex justify-between items-center px-6 w-full">
+            <button onClick={(e) => { e.stopPropagation(); setGlobalWordIndex(0); }} className="active:scale-90 opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={22} /></button>
+            <button onClick={(e) => { e.stopPropagation(); skipBackward(); }} className="active:scale-90 opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipBack size={24} /></button>
             <button 
-              onClick={() => setIsPlaying(!isPlaying)} 
-              className="w-20 h-11 md:w-20 md:h-11 rounded-full flex items-center justify-center text-white active:scale-95 transition-all" 
-              style={{ background: '#007AFF', boxShadow: '0 8px 30px rgba(0, 122, 255, 0.4)' }}
+              onClick={(e) => { e.stopPropagation(); setIsPlaying(!isPlaying); }} 
+              className="w-16 h-16 rounded-full flex items-center justify-center text-white active:scale-95 transition-all shadow-lg" 
+              style={{ background: '#007AFF' }}
             >
-              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0" />}
+              <Play size={24} fill="currentColor" className="ml-1" />
             </button>
-            <button onClick={() => setCurrentIndex(Math.min(chunks.length - 1, currentIndex + 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipForward size={24} /></button>
-            <button onClick={() => setIsSettingsOpen(true)} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><Settings size={24} /></button>
+            <button onClick={(e) => { e.stopPropagation(); skipForward(); }} className="active:scale-90 opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipForward size={24} /></button>
+            <button onClick={(e) => { e.stopPropagation(); setIsSettingsOpen(true); }} className="active:scale-90 opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><Settings size={22} /></button>
           </div>
         </div>
       </div>
 
-      {/* Settings Modal */}
+      {/* Settings Modal (Compact) */}
       {isSettingsOpen && (
-        <div className="absolute bottom-0 left-0 w-full p-6 z-50 rounded-t-3xl border-t shadow-2xl backdrop-blur-2xl transition-all font-inter" style={{ background: isDark ? 'rgba(30, 30, 30, 0.85)' : 'rgba(240, 240, 240, 0.9)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: themeVals.textMain }}>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-lg">Display Settings</h3>
-            <button onClick={() => setIsSettingsOpen(false)} className="opacity-60 hover:opacity-100 p-2"><X size={24} /></button>
-          </div>
-          
-          <div className="space-y-6 max-w-md mx-auto">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium opacity-80">Lines</span>
-              <input type="number" min="1" max="10" value={numLines} onChange={(e) => setNumLines(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 p-2 rounded-lg text-center font-bold outline-none" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium opacity-80">Words per line</span>
-              <input type="number" min="1" max="20" value={wordsPerLine} onChange={(e) => setWordsPerLine(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 p-2 rounded-lg text-center font-bold outline-none" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium opacity-80">Alignment</span>
-              <div className="flex gap-2 p-1 rounded-lg" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
-                <button onClick={() => setAlignment('left')} className={`p-2 rounded-md transition-all ${alignment === 'left' ? 'bg-[#007AFF] text-white shadow-md' : 'opacity-50 hover:opacity-100'}`}><AlignLeft size={18} /></button>
-                <button onClick={() => setAlignment('center')} className={`p-2 rounded-md transition-all ${alignment === 'center' ? 'bg-[#007AFF] text-white shadow-md' : 'opacity-50 hover:opacity-100'}`}><AlignCenter size={18} /></button>
-                <button onClick={() => setAlignment('right')} className={`p-2 rounded-md transition-all ${alignment === 'right' ? 'bg-[#007AFF] text-white shadow-md' : 'opacity-50 hover:opacity-100'}`}><AlignRight size={18} /></button>
-                <button onClick={() => setAlignment('justify')} className={`p-2 rounded-md transition-all ${alignment === 'justify' ? 'bg-[#007AFF] text-white shadow-md' : 'opacity-50 hover:opacity-100'}`}><AlignJustify size={18} /></button>
+        <div className="absolute bottom-0 left-0 w-full p-5 z-50 rounded-t-3xl border-t shadow-2xl backdrop-blur-3xl transition-all" style={{ background: isDark ? 'rgba(20, 20, 20, 0.9)' : 'rgba(245, 245, 245, 0.95)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }} onClick={(e) => e.stopPropagation()}>
+          <div className="max-w-sm mx-auto">
+            <div className="flex justify-between items-center mb-5"><h3 className="font-bold text-sm uppercase tracking-wider opacity-80">Settings</h3><button onClick={() => setIsSettingsOpen(false)}><X size={20} /></button></div>
+            
+            <div className="space-y-5 text-sm">
+              {/* Reading Mode */}
+              <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                {[ {id: 'serial', label: 'Serial'}, {id: 'highlight', label: 'Highlight'}, {id: 'teleprompter', label: 'Scroll'} ].map(m => (
+                  <button key={m.id} onClick={() => setReadMode(m.id)} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${readMode === m.id ? 'bg-white dark:bg-[#333] shadow-sm' : 'opacity-50'}`}>{m.label}</button>
+                ))}
               </div>
-            </div>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-end"><span className="text-sm font-medium opacity-80">Font Size</span><span className="text-xs font-bold bg-[#007AFF] text-white px-2 py-1 rounded">{fontSize}px</span></div>
-              <input type="range" min="16" max="96" value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
-            </div>
+              {/* Sliders (Only show in Serial/Teleprompter) */}
+              {readMode !== 'highlight' && (
+                <div className="flex gap-4">
+                  {readMode === 'serial' && (
+                    <div className="flex-1 space-y-2"><div className="flex justify-between opacity-80 text-xs"><span>Lines</span><span>{numLines}</span></div><input type="range" min="1" max="5" value={numLines} onChange={(e) => setNumLines(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none bg-black/10 dark:bg-white/10" style={{accentColor: '#007AFF'}} /></div>
+                  )}
+                  <div className="flex-1 space-y-2"><div className="flex justify-between opacity-80 text-xs"><span>Words / Line</span><span>{wordsPerLine}</span></div><input type="range" min="1" max="5" value={wordsPerLine} onChange={(e) => setWordsPerLine(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none bg-black/10 dark:bg-white/10" style={{accentColor: '#007AFF'}} /></div>
+                </div>
+              )}
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-sm font-medium opacity-80">Font Color</span>
-              <input type="color" value={fontColor || (isDark ? '#ffffff' : '#000000')} onChange={(e) => setFontColor(e.target.value)} className="w-10 h-10 p-0 border-0 rounded-full overflow-hidden cursor-pointer bg-transparent shadow-sm" />
+              {/* Font & Alignment */}
+              <div className="flex gap-4 items-center">
+                <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="flex-1 p-2 rounded-lg bg-black/5 dark:bg-white/5 outline-none font-medium cursor-pointer text-xs" style={{ fontFamily }}>
+                  <option value="Inter, sans-serif">Google Sans (Inter)</option>
+                  <option value="'Baskervville', serif">Baskervville</option>
+                  <option value="'Space Mono', monospace">Space Mono</option>
+                </select>
+                <div className="flex gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-lg">
+                  {[ {icon: AlignLeft, v: 'left'}, {icon: AlignCenter, v: 'center'}, {icon: AlignRight, v: 'right'} ].map(a => <button key={a.v} onClick={() => setAlignment(a.v)} className={`p-1.5 rounded ${alignment === a.v ? 'bg-white dark:bg-[#333] shadow-sm text-[#007AFF]' : 'opacity-50'}`}><a.icon size={16} /></button>)}
+                </div>
+              </div>
+
+              {/* Adaptive WPM Toggle */}
+              <div className="flex justify-between items-center py-1">
+                <div className="flex flex-col"><span className="font-bold opacity-90 text-xs">Adaptive Speed</span><span className="text-[10px] opacity-50">Slow down for larger words</span></div>
+                <button onClick={() => setAdaptiveWpm(!adaptiveWpm)} className={`w-11 h-6 rounded-full p-1 transition-colors ${adaptiveWpm ? 'bg-[#007AFF]' : 'bg-black/20 dark:bg-white/20'}`}>
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${adaptiveWpm ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Global CSS for Teleprompter Mask */}
+      <style>{`
+        .mask-image-vertical {
+          -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+          mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+        }
+      `}</style>
     </div>
   );
 }
