@@ -307,15 +307,15 @@ export default function FlashcardPlayer() {
 
     // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (เปลี่ยนสีทั้งใบและเรืองแสง)
     if (direction === 'up') {
-      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('shadow-[0_0_120px_rgba(52,199,89,1)] scale-105');
       setSwipeBg('#34C759');
     } else if (direction === 'down') {
-      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
       setSwipeBg('#FF3B30');
     } else if (direction === 'undo') {
-      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('');
       setSwipeBg(null);
     }
