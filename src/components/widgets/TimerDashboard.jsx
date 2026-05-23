@@ -56,12 +56,10 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
               </defs>
               <circle cx={trackSize/2} cy={trackSize/2} r={cfg.trackRadius} fill="none" stroke={theme.trackBg} strokeWidth={cfg.bgTrackStroke} />
               
-              <g className={isAutoTrackHue ? "rgb-loop-anim" : ""} style={isAutoTrackHue ? undefined : { filter: `hue-rotate(${trackHue}deg)` }}>
-                <g mask="url(#progressMask)" filter="url(#neonDrop)">
-                  <foreignObject x="0" y="0" width={trackSize} height={trackSize}>
-                    <div style={{ width: '100%', height: '100%', background: 'conic-gradient(from 90deg, #3b82f6 0%, #3b82f6 40%, #f97316 75%, #ef4444 100%)' }} />
-                  </foreignObject>
-                </g>
+              <g mask="url(#progressMask)" filter="url(#neonDrop)">
+                <foreignObject x="0" y="0" width={trackSize} height={trackSize}>
+                  <div className={isAutoTrackHue ? "rgb-loop-anim" : ""} style={{ width: '100%', height: '100%', background: 'conic-gradient(from 90deg, #3b82f6 0%, #3b82f6 40%, #f97316 75%, #ef4444 100%)', filter: isAutoTrackHue ? undefined : `hue-rotate(${trackHue}deg)` }} />
+                </foreignObject>
               </g>
               
               {marks.map((markPercent, i) => {
