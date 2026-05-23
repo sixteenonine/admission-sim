@@ -59,7 +59,7 @@ export default function Subscription() {
       
       {/* QR Code Pop-up Overlay */}
       {qrData && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-transparent backdrop-blur-sm px-4">
           <div className="w-full max-w-sm rounded-[2rem] p-8 flex flex-col items-center text-center relative border border-white/20 shadow-2xl" style={{ background: bg }}>
             <button onClick={() => setQrData(null)} className="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center bg-black/5 active:scale-95 transition-all" style={{ color: textMain }}>
               <X size={16} />

@@ -370,7 +370,7 @@ export default function StoryReader() {
 
       {/* 🃏 Flashcard Modal Overlay */}
       {showFlashcards && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-md px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-200">
           <div className="w-full max-w-sm flex flex-col items-center">
             <div className="text-white/60 font-bold tracking-widest text-sm mb-6">
               {cardIndex + 1} / {flashcardList.length}

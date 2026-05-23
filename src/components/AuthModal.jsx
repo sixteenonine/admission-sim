@@ -41,7 +41,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, themeVals }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/40 backdrop-blur-md px-4">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-transparent backdrop-blur-md px-4">
       <div className="w-full max-w-sm rounded-[2.5rem] border border-white/20 p-8 relative flex flex-col items-center" style={{ background: bg, boxShadow: shadowOuter }}>
         <button onClick={onClose} className="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full border border-white/10 active:scale-95 transition-transform" style={{ background: raisedGradient, color: theme.textMain }}>
           <X size={14} />

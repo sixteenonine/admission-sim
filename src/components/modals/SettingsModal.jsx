@@ -246,7 +246,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
                   <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: theme.textMain }}>SFX Sounds</span>
                   <span className="text-[9px] opacity-60" style={{ color: theme.textSub }}>เสียงกระดาษ/เก้าอี้</span>
                 </div>
-                <button onClick={() => setSfxEnabled(!sfxEnabled)} className={`w-8 h-4 rounded-full transition-colors relative ${sfxEnabled ? 'bg-emerald-500' : 'bg-black/20 dark:bg-white/10'}`}>
+                <button onClick={() => setSfxEnabled(!sfxEnabled)} className={`w-8 h-4 rounded-full transition-colors relative ${sfxEnabled ? 'bg-emerald-500' : 'bg-transparent dark:bg-white/10'}`}>
                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${sfxEnabled ? 'left-[18px]' : 'left-1'}`} />
                 </button>
               </div>

@@ -62,7 +62,7 @@ const ProfileModal = ({ isOpen, onClose, user, themeVals, onRefreshUser }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/40 backdrop-blur-md px-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[350] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-300">
       <div className="w-full max-w-4xl rounded-[2.5rem] border border-white/30 relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         <div className="w-full rounded-[2rem] p-6 sm:p-8 flex flex-col gap-8 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
           

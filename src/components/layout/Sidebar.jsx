@@ -24,7 +24,7 @@ export default function Sidebar({ isOpen, onClose, themeVals }) {
       {/* Backdrop แบบลอยทับ */}
       <div 
         onClick={onClose}
-        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-transparent backdrop-blur-sm z-[200] transition-opacity duration-300 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
       
       {/* Sidebar Panel */}
@@ -39,7 +39,7 @@ export default function Sidebar({ isOpen, onClose, themeVals }) {
               ADMiSSIM
             </span>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl transition-all active:scale-95 hover:bg-black/5" style={{ color: themeVals.textSub }}>
+          <button onClick={onClose} className="p-2 rounded-xl transition-all active:scale-95 hover:bg-transparent" style={{ color: themeVals.textSub }}>
             <X size={20} />
           </button>
         </div>

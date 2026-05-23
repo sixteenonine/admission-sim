@@ -545,7 +545,7 @@ export default function App() {
       )}
       
       {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/20 backdrop-blur-sm px-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-transparent backdrop-blur-sm px-4 animate-in fade-in duration-300">
           <div className="w-full max-w-sm p-8 rounded-[2.5rem] text-center border border-white/10" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
             <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-full bg-red-500/10 text-red-500">
               <AlertTriangle size={40} />

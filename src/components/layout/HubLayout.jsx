@@ -72,7 +72,7 @@ export default function HubLayout() {
       />
 
       {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/20 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-[400] flex items-center justify-center bg-transparent backdrop-blur-sm px-4">
           <div className="w-full max-w-sm p-8 rounded-[2.5rem] text-center border border-white/10" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
             <AlertTriangle size={40} className="mx-auto mb-4 text-red-500" />
             <h3 className="text-xl font-bold mb-2" style={{ color: themeVals.textMain }}>Log Out?</h3>

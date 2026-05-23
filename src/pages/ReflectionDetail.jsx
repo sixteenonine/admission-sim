@@ -262,7 +262,7 @@ export function ReflectionView({ themeVals, setCurrentView, sessionData, isDraft
       </div>
 
       {showDiscardConfirm && (
-        <div className="fixed inset-0 z-[350] flex items-center justify-center bg-black/20 backdrop-blur-md px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[350] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-200">
           <div className="p-6 rounded-[2rem] max-w-sm w-full border border-white/10 flex flex-col items-center text-center animate-in zoom-in-95 duration-200" style={{ background: bg, boxShadow: shadowOuter }}>
              <h3 className="text-lg font-bold mb-2" style={{color: theme.textMain}}>ละทิ้งบันทึกนี้?</h3>
              <p className="text-sm mb-6 opacity-70" style={{color: theme.textSub}}>หากกดละทิ้ง ข้อมูล Reflection ครั้งนี้จะไม่ถูกบันทึกลงใน History Lobby</p>

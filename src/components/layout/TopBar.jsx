@@ -81,7 +81,7 @@ export default function TopBar({ setIsSidebarOpen, setIsAuthModalOpen, setIsProf
                      )}
                   </div>
                </div>
-               <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>
+               <button onClick={() => { setIsProfileModalOpen(true); setIsProfileDropdownOpen(false); }} className="w-full text-left px-4 py-3 font-semibold flex items-center gap-3 rounded-xl hover:bg-transparent transition-colors" style={{ color: themeVals.textMain }}>
                  <UserCircle2 size={18} /> Profile
                </button>
                <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full text-left px-4 py-3 font-semibold flex items-center justify-between rounded-xl hover:bg-black/5 transition-colors" style={{ color: themeVals.textMain }}>

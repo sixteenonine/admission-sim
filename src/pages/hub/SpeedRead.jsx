@@ -282,7 +282,7 @@ export default function SpeedRead() {
 
       {/* Settings Modal (Centered) */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4" onClick={() => setIsSettingsOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent backdrop-blur-sm px-4" onClick={() => setIsSettingsOpen(false)}>
           <div className="w-full max-w-md p-6 rounded-3xl shadow-2xl transition-all" style={{ background: themeVals.bg, color: themeVals.textMain, border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'Inter, sans-serif' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-sm uppercase tracking-wider opacity-80">Settings</h3>

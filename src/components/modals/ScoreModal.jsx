@@ -13,7 +13,7 @@ function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTim
   const finalScore = totalCorrect === '' ? 0 : totalCorrect * 1.25;
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/20 backdrop-blur-md px-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-transparent backdrop-blur-md px-4 animate-in fade-in duration-300">
       <div className="w-full max-w-sm rounded-[2.5rem] border border-white/20 transition-all relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
         <div className="w-full rounded-[2rem] p-8 flex flex-col gap-6 border border-white/5" style={{ background: bg, boxShadow: shadowOuter }}>
           <div className="flex justify-between items-center">

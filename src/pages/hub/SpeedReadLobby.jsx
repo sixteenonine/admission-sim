@@ -213,7 +213,7 @@ export default function SpeedReadLobby() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-transparent backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-[400px] bg-white rounded-[32px] overflow-hidden shadow-2xl flex flex-col transform transition-all">
             <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
               <span className="font-black text-gray-800 tracking-wide">{editingId ? 'EDIT ARTICLE' : 'ADD NEW ARTICLE'}</span>
