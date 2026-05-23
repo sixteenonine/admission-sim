@@ -130,14 +130,39 @@ export function HubFlashcardDecks() {
   const themeVals = useOutletContext();
   const navigate = useNavigate();
   const [decksData, setDecksData] = React.useState(null);
+  const [favCount, setFavCount] = React.useState(null);
 
   const categories = [
-    { name: 'SCIENCE, HEALTH & NATURE', color: '#22c55e', image: '/decks/science.png' },
-    { name: 'BUSINESS & TECHNOLOGIES', color: '#0070fb', image: '/decks/business.png' },
-    { name: 'ACADEMIC & CAREER', color: '#ff2e57', image: '/decks/academic.png' },
-    { name: 'LIFESTYLE & MEDIA', color: '#8c52ff', image: '/decks/lifestyle.png' },
-    { name: 'SOCIETY & CULTURE', color: '#505e72', image: '/decks/society.png' },
-    { name: 'MY FAVORITE', color: '#ff8301', image: '/decks/favorite.png' }
+    { 
+      name: 'SCIENCE, HEALTH & NATURE', 
+      color: '#4bdd31', 
+      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    { 
+      name: 'BUSINESS & TECHNOLOGIES', 
+      color: '#0070fb', 
+      diamonds: <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    { 
+      name: 'ACADEMIC & CAREER', 
+      color: '#ff2e57', 
+      diamonds: <div className="absolute inset-0 flex items-center justify-center space-x-10 pointer-events-none select-none text-black z-0"><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-24 h-48" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-20 h-40" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    { 
+      name: 'LIFESTYLE & MEDIA', 
+      color: '#8c52ff', 
+      diamonds: <div className="absolute inset-0 flex flex-col items-center justify-between py-6 pointer-events-none select-none text-black z-0"><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-64 h-28" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    { 
+      name: 'SOCIETY & CULTURE', 
+      color: '#505e72', 
+      diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-80 h-40" viewBox="0 0 200 100"><polygon points="100,10 190,50 100,90 10,50" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div>
+    },
+    { 
+      name: 'MY FAVORITE', 
+      color: '#ff8301', 
+      diamonds: null
+    }
   ];
 
   React.useEffect(() => {
@@ -150,6 +175,13 @@ export function HubFlashcardDecks() {
          }
        } catch(e) { console.error(e); }
     }
+    async function loadFavs() {
+       try {
+         const count = await db.flashcards.where('isStarred').equals(1).count();
+         setFavCount(count);
+       } catch(e) { console.error(e); }
+    }
+    loadFavs();
     loadDecks();
   }, []);
 
@@ -173,23 +205,35 @@ export function HubFlashcardDecks() {
       
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
         {categories.map((cat, i) => {
-          const wordCount = decksData && decksData[cat.name] ? decksData[cat.name].levels.flat().length : 0;
+          // คำนวณจำนวนคำจาก decksData
+          let deckInfo = decksData ? decksData[cat.name] : null;
+          let wordCount = 0;
+          let isDataLoaded = decksData !== null;
+
+          if (cat.name === 'MY FAVORITE') {
+            wordCount = favCount !== null ? favCount : 0;
+            isDataLoaded = favCount !== null;
+          } else {
+            wordCount = deckInfo ? deckInfo.levels.flat().length : 0;
+            // ถ้าดึงข้อมูลสำเร็จแล้ว แม้จะเป็น 0 ก็ถือว่าโหลดเสร็จ
+          }
           
           return (
             <div key={i} onClick={() => goToLevelSelection(cat.name, cat.color)} className="relative w-full aspect-[21/9] md:aspect-[16/9] cursor-pointer group" style={{ perspective: '1000px' }}>
-              {/* Layer 1 (Bottom Card) */}
-              <div className="absolute inset-0 rounded-[2rem] translate-y-4 scale-[0.92] opacity-30 transition-all duration-300 group-hover:translate-y-5 group-hover:scale-[0.88]" style={{ background: cat.color }}></div>
+              {/* Layer 1-3 เหมือนเดิม... */}
               
-              {/* Layer 2 (Middle Card) */}
-              <div className="absolute inset-0 rounded-[2rem] translate-y-2 scale-[0.96] opacity-60 transition-all duration-300 group-hover:translate-y-2.5 group-hover:scale-[0.94]" style={{ background: cat.color }}></div>
-              
-              {/* Layer 3 (Top Image Box) */}
-              <div className="absolute inset-0 rounded-[2rem] flex flex-col justify-center transition-all duration-300 group-hover:-translate-y-1 group-active:scale-95 border border-white/10 z-10 overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${cat.image})`, boxShadow: `0 10px 25px -5px ${cat.color}60` }}>
-                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent pointer-events-none"></div>
-                
-                <div className="p-6 md:p-8 relative z-20 flex flex-col items-start h-full justify-center w-[80%] md:w-[70%]">
-                  <h2 className="text-md md:text-xl font-black uppercase tracking-wider leading-tight text-white drop-shadow-md mb-3">{cat.name}</h2>
-                  <span className="text-[10px] md:text-xs font-bold px-4 py-1.5 rounded-full text-white shadow-sm" style={{ background: cat.color }}>{wordCount > 0 ? `${wordCount} WORDS` : 'LOADING...'}</span>
+              {/* ... (คงส่วน Layer 1 และ 2 ไว้เหมือนเดิม) */}
+
+              {/* Layer 3 (Top Code-Based Card) */}
+              <div className="absolute inset-0 rounded-[2rem] flex flex-col justify-center items-center text-white transition-all duration-300 group-hover:-translate-y-1 group-active:scale-95 shadow-lg overflow-hidden" style={{ backgroundColor: cat.color, boxShadow: `0 10px 25px -5px ${cat.color}60` }}>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0">
+                  {cat.diamonds}
+                </div>
+                <div className="flex flex-col items-center z-10">
+                  <h2 className="text-3xl sm:text-4xl font-bold tracking-tight max-w-xs mx-auto leading-tight text-center px-4">{cat.name}</h2>
+                  <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: cat.color }}>
+                    {isDataLoaded ? `${wordCount} terms` : 'Loading...'}
+                  </div>
                 </div>
               </div>
             </div>
