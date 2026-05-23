@@ -61,19 +61,8 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
                   <input type="range" min="0" max="360" value={lcdHue} onChange={(e) => setLcdHue(e.target.value)} onTouchStart={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#10b981] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
                 </div>
                 <div className="w-full px-5 pt-2 pb-3 flex flex-col gap-3 border-t border-white/5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: theme.textSub }}>Track Hue</span>
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setIsAutoTrackHue(!isAutoTrackHue); }}
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase transition-colors ${isAutoTrackHue ? 'bg-blue-500 text-white shadow-[0_0_6px_#3b82f6]' : 'bg-black/10 text-current'}`}
-                      >
-                        Auto
-                      </button>
-                      <span className="text-[10px] font-mono font-medium" style={{ color: theme.textSub }}>{Math.round(trackHue)}°</span>
-                    </div>
-                  </div>
-                  <input type="range" min="0" max="360" value={trackHue} onChange={(e) => setTrackHue(e.target.value)} onPointerDown={() => { if (isAutoTrackHue) setIsAutoTrackHue(false); }} onTouchStart={(e) => { e.stopPropagation(); if (isAutoTrackHue) setIsAutoTrackHue(false); }} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
+                  <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: theme.textSub }}>Track Hue</span><span className="text-[10px] font-mono font-medium" style={{ color: theme.textSub }}>{Math.round(trackHue)}°</span></div>
+                  <input type="range" min="0" max="360" value={trackHue} onChange={(e) => setTrackHue(e.target.value)} onTouchStart={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
                 </div>
             </div>
           )}
