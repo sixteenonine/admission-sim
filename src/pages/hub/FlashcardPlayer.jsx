@@ -52,6 +52,7 @@ export default function FlashcardPlayer() {
   
   const [isChangingWord, setIsChangingWord] = useState(false);
   const [animClass, setAnimClass] = useState('');
+  const [swipeGlow, setSwipeGlow] = useState('');
   const [showExampleFront, setShowExampleFront] = useState(false);
   const [showSynAnt, setShowSynAnt] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
@@ -303,30 +304,37 @@ export default function FlashcardPlayer() {
     setShowExampleFront(false);
     setShowSynAnt(false);
 
-    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง
-    if (direction === 'up') setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
-    else if (direction === 'down') setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-300 ease-in');
-    else if (direction === 'undo') setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-300 ease-in');
+    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (ปรับให้ไวขึ้นและใส่เรืองแสง)
+    if (direction === 'up') {
+      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setSwipeGlow('shadow-[0_0_100px_rgba(52,199,89,1)] ring-4 ring-[#34C759]');
+    } else if (direction === 'down') {
+      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setSwipeGlow('shadow-[0_0_100px_rgba(255,59,48,1)] ring-4 ring-[#FF3B30]');
+    } else if (direction === 'undo') {
+      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setSwipeGlow('');
+    }
 
     setTimeout(() => {
       // ขั้นที่ 2: เปลี่ยนคำศัพท์และล้างสถานะการพลิกตอนที่มองไม่เห็นแล้ว
       actionFn();
       setIsFlipped(false);
+      setSwipeGlow('');
       
-      // ขั้นที่ 3: ดึงการ์ดให้มาย่อหลบอยู่ในตำแหน่ง "เตรียมเด้งขึ้น" (เลียนแบบท่าของการ์ดใบล่างที่รออยู่)
+      // ขั้นที่ 3: ดึงการ์ดให้มาย่อหลบอยู่ในตำแหน่ง "เตรียมเด้งขึ้น"
       setAnimClass('translate-y-3 scale-[0.95] opacity-100 transition-none');
       
       // ขั้นที่ 4: สั่งขยายและสไลด์การ์ดขึ้นมาแบบเด้งๆ ให้ความรู้สึกเป็นใบใหม่
       setTimeout(() => {
-        setAnimClass('translate-y-0 scale-100 opacity-100 transition-transform duration-300 ease-out');
+        setAnimClass('translate-y-0 scale-100 opacity-100 transition-transform duration-150 ease-out');
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
-        }, 300);
+        }, 150);
       }, 20);
-    }, 300);
+    }, 150);
   };
-
   const handleAnswer = async (isRemembered) => {
     if (!currentWord || isChangingWord) return;
     setSessionStats(prev => ({
@@ -487,7 +495,7 @@ export default function FlashcardPlayer() {
                 
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white shadow-xl p-8 md:p-12 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
                   style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                 >
                   
@@ -535,7 +543,7 @@ export default function FlashcardPlayer() {
 
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white shadow-xl p-8 md:p-12 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
                   style={{ backgroundColor: cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
