@@ -138,27 +138,27 @@ export default function SpeedRead() {
       for (let i = 0; i < words.length; i += 12) {
         lines.push({ text: words.slice(i, i + 12).join(" "), index: i });
       }
+      
       const activeLineFloat = globalWordIndex / 12; 
       const activeLineInt = Math.floor(globalWordIndex / 12);
-      const lineSpacing = fontSize * 1.5; // ลดช่องว่างบรรทัดให้พอดีกับ 1 บรรทัด เพื่อให้ประโยคขยับมาทันไฮไลท์
+      const lineSpacing = fontSize * 2.5; // ให้พื้นที่เผื่อสำหรับการตัดขึ้นบรรทัดใหม่
 
       return (
-        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
-          <div className="absolute left-0 right-0 px-8 md:px-16 lg:px-24" style={{ 
+        <div className="relative w-full max-w-6xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
+          <div className="absolute left-0 right-0 px-6 md:px-12 lg:px-16" style={{ 
             top: '50%', 
             transform: `translateY(calc(-${(activeLineFloat + 0.5) * lineSpacing}px))`, 
             transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 150ms ease-out' 
           }}>
             {lines.map((line, i) => (
               <div key={i} className={`w-full transition-opacity duration-150 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
-                height: `${lineSpacing}px`, 
+                height: `${lineSpacing}px`, // ล็อคความสูงให้คงที่เพื่อให้คำนวณระยะ Scroll ได้แม่นยำ
                 display: 'flex', 
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: alignment === 'left' ? 'flex-start' : alignment === 'right' ? 'flex-end' : 'center',
-                whiteSpace: 'nowrap'
+                flexDirection: 'column', // จัดให้อยู่กึ่งกลางแนวตั้งเสมอ ไม่ว่าจะเป็น 1 หรือ 2 บรรทัด
+                justifyContent: 'center',
+                textAlign: alignment 
               }}>
-                {line.text}
+                <div>{line.text}</div>
               </div>
             ))}
           </div>
