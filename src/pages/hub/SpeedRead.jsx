@@ -25,7 +25,7 @@ export default function SpeedRead() {
   const [wordsPerLine, setWordsPerLine] = useState(1);
   const [alignment, setAlignment] = useState('center');
   const [fontFamily, setFontFamily] = useState('Inter, sans-serif');
-  const [fontSize, setFontSize] = useState(48);
+  const [fontSize, setFontSize] = useState(40);
   const [fontColor, setFontColor] = useState('');
   const [adaptiveWpm, setAdaptiveWpm] = useState(false);
 
@@ -136,11 +136,10 @@ export default function SpeedRead() {
       }
     }
   }, [globalWordIndex, readMode]);
-  // Click background to pause
+  // Click background to toggle play/pause
   const handleBackgroundClick = (e) => {
-    if (isPlaying) {
-      e.stopPropagation();
-      setIsPlaying(false);
+    if (!isSettingsOpen) {
+      setIsPlaying(prev => !prev);
     }
   };
 
