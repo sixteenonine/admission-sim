@@ -425,10 +425,10 @@ export default function FlashcardPlayer() {
             <div className="h-4 w-24 bg-black/10 dark:bg-white/10 rounded-full mb-4"></div>
             <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full"></div>
           </div>
-          <div className="relative w-full max-w-lg h-72 mx-auto">
-            <div className="absolute inset-0 rounded-3xl shadow-lg flex flex-col items-center justify-center p-8" style={{ backgroundColor: currentStyle.color }}>
-              <div className="w-2/3 h-12 bg-white/20 rounded-full mb-4"></div>
-              <div className="w-1/3 h-6 bg-white/20 rounded-full"></div>
+          <div className="relative w-full max-w-4xl aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/9] max-h-[65vh] min-h-[380px] mx-auto">
+            <div className="absolute inset-0 rounded-[2.5rem] shadow-xl flex flex-col items-center justify-center p-8" style={{ backgroundColor: currentStyle.color }}>
+              <div className="w-2/3 h-16 md:h-20 bg-white/20 rounded-full mb-6"></div>
+              <div className="w-1/3 h-8 md:h-10 bg-white/20 rounded-full"></div>
             </div>
           </div>
         </div>
@@ -452,12 +452,12 @@ export default function FlashcardPlayer() {
           </div>
 
           {/* Area การ์ดแนวนอน แบบ 3D Layering */}
-          <div className="relative w-full max-w-lg h-72 mx-auto transition-all duration-300">
+          <div className="relative w-full max-w-4xl aspect-[4/5] sm:aspect-[4/3] lg:aspect-[16/9] max-h-[65vh] min-h-[380px] mx-auto transition-all duration-300">
             
             {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
             {deck.length > 1 && (
-              <div className="absolute inset-0 rounded-3xl shadow-lg pointer-events-none" style={{ backgroundColor: cardColor, transform: 'translateY(12px) scale(0.95)', zIndex: 0 }}>
-                <div className="opacity-[0.05] w-full h-full rounded-3xl overflow-hidden relative">
+              <div className="absolute inset-0 rounded-[2.5rem] shadow-xl pointer-events-none" style={{ backgroundColor: cardColor, transform: 'translateY(16px) scale(0.95)', zIndex: 0 }}>
+                <div className="opacity-[0.05] w-full h-full rounded-[2.5rem] overflow-hidden relative">
                   {cardDiamonds}
                 </div>
               </div>
@@ -466,7 +466,7 @@ export default function FlashcardPlayer() {
             {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
             <div 
               className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none ${animClass}`}
-              style={{ perspective: '1000px' }}
+              style={{ perspective: '1200px' }}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
               onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
@@ -483,22 +483,22 @@ export default function FlashcardPlayer() {
                 
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white shadow-xl p-8 md:p-12 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
                   style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
                   <div 
-                    className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" 
+                    className="absolute top-6 left-6 md:top-8 md:left-8 h-8 flex items-center z-20 cursor-pointer hover:scale-110 transition-transform" 
                     onClick={(e) => { e.stopPropagation(); toggleStar(); }}
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                   >
-                    <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
+                    <Star size={32} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
                   
                   {/* ลาย Watermark Background */}
-                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] select-none text-black z-0 rounded-3xl overflow-hidden">
+                  <div className="absolute inset-0 pointer-events-none opacity-[0.05] select-none text-black z-0 rounded-[2.5rem] overflow-hidden">
                     {cardDiamonds}
                   </div>
                   
@@ -507,79 +507,81 @@ export default function FlashcardPlayer() {
                     onClick={(e) => { e.stopPropagation(); setShowExampleFront(!showExampleFront); }} 
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
-                    className="absolute top-6 right-6 w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" 
+                    className="absolute top-6 right-6 md:top-8 md:right-8 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full flex items-center justify-center text-sm md:text-base font-bold shadow-md hover:scale-105 transition-all duration-300 z-20" 
                     style={{ color: cardColor }}
                   >
-                    {showExampleFront ? 'x' : 'i'}
+                    {showExampleFront ? '✕' : 'i'}
                   </button>
 
                   {/* หน้าหลัก - คำศัพท์ & ประเภท */}
                   {!showExampleFront ? (
-                    <div className="flex flex-col items-center z-10">
-                      <h2 className="text-5xl font-normal tracking-wide">{currentWord.eng}</h2>
-                      <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: cardColor }}>
+                    <div className="flex flex-col items-center z-10 w-full px-4">
+                      <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-normal tracking-wide text-center break-words w-full">{currentWord.eng}</h2>
+                      <div className="mt-6 md:mt-8 px-6 py-1 md:px-8 md:py-2 bg-white rounded-full font-bold text-sm md:text-lg transition-colors duration-500 shadow-sm" style={{ color: cardColor }}>
                         {currentWord.pos}
                       </div>
                     </div>
                   ) : (
                     /* หน้าตัวอย่างประโยค (Overlay ดำ) */
-                    <div className="absolute inset-0 bg-black/10 rounded-3xl p-8 flex flex-col justify-center items-center text-center z-10 pointer-events-auto" onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
-                      <p className="text-2xl font-semibold leading-relaxed">"{currentWord.example || '-'}"</p>
+                    <div className="absolute inset-0 bg-black/20 rounded-[2.5rem] p-8 md:p-12 flex flex-col justify-center items-center text-center z-10 pointer-events-auto backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setShowExampleFront(false); }}>
+                      <p className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-semibold leading-relaxed md:leading-normal drop-shadow-md">"{currentWord.example || '-'}"</p>
                     </div>
                   )}
                 </div>
 
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white shadow-xl p-8 md:p-12 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
                   style={{ backgroundColor: cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
                   <div 
-                    className="absolute top-6 left-6 h-6 flex items-center z-20 cursor-pointer" 
+                    className="absolute top-6 left-6 md:top-8 md:left-8 h-8 flex items-center z-20 cursor-pointer hover:scale-110 transition-transform" 
                     onClick={(e) => { e.stopPropagation(); toggleStar(); }}
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                   >
-                    <Star size={24} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
+                    <Star size={32} fill={isStarred ? '#FFD700' : 'none'} color={isStarred ? '#FFD700' : '#ffffff'} />
                   </div>
 
                   {/* iOS Style Switch ขวาบน */}
                   <div 
-                    className="absolute top-6 right-6 flex items-center gap-2 z-20" 
-                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-2 z-20 cursor-pointer hover:opacity-90 transition-opacity" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowSynAnt(!showSynAnt);
+                    }}
                     onPointerDown={(e) => e.stopPropagation()}
                     onPointerUp={(e) => e.stopPropagation()}
                   >
-                    <button 
-                      onClick={() => setShowSynAnt(!showSynAnt)} 
-                      className="w-11 h-6 rounded-full relative transition-all duration-300" 
-                      style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(255, 255, 255, 0.3)' }}
+                    <div 
+                      className="w-14 h-8 md:w-16 md:h-9 rounded-full relative transition-all duration-300 shadow-inner" 
+                      style={{ backgroundColor: showSynAnt ? '#4bdd31' : 'rgba(0, 0, 0, 0.2)' }}
                     >
                       <div 
-                        className="w-5 h-5 bg-white rounded-full absolute top-0.5 left-0.5 transition-transform duration-300" 
-                        style={{ transform: showSynAnt ? 'translateX(20px)' : 'translateX(0px)' }}
+                        className="w-6 h-6 md:w-7 md:h-7 bg-white rounded-full absolute top-1 left-1 md:top-1 md:left-1 transition-transform duration-300 shadow-md" 
+                        style={{ transform: showSynAnt ? 'translateX(24px)' : 'translateX(0px)', ...(window.innerWidth >= 768 && showSynAnt ? { transform: 'translateX(28px)' } : {}) }}
                       ></div>
-                    </button>
+                    </div>
                   </div>
 
                   {/* เนื้อหาหลังการ์ด */}
-                  <div className="w-full h-full flex items-center justify-center z-10">
+                  <div className="w-full h-full flex items-center justify-center z-10 mt-4 md:mt-0 px-4">
                     {!showSynAnt ? (
                       /* แปลไทย */
-                      <h2 className="text-4xl font-prompt font-normal px-4">{currentWord.thai}</h2>
+                      <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-prompt font-normal text-center leading-tight break-words w-full">{currentWord.thai}</h2>
                     ) : (
                       /* Synonyms / Antonyms Layout */
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Synonym</span>
-                          <span className="text-4xl font-bold">{currentWord.synonyms || '-'}</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-6 md:gap-10">
+                        <div className="flex flex-col items-center w-full">
+                          <span className="text-sm md:text-base opacity-70 tracking-widest font-bold mb-2 md:mb-3 uppercase">Synonym</span>
+                          <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-center break-words w-full px-2">{currentWord.synonyms || '-'}</span>
                         </div>
-                        <div className="w-24 h-[1px] bg-white/20 my-1"></div>
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs opacity-70 tracking-wide font-medium mb-1">Antonym</span>
-                          <span className="text-4xl font-bold">{currentWord.antonyms || '-'}</span>
+                        <div className="w-32 md:w-48 h-[2px] bg-white/20 my-2 md:my-4 rounded-full"></div>
+                        <div className="flex flex-col items-center w-full">
+                          <span className="text-sm md:text-base opacity-70 tracking-widest font-bold mb-2 md:mb-3 uppercase">Antonym</span>
+                          <span className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-center break-words w-full px-2">{currentWord.antonyms || '-'}</span>
                         </div>
                       </div>
                     )}
