@@ -53,6 +53,7 @@ export default function FlashcardPlayer() {
   const [isChangingWord, setIsChangingWord] = useState(false);
   const [animClass, setAnimClass] = useState('');
   const [swipeGlow, setSwipeGlow] = useState('');
+  const [swipeBg, setSwipeBg] = useState(null);
   const [showExampleFront, setShowExampleFront] = useState(false);
   const [showSynAnt, setShowSynAnt] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
@@ -304,16 +305,19 @@ export default function FlashcardPlayer() {
     setShowExampleFront(false);
     setShowSynAnt(false);
 
-    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (ปรับให้ไวขึ้นและใส่เรืองแสง)
+    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (เปลี่ยนสีทั้งใบและเรืองแสง)
     if (direction === 'up') {
-      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
-      setSwipeGlow('shadow-[0_0_100px_rgba(52,199,89,1)] ring-4 ring-[#34C759]');
+      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setSwipeGlow('shadow-[0_0_120px_rgba(52,199,89,1)] scale-105');
+      setSwipeBg('#34C759');
     } else if (direction === 'down') {
-      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-250 ease-in');
-      setSwipeGlow('shadow-[0_0_100px_rgba(255,59,48,1)] ring-4 ring-[#FF3B30]');
+      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-150 ease-in');
+      setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
+      setSwipeBg('#FF3B30');
     } else if (direction === 'undo') {
-      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
+      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-150 ease-in');
       setSwipeGlow('');
+      setSwipeBg(null);
     }
 
     setTimeout(() => {
@@ -321,6 +325,7 @@ export default function FlashcardPlayer() {
       actionFn();
       setIsFlipped(false);
       setSwipeGlow('');
+      setSwipeBg(null);
       
       // ขั้นที่ 3: ดึงการ์ดให้มาย่อหลบอยู่ในตำแหน่ง "เตรียมเด้งขึ้น"
       setAnimClass('translate-y-3 scale-[0.95] opacity-100 transition-none');
@@ -496,7 +501,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                  style={{ backgroundColor: swipeBg || cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
@@ -544,7 +549,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: swipeBg || cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
