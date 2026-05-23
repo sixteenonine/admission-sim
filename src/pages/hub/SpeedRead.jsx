@@ -106,10 +106,10 @@ export default function SpeedRead() {
       </div>
 
       {/* Reader Display (Always visible, centered) */}
-      <div className="relative w-full flex items-center justify-center text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight z-0 py-12 px-4">
-        <div className="absolute top-0 w-12 h-1.5 bg-[#007AFF] rounded-full opacity-20"></div>
-        <div className="absolute bottom-0 w-12 h-1.5 bg-[#007AFF] rounded-full opacity-20"></div>
-        <div className="flex justify-center w-full relative font-solway">
+      <div className="relative w-full flex items-center justify-center text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight z-0 py-12 px-4">
+        <div className="absolute top-0 w-10 h-0.5 bg-[#007AFF] rounded-full opacity-20"></div>
+        <div className="absolute bottom-0 w-10 h-0.5 bg-[#007AFF] rounded-full opacity-20"></div>
+        <div className="flex justify-center w-full relative font-inter">
           <div className="text-right flex-1 pr-[2px]" style={{ color: themeVals.textMain }}>{currentWord.substring(0, focusIdx)}</div>
           <div className="text-[#007AFF]">{currentWord[focusIdx]}</div>
           <div className="text-left flex-1 pl-[2px]" style={{ color: themeVals.textMain }}>{currentWord.substring(focusIdx + 1)}</div>
@@ -118,28 +118,28 @@ export default function SpeedRead() {
 
       {/* Controls (Fadable) */}
       <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-16 md:pb-20 transition-opacity duration-500 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className="w-full max-w-md space-y-12">
-          <div className="flex flex-col items-center space-y-5">
-            <div className="text-[13px] font-bold font-solway tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain }}>SPEED: {wpm} WPM</div>
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center space-y-3">
+            <div className="text-[11px] font-regular font-inter tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain }}>SPEED: {wpm} WPM</div>
             <input 
               type="range" min="50" max="1000" step="10" value={wpm} 
               onChange={(e) => setWpm(e.target.value)}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer"
+              className="w-80 h-0.5 rounded-full appearance-none cursor-pointer"
               style={{ background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }}
             />
           </div>
 
-          <div className="flex justify-between items-center px-2 w-full">
-            <button onClick={() => setCurrentIndex(0)} className="active:scale-90 transition-all opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={26} /></button>
-            <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipBack size={34} /></button>
+          <div className="flex justify-between items-center px-15 w-full">
+            <button onClick={() => setCurrentIndex(0)} className="active:scale-90 transition-all opacity-40 hover:opacity-100" style={{ color: themeVals.textMain }}><RotateCcw size={24} /></button>
+            <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipBack size={24} /></button>
             <button 
               onClick={() => setIsPlaying(!isPlaying)} 
-              className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center text-white active:scale-95 transition-all" 
+              className="w-20 h-11 md:w-20 md:h-11 rounded-full flex items-center justify-center text-white active:scale-95 transition-all" 
               style={{ background: '#007AFF', boxShadow: '0 8px 30px rgba(0, 122, 255, 0.4)' }}
             >
-              {isPlaying ? <Pause size={38} fill="currentColor" /> : <Play size={38} fill="currentColor" className="ml-2" />}
+              {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0" />}
             </button>
-            <button onClick={() => setCurrentIndex(Math.min(words.length - 1, currentIndex + 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipForward size={34} /></button>
+            <button onClick={() => setCurrentIndex(Math.min(words.length - 1, currentIndex + 1))} className="active:scale-90 transition-all opacity-60 hover:opacity-100" style={{ color: themeVals.textMain }}><SkipForward size={24} /></button>
             <div className="w-[26px]"></div>
           </div>
         </div>
