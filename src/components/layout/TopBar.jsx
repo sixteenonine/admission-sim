@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { UserCircle2, LogOut, Sun, Moon, ChevronDown, CreditCard } from 'lucide-react';
+import { useEffect } from 'react';
+import { UserCircle2, LogOut, Sun, Moon, ChevronDown, CreditCard, Menu, Maximize, Minimize } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { Menu } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
 
 const AVATARS = [
@@ -17,6 +17,21 @@ export default function TopBar({ setIsSidebarOpen, setIsAuthModalOpen, setIsProf
   const { isDarkMode, setIsDarkMode, themeVals } = useTheme();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => console.log(err));
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  };
 
   const { isRunning, isTimerStarted, mode, MODES, handleModeSelect } = simulatorProps;
 
@@ -43,7 +58,16 @@ export default function TopBar({ setIsSidebarOpen, setIsAuthModalOpen, setIsProf
       </div>
 
       {/* ส่วนขวา: โปรไฟล์ */}
-      <div className="w-1/3 flex justify-end pointer-events-auto">
+      <div className="w-1/3 flex items-center justify-end gap-3 pointer-events-auto">
+        <button
+          onClick={toggleFullscreen}
+          className="p-2 transition-transform active:scale-95 opacity-50 hover:opacity-100 flex items-center justify-center"
+          style={{ color: themeVals.textMain }}
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        >
+          {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+        </button>
+
         {currentUser ? (
           <div className="relative">
             {isProfileDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsProfileDropdownOpen(false)}></div>}
