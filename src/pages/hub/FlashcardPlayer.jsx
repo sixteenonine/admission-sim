@@ -306,13 +306,13 @@ export default function FlashcardPlayer() {
 
     // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (ปรับให้ไวขึ้นและใส่เรืองแสง)
     if (direction === 'up') {
-      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-200 ease-in');
+      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('shadow-[0_0_100px_rgba(52,199,89,1)] ring-4 ring-[#34C759]');
     } else if (direction === 'down') {
-      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-200 ease-in');
+      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('shadow-[0_0_100px_rgba(255,59,48,1)] ring-4 ring-[#FF3B30]');
     } else if (direction === 'undo') {
-      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-200 ease-in');
+      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
       setSwipeGlow('');
     }
 
