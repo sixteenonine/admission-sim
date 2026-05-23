@@ -190,7 +190,7 @@ export default function SpeedRead() {
           return (
             <div 
               ref={teleprompterRef}
-              className="relative w-full max-w-5xl mx-auto px-8 md:px-12 lg:px-16 h-[60vh] overflow-y-auto hide-scrollbar"
+              className="relative w-full max-w-5xl mx-auto px-8 md:px-12 lg:px-16 h-[60vh] overflow-y-auto hide-scrollbar mask-image-top"
               style={{
                 paddingTop: '25vh',
                 paddingBottom: '25vh',
@@ -202,8 +202,7 @@ export default function SpeedRead() {
                 <span 
                   key={i} 
                   id={`highlight-word-${i}`}
-                  className={`transition-all duration-150 ${i === globalWordIndex ? 'opacity-100 font-bold' : 'opacity-30'}`}
-                  style={{ color: i === globalWordIndex ? '#007AFF' : 'inherit' }}
+                  className={`transition-opacity duration-150 ${i === globalWordIndex ? 'opacity-100' : 'opacity-30'}`}
                 >
                   {word}{' '}
                 </span>
@@ -354,6 +353,10 @@ export default function SpeedRead() {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        .mask-image-top {
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
         }
       `}</style>
     </div>
