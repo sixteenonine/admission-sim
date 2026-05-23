@@ -66,6 +66,13 @@ export default function FlashcardPlayer() {
   const actionQueueRef = useRef([]);
 
   useEffect(() => { latestStarsRef.current = starredWords; }, [starredWords]);
+  // บังคับล็อกไม่ให้หน้าจอ Scroll ได้
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -414,7 +421,7 @@ export default function FlashcardPlayer() {
   const isStarred = currentWord && starredWords.includes(currentWord.eng);
 
   return (
-    <div className="flex flex-col items-center w-full h-[calc(100dvh-110px)] mx-auto animate-in fade-in duration-300 pb-8" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
+    <div className="flex flex-col items-center w-full h-[calc(100dvh-110px)] overflow-hidden mx-auto animate-in fade-in duration-300 pb-4" style={{ fontFamily: "'Inter', 'Prompt', sans-serif" }}>
 
       {!isReady ? (
         <div className="w-full flex flex-col items-center px-4 animate-pulse pointer-events-none mt-2 h-full">
