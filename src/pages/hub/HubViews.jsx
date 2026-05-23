@@ -205,17 +205,20 @@ export function HubFlashcardDecks() {
       
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
         {categories.map((cat, i) => {
-          // คำนวณจำนวนคำจาก decksData
-          let deckInfo = decksData ? decksData[cat.name] : null;
           let wordCount = 0;
-          let isDataLoaded = decksData !== null;
+          let isDataLoaded = false;
 
           if (cat.name === 'MY FAVORITE') {
             wordCount = favCount !== null ? favCount : 0;
             isDataLoaded = favCount !== null;
           } else {
-            wordCount = deckInfo ? deckInfo.levels.flat().length : 0;
-            // ถ้าดึงข้อมูลสำเร็จแล้ว แม้จะเป็น 0 ก็ถือว่าโหลดเสร็จ
+            isDataLoaded = decksData !== null;
+            // ป้องกันแครชหาก API ส่งข้อมูลมาแต่ไม่มีฟิลด์ levels
+            if (decksData && decksData[cat.name] && Array.isArray(decksData[cat.name].levels)) {
+              wordCount = decksData[cat.name].levels.flat().length;
+            } else {
+              wordCount = 0;
+            }
           }
           
           return (

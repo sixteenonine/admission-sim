@@ -58,7 +58,7 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
                 </div>
                 <div className="w-full px-5 pt-3 pb-2 mt-1 flex flex-col gap-3 border-t border-white/5">
                   <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: theme.textSub }}>LCD Hue</span><span className="text-[10px] font-mono font-medium" style={{ color: theme.textSub }}>{lcdHue}°</span></div>
-                  <input type="range" min="0" max="360" value={lcdHue} onChange={(e) => setLcdHue(e.target.value)} onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#10b981] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
+                  <input type="range" min="0" max="360" value={lcdHue} onChange={(e) => setLcdHue(e.target.value)} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#10b981] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
                 </div>
                 <div className="w-full px-5 pt-2 pb-3 flex flex-col gap-3 border-t border-white/5">
                   <div className="flex justify-between items-center">
@@ -73,7 +73,7 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
                       <span className="text-[10px] font-mono font-medium" style={{ color: theme.textSub }}>{Math.round(trackHue)}°</span>
                     </div>
                   </div>
-                  <input type="range" min="0" max="360" step="1" value={Math.round(Number(trackHue) || 0)} onChange={(e) => setTrackHue(Number(e.target.value))} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => { e.stopPropagation(); setIsAutoTrackHue(false); }} onTouchStart={(e) => { e.stopPropagation(); setIsAutoTrackHue(false); }} onTouchMove={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
+                  <input type="range" min="0" max="360" value={trackHue} onChange={(e) => { setTrackHue(e.target.value); if (isAutoTrackHue) setIsAutoTrackHue(false); }} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: shadowTrench }} />
                 </div>
             </div>
           )}
