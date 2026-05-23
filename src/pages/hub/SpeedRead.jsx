@@ -56,7 +56,7 @@ export default function SpeedRead() {
       chunkWords = 1;
       chunkChars = words[globalWordIndex]?.length || 5;
     } else if (readMode === 'teleprompter') {
-      const wordsToRead = Math.min(words.length - globalWordIndex, wordsPerLine);
+      const wordsToRead = Math.min(words.length - globalWordIndex, 12); // บังคับเป็นประโยคยาว 12 คำ
       chunkWords = wordsToRead;
       chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
     }
@@ -77,7 +77,7 @@ export default function SpeedRead() {
       } else if (readMode === 'highlight') {
         chunkWords = 1;
       } else if (readMode === 'teleprompter') {
-        chunkWords = Math.min(words.length - globalWordIndex, wordsPerLine);
+        chunkWords = Math.min(words.length - globalWordIndex, 12); // บังคับเป็นประโยคยาว 12 คำ
       }
 
       timerRef.current = setTimeout(() => {
@@ -96,8 +96,8 @@ export default function SpeedRead() {
     }
   };
 
-  const skipForward = () => setGlobalWordIndex(prev => Math.min(words.length - 1, prev + (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? wordsPerLine : 1))));
-  const skipBackward = () => setGlobalWordIndex(prev => Math.max(0, prev - (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? wordsPerLine : 1))));
+  const skipForward = () => setGlobalWordIndex(prev => Math.min(words.length - 1, prev + (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? 12 : 1))));
+  const skipBackward = () => setGlobalWordIndex(prev => Math.max(0, prev - (readMode === 'serial' ? numLines * wordsPerLine : (readMode === 'teleprompter' ? 12 : 1))));
   const showUI = !isPlaying && !isSettingsOpen;
 
   const renderContent = () => {
@@ -118,13 +118,13 @@ export default function SpeedRead() {
     }
 
     if (readMode === 'highlight') {
-      const pageSize = 30;
+      const pageSize = 20; // ลดเหลือ 20 คำต่อหน้า
       const pageStart = Math.floor(globalWordIndex / pageSize) * pageSize;
       const pageWords = words.slice(pageStart, pageStart + pageSize);
       const activeIdxInPage = globalWordIndex - pageStart;
 
       return (
-        <div className={`w-full max-w-4xl mx-auto px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 mask-highlight-bottom ${justifyClass}`}>
+        <div className={`w-full max-w-4xl mx-auto px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 pb-32 ${justifyClass}`}>
           {pageWords.map((word, i) => (
             <span key={i} className={i === activeIdxInPage ? 'opacity-100' : 'opacity-20'}>
               {word}
@@ -136,13 +136,13 @@ export default function SpeedRead() {
 
     if (readMode === 'teleprompter') {
       const lines = [];
-      for (let i = 0; i < words.length; i += wordsPerLine) {
-        lines.push({ text: words.slice(i, i + wordsPerLine).join(" "), index: i });
+      for (let i = 0; i < words.length; i += 12) {
+        lines.push({ text: words.slice(i, i + 12).join(" "), index: i });
       }
-      const activeLineIdx = Math.floor(globalWordIndex / wordsPerLine);
+      const activeLineIdx = Math.floor(globalWordIndex / 12);
 
       return (
-        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical" style={{ textAlign: alignment }}>
+        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical pb-8" style={{ textAlign: alignment }}>
           <div className="absolute left-0 right-0 px-8 md:px-16 lg:px-24 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))`, transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 300ms ease' }}>
             {lines.map((line, i) => (
               <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineIdx ? 'opacity-100' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px` }}>
@@ -222,7 +222,7 @@ export default function SpeedRead() {
                     <input type="range" min="1" max="5" value={numLines} onChange={(e) => setNumLines(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
                   </div>
                 )}
-                {readMode !== 'highlight' && (
+                {readMode === 'serial' && (
                   <div className="space-y-2">
                     <div className="flex justify-between opacity-80 text-xs font-medium"><span>Words / Line</span><span>{wordsPerLine}</span></div>
                     <input type="range" min="1" max="5" value={wordsPerLine} onChange={(e) => setWordsPerLine(parseInt(e.target.value))} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', accentColor: '#007AFF' }} />
@@ -263,10 +263,6 @@ export default function SpeedRead() {
         .mask-image-vertical {
           -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
           mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
-        }
-        .mask-highlight-bottom {
-          -webkit-mask-image: linear-gradient(to bottom, black 70%, rgba(0,0,0,0.05) 95%);
-          mask-image: linear-gradient(to bottom, black 70%, rgba(0,0,0,0.05) 95%);
         }
       `}</style>
     </div>
