@@ -121,6 +121,21 @@ export default function SpeedRead() {
 
     return () => cancelAnimationFrame(requestRef.current);
   }, [isPlaying, readMode, wpm, fontSize]);
+  useEffect(() => {
+    if (readMode === 'highlight') {
+      const activeEl = document.getElementById(`highlight-word-${globalWordIndex}`);
+      if (activeEl && teleprompterRef.current) {
+        const container = teleprompterRef.current;
+        const relativeTop = activeEl.offsetTop - container.scrollTop;
+        
+        // เลื่อนจอเมื่อคำปัจจุบันหลุดกรอบกึ่งกลางจอ (ต่ำกว่า 60% หรือสูงกว่า 20%)
+        if (relativeTop > container.clientHeight * 0.6 || relativeTop < container.clientHeight * 0.2) {
+          const targetScrollTop = activeEl.offsetTop - (container.clientHeight / 2);
+          container.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        }
+      }
+    }
+  }, [globalWordIndex, readMode]);
   // Click background to pause
   const handleBackgroundClick = (e) => {
     if (isPlaying) {
@@ -172,21 +187,30 @@ export default function SpeedRead() {
     }
 
     if (readMode === 'highlight') {
-      const pageSize = 20; // ลดเหลือ 20 คำต่อหน้า
-      const pageStart = Math.floor(globalWordIndex / pageSize) * pageSize;
-      const pageWords = words.slice(pageStart, pageStart + pageSize);
-      const activeIdxInPage = globalWordIndex - pageStart;
-
-      return (
-        <div className={`w-full max-w-4xl mx-auto px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 pb-32 ${justifyClass}`}>
-          {pageWords.map((word, i) => (
-            <span key={i} className={i === activeIdxInPage ? 'opacity-100' : 'opacity-20'}>
-              {word}
-            </span>
-          ))}
-        </div>
-      );
-    }
+          return (
+            <div 
+              ref={teleprompterRef}
+              className="relative w-full max-w-5xl mx-auto px-8 md:px-12 lg:px-16 h-[60vh] overflow-y-auto hide-scrollbar"
+              style={{
+                paddingTop: '25vh',
+                paddingBottom: '25vh',
+                textAlign: alignment,
+                lineHeight: '1.8'
+              }}
+            >
+              {words.map((word, i) => (
+                <span 
+                  key={i} 
+                  id={`highlight-word-${i}`}
+                  className={`transition-all duration-150 ${i === globalWordIndex ? 'opacity-100 font-bold' : 'opacity-30'}`}
+                  style={{ color: i === globalWordIndex ? '#007AFF' : 'inherit' }}
+                >
+                  {word}{' '}
+                </span>
+              ))}
+            </div>
+          );
+        }
 
     if (readMode === 'teleprompter') {
       return (
