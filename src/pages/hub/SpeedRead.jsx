@@ -43,40 +43,51 @@ export default function SpeedRead() {
 
   const words = useMemo(() => text ? text.split(/\s+/) : [], [text]);
 
+  const currentDelay = useMemo(() => {
+    if (words.length === 0) return 300;
+    let chunkWords = 1;
+    let chunkChars = 5;
+
+    if (readMode === 'serial') {
+      const wordsToRead = Math.min(words.length - globalWordIndex, numLines * wordsPerLine);
+      chunkWords = wordsToRead;
+      chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+    } else if (readMode === 'highlight') {
+      chunkWords = 1;
+      chunkChars = words[globalWordIndex]?.length || 5;
+    } else if (readMode === 'teleprompter') {
+      const wordsToRead = Math.min(words.length - globalWordIndex, wordsPerLine);
+      chunkWords = wordsToRead;
+      chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+    }
+
+    let delay = (60 / wpm) * 1000 * chunkWords;
+    if (adaptiveWpm) {
+      delay = (60 / wpm) * 1000 * (Math.max(1, chunkChars) / 5);
+    }
+    return delay;
+  }, [globalWordIndex, wpm, words, readMode, numLines, wordsPerLine, adaptiveWpm]);
+
   // Main Loop
   useEffect(() => {
     if (isPlaying && globalWordIndex < words.length) {
       let chunkWords = 1;
-      let chunkChars = 5; // Default average
-
       if (readMode === 'serial') {
-        const wordsToRead = Math.min(words.length - globalWordIndex, numLines * wordsPerLine);
-        chunkWords = wordsToRead;
-        chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
+        chunkWords = Math.min(words.length - globalWordIndex, numLines * wordsPerLine);
       } else if (readMode === 'highlight') {
         chunkWords = 1;
-        chunkChars = words[globalWordIndex]?.length || 5;
       } else if (readMode === 'teleprompter') {
-        const wordsToRead = Math.min(words.length - globalWordIndex, wordsPerLine);
-        chunkWords = wordsToRead;
-        chunkChars = words.slice(globalWordIndex, globalWordIndex + wordsToRead).join(" ").length;
-      }
-
-      // Adaptive WPM Logic: adjust delay based on character density (assume avg 5 chars = 1 word)
-      let delay = (60 / wpm) * 1000 * chunkWords;
-      if (adaptiveWpm) {
-        delay = (60 / wpm) * 1000 * (Math.max(1, chunkChars) / 5);
+        chunkWords = Math.min(words.length - globalWordIndex, wordsPerLine);
       }
 
       timerRef.current = setTimeout(() => {
         setGlobalWordIndex(prev => Math.min(words.length, prev + chunkWords));
-      }, delay);
+      }, currentDelay);
     } else if (globalWordIndex >= words.length) {
       setIsPlaying(false);
     }
     return () => clearTimeout(timerRef.current);
-  }, [isPlaying, globalWordIndex, wpm, words, readMode, numLines, wordsPerLine, adaptiveWpm]);
-
+  }, [isPlaying, globalWordIndex, words, readMode, numLines, wordsPerLine, currentDelay]);
   // Click background to pause
   const handleBackgroundClick = (e) => {
     if (isPlaying) {
@@ -113,9 +124,9 @@ export default function SpeedRead() {
       const activeIdxInPage = globalWordIndex - pageStart;
 
       return (
-        <div className={`w-full max-w-4xl px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 ${justifyClass}`}>
+        <div className={`w-full max-w-4xl mx-auto px-8 md:px-16 lg:px-24 flex flex-wrap gap-x-2 gap-y-1 mask-highlight-bottom ${justifyClass}`}>
           {pageWords.map((word, i) => (
-            <span key={i} className={`transition-opacity duration-150 ${i === activeIdxInPage ? 'opacity-100' : 'opacity-20'}`}>
+            <span key={i} className={i === activeIdxInPage ? 'opacity-100' : 'opacity-20'}>
               {word}
             </span>
           ))}
@@ -131,8 +142,8 @@ export default function SpeedRead() {
       const activeLineIdx = Math.floor(globalWordIndex / wordsPerLine);
 
       return (
-        <div className="relative w-full h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical" style={{ textAlign: alignment }}>
-          <div className="absolute w-full transition-transform duration-300 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))` }}>
+        <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center px-8 md:px-16 lg:px-24 overflow-hidden mask-image-vertical" style={{ textAlign: alignment }}>
+          <div className="absolute left-0 right-0 px-8 md:px-16 lg:px-24 ease-linear" style={{ transform: `translateY(calc(0px - ${activeLineIdx * (fontSize * 1.5)}px))`, transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 300ms ease' }}>
             {lines.map((line, i) => (
               <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineIdx ? 'opacity-100' : 'opacity-20'}`} style={{ height: `${fontSize * 1.5}px` }}>
                 {line.text}
@@ -250,8 +261,12 @@ export default function SpeedRead() {
       {/* Global CSS for Teleprompter Mask */}
       <style>{`
         .mask-image-vertical {
-          -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
-          mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+          -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+          mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+        }
+        .mask-highlight-bottom {
+          -webkit-mask-image: linear-gradient(to bottom, black 70%, rgba(0,0,0,0.05) 95%);
+          mask-image: linear-gradient(to bottom, black 70%, rgba(0,0,0,0.05) 95%);
         }
       `}</style>
     </div>
