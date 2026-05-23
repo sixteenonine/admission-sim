@@ -465,7 +465,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
@@ -513,7 +513,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-3xl flex flex-col items-center justify-center text-white shadow-lg p-8 transition-colors duration-500 ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: cardColor, transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
