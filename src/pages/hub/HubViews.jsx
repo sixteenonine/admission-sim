@@ -99,14 +99,14 @@ export function HubFlashcards() {
       
       <div className="w-full max-w-4xl flex flex-col gap-6 px-4">
         {/* Top Row */}
-        <div className="flex flex-col md:flex-row gap-6 w-full h-auto md:h-[180px]">
-          <div onClick={goToAllDecks} className="flex-1 rounded-[2.5rem] flex flex-col items-center justify-center p-6 cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
-            <span className="text-2xl font-black uppercase tracking-widest" style={{ color: themeVals.textMain }}>ALL DECKS</span>
-            <span className="text-sm font-medium mt-2" style={{ color: themeVals.textMain, opacity: 0.7 }}>Browse categories & levels</span>
+        <div className="flex flex-col md:flex-row gap-6 w-full">
+          <div onClick={goToAllDecks} className="flex-1 relative aspect-[21/9] md:aspect-[16/9] rounded-[2.5rem] flex flex-col items-center justify-center p-6 cursor-pointer border border-white/10 transition-transform active:scale-95" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+            <span className="text-2xl font-black uppercase tracking-widest text-center leading-tight" style={{ color: themeVals.textMain }}>ALL DECKS</span>
+            <span className="text-sm font-medium mt-2 text-center" style={{ color: themeVals.textMain, opacity: 0.7 }}>Browse categories & levels</span>
           </div>
           
-          <div onClick={goToSRSReview} className="flex-1 rounded-[2.5rem] flex flex-col items-center justify-center p-6 cursor-pointer border border-white/10 transition-transform active:scale-95 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #FF9500 0%, #FF5E3A 100%)', boxShadow: themeVals.shadowPlateau }}>
-            <span className="text-2xl font-black uppercase tracking-widest text-white">SMART REVIEW</span>
+          <div onClick={goToSRSReview} className="flex-1 relative aspect-[21/9] md:aspect-[16/9] rounded-[2.5rem] flex flex-col items-center justify-center p-6 cursor-pointer border border-white/10 transition-transform active:scale-95 overflow-hidden" style={{ background: 'linear-gradient(135deg, #FF9500 0%, #FF5E3A 100%)', boxShadow: themeVals.shadowPlateau }}>
+            <span className="text-2xl font-black uppercase tracking-widest text-white text-center leading-tight">SMART REVIEW</span>
             <div className="mt-4 bg-white/20 backdrop-blur-md px-5 py-2 rounded-full border border-white/30">
               <span className="text-white font-bold">{dueCount} WORDS DUE</span>
             </div>
@@ -116,23 +116,23 @@ export function HubFlashcards() {
         {/* Bottom Row */}
         <div className="w-full flex flex-col gap-4 mt-6">
           <h2 className="text-lg font-bold tracking-wider uppercase text-left ml-4" style={{ color: themeVals.textMain, opacity: 0.8 }}>RECENTLY STUDIED</h2>
-          <div className="flex flex-col md:flex-row gap-6 w-full h-auto md:h-[140px]">
+          <div className="flex flex-col md:flex-row gap-5 md:gap-6 w-full">
             {recentDecks.length > 0 ? recentDecks.map((deck, idx) => {
               const catDef = FLASHCARD_CATEGORIES.find(c => c.name === deck.deckTitle) || { color: deck.color || '#8c52ff', diamonds: null };
               return (
-                <div key={idx} onClick={() => navigate('/vocab/play', { state: deck })} className="flex-1 relative rounded-[2rem] flex flex-col items-center justify-center p-4 cursor-pointer border border-white/10 transition-transform duration-300 hover:-translate-y-1 active:scale-95 overflow-hidden min-h-[120px]" style={{ backgroundColor: catDef.color, boxShadow: `0 10px 25px -5px ${catDef.color}60` }}>
+                <div key={idx} onClick={() => navigate('/vocab/play', { state: deck })} className="flex-1 relative aspect-[21/9] md:aspect-[16/9] rounded-[2rem] flex flex-col items-center justify-center p-4 cursor-pointer border border-white/10 transition-transform duration-300 hover:-translate-y-1 active:scale-95 overflow-hidden" style={{ backgroundColor: catDef.color, boxShadow: `0 10px 25px -5px ${catDef.color}60` }}>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0 scale-[0.6]">
                     {catDef.diamonds}
                   </div>
-                  <div className="flex flex-col items-center z-10">
-                    <span className="text-sm md:text-base font-black uppercase text-center leading-tight mb-3 text-white drop-shadow-sm">{deck.deckTitle}</span>
-                    <span className="text-[11px] font-black px-4 py-1.5 rounded-full bg-white shadow-sm" style={{ color: catDef.color }}>LEVEL {deck.level}</span>
+                  <div className="flex flex-col items-center justify-center z-10 w-full px-1">
+                    <span className="text-sm md:text-base font-black uppercase text-center leading-tight mb-2 text-white drop-shadow-sm line-clamp-2">{deck.deckTitle}</span>
+                    <span className="text-[11px] font-black px-4 py-1.5 rounded-full bg-white shadow-sm shrink-0 mt-1" style={{ color: catDef.color }}>LEVEL {deck.level}</span>
                   </div>
                 </div>
               );
             }) : (
-              <div className="flex-1 rounded-[2rem] flex items-center justify-center p-4 border border-white/10 opacity-60" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
-                <span className="text-sm font-medium" style={{ color: themeVals.textMain }}>No recent decks yet. Let's study!</span>
+              <div className="flex-1 relative aspect-[21/9] md:aspect-[16/9] rounded-[2rem] flex items-center justify-center p-4 border border-white/10 opacity-60" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+                <span className="text-sm font-medium text-center px-4" style={{ color: themeVals.textMain }}>No recent decks yet. Let's study!</span>
               </div>
             )}
           </div>
