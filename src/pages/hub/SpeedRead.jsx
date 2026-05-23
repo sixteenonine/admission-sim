@@ -138,9 +138,9 @@ export default function SpeedRead() {
       for (let i = 0; i < words.length; i += 12) {
         lines.push({ text: words.slice(i, i + 12).join(" "), index: i });
       }
-      const activeLineFloat = globalWordIndex / 12; // ใช้ทศนิยมเพื่อให้เลื่อนขึ้นแบบไหลลื่น
+      const activeLineFloat = globalWordIndex / 12; 
       const activeLineInt = Math.floor(globalWordIndex / 12);
-      const lineSpacing = fontSize * 3; // เผื่อพื้นที่ให้ข้อความตัดบรรทัด (wrap) ได้สูงสุด 3 บรรทัด
+      const lineSpacing = fontSize * 1.5; // ลดช่องว่างบรรทัดให้พอดีกับ 1 บรรทัด เพื่อให้ประโยคขยับมาทันไฮไลท์
 
       return (
         <div className="relative w-full max-w-4xl mx-auto h-[60vh] flex flex-col justify-center overflow-hidden mask-image-vertical pb-8">
@@ -150,14 +150,15 @@ export default function SpeedRead() {
             transition: isPlaying ? `transform ${currentDelay}ms linear` : 'transform 150ms ease-out' 
           }}>
             {lines.map((line, i) => (
-              <div key={i} className={`w-full transition-opacity duration-300 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
-                minHeight: `${lineSpacing}px`, 
+              <div key={i} className={`w-full transition-opacity duration-150 ${i === activeLineInt ? 'opacity-100' : 'opacity-20'}`} style={{ 
+                height: `${lineSpacing}px`, 
                 display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'center',
-                textAlign: alignment 
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: alignment === 'left' ? 'flex-start' : alignment === 'right' ? 'flex-end' : 'center',
+                whiteSpace: 'nowrap'
               }}>
-                <div>{line.text}</div>
+                {line.text}
               </div>
             ))}
           </div>
@@ -172,7 +173,7 @@ export default function SpeedRead() {
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: themeVals.bg, fontFamily }} onClick={handleBackgroundClick}>
       
       {/* Header */}
-      <div className={`absolute top-8 left-0 w-full flex items-center justify-center pt-12 pb-6 transition-opacity duration-300 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`absolute top-8 left-0 w-full flex items-center justify-center pt-12 pb-6 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <span className="font-bold text-sm tracking-[0.2em] uppercase opacity-40" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>{location.state?.title || "SPEED READING"}</span>
       </div>
 
@@ -185,7 +186,7 @@ export default function SpeedRead() {
       </div>
 
       {/* Controls */}
-      <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-12 transition-opacity duration-300 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`absolute bottom-0 left-0 w-full flex flex-col items-center px-6 pb-12 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <div className="w-full max-w-md space-y-8">
           <div className="flex flex-col items-center space-y-3">
             <div className="text-[11px] font-bold tracking-[0.1em] opacity-60" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>SPEED: {wpm} WPM</div>
