@@ -48,6 +48,7 @@ export default function FlashcardPlayer() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredHistory, setMasteredHistory] = useState([]);
+  const [isReady, setIsReady] = useState(false);
   
   const [isChangingWord, setIsChangingWord] = useState(false);
   const [animClass, setAnimClass] = useState('');
@@ -227,7 +228,11 @@ export default function FlashcardPlayer() {
 
         const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
         setStarredWords(starred.map(w => w.eng));
-      } catch (error) { console.error('LocalDB Error:', error); }
+      setIsReady(true);
+      } catch (error) { 
+        console.error('LocalDB Error:', error); 
+        setIsReady(true);
+      }
     }
     initLocalDB();
   }, [currentCategory, user?.id]);
@@ -413,8 +418,22 @@ export default function FlashcardPlayer() {
       
       
 
-      {deck.length > 0 ? (
-        <div className="w-full flex flex-col items-center px-4">
+      {!isReady ? (
+        <div className="w-full flex flex-col items-center px-4 animate-pulse pointer-events-none mt-6">
+          <div className="w-full max-w-md flex flex-col items-center mb-8 text-center">
+            <div className="h-8 w-48 bg-black/10 dark:bg-white/10 rounded-full mb-3"></div>
+            <div className="h-4 w-24 bg-black/10 dark:bg-white/10 rounded-full mb-4"></div>
+            <div className="w-full max-w-[280px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full"></div>
+          </div>
+          <div className="relative w-full max-w-lg h-72 mx-auto">
+            <div className="absolute inset-0 rounded-3xl shadow-lg flex flex-col items-center justify-center p-8" style={{ backgroundColor: currentStyle.color }}>
+              <div className="w-2/3 h-12 bg-white/20 rounded-full mb-4"></div>
+              <div className="w-1/3 h-6 bg-white/20 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+      ) : deck.length > 0 ? (
+        <div className="w-full flex flex-col items-center px-4 mt-6">
           
           
           {/* Header Layout (อิงจากโค้ด index) */}
