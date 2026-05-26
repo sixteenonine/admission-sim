@@ -57,7 +57,18 @@ export default function App() {
   const [mode, setMode] = useState(savedState.mode || 'full');
   const initialTime = MODES[savedState.mode || 'full'].time;
   const totalTime = useRef(initialTime);
+  const timeLeftRef = useRef(initialTime);
+  const timeDisplayRef = useRef(null);
   const [timeLeft, setTimeLeft] = useState(initialTime);
+  
+  const handleTimeUp = useCallback(() => {
+    setIsRunning(false);
+    setFinishTime(totalTime.current);
+    setTimeLeft(0);
+    if (!marks.length) setMarks([{ part: 'End', time: 0, marker: true }]);
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+    setIsScoreModalOpen(true);
+  }, [marks.length]);
   const [isRunning, setIsRunning] = useState(false);
   const [ambientOn, setAmbientOn] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -199,26 +210,9 @@ export default function App() {
     }
   }, [countdown]);
 
-  useEffect(() => {
-    let interval;
-    if (isRunning && timeLeft > 0) {
-      let lastTick = Date.now();
-      interval = setInterval(() => {
-        const now = Date.now();
-        const deltaSeconds = ((now - lastTick) / 1000) * speed;
-        lastTick = now;
-        setTimeLeft((prev) => {
-          const nextTime = prev - deltaSeconds;
-          if (nextTime <= 0) { setIsRunning(false); return 0; }
-          return nextTime;
-        });
-      }, 1000 / speed);
-    } else if (timeLeft <= 0 && isRunning) {
-      setIsRunning(false);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, speed]);
-
+  // -------------------------------------------------------------
+  // 🚀 Timer Optimization (requestAnimationFrame) ถูกย้ายไปที่ TimerDashboard
+  // -------------------------------------------------------------
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (currentView === 'tictactoe' && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown')) e.preventDefault(); 
@@ -231,6 +225,7 @@ export default function App() {
     setMode(selectedKey);
     const newTime = MODES[selectedKey].time;
     totalTime.current = newTime;
+    timeLeftRef.current = newTime;
     setTimeLeft(newTime);
     setIsRunning(false);
     setCountdown(null);
@@ -251,8 +246,12 @@ export default function App() {
   }, []);
 
   const toggleAmbient = useCallback(() => setAmbientOn(p => !p), []);
-  const resetTimer = useCallback(() => { setIsRunning(false); setCountdown(null); setTimeLeft(totalTime.current); setMarks([]); setFinishTime(null); setCurrentView('timer'); }, []);
-  const skipTime = useCallback(() => setTimeLeft(prev => Math.max(0, prev - 300)), []);
+  const resetTimer = useCallback(() => { setIsRunning(false); setCountdown(null); timeLeftRef.current = totalTime.current; setTimeLeft(totalTime.current); setMarks([]); setFinishTime(null); setCurrentView('timer'); }, []);
+  const skipTime = useCallback(() => {
+    const newTime = Math.max(0, timeLeftRef.current - 300);
+    timeLeftRef.current = newTime;
+    setTimeLeft(newTime);
+  }, []);
   
   const addMark = useCallback(() => {
     if (!isRunningRef.current) return;
@@ -267,6 +266,7 @@ export default function App() {
     if (!finishTime) {
       setFinishTime(totalTime.current - timeLeftRef.current);
     } else {
+      timeLeftRef.current = 0;
       setTimeLeft(0);
     }
   }, [finishTime]);
@@ -477,7 +477,7 @@ export default function App() {
 
             {/* Main Timer Dial & Controls from Desktop Component */}
             <div className="relative flex flex-col items-center justify-center w-full scale-130 min-h-[380px] overflow-visible select-none">
-              <TimerDashboard 
+            <TimerDashboard 
                 cfg={mobileCfg} 
                 themeVals={themeVals} 
                 timeLeft={timeLeft} 
@@ -494,6 +494,9 @@ export default function App() {
                 countdown={countdown} 
                 isAutoTrackHue={isAutoTrackHue} 
                 mode={mode} 
+                onTimeUp={handleTimeUp}
+                timeLeftRef={timeLeftRef}
+                setTimeLeft={setTimeLeft}
               />
             </div>
 
@@ -625,7 +628,27 @@ export default function App() {
               </div>
             </div>
         
-            <TimerDashboard cfg={cfg} themeVals={themeVals} timeLeft={timeLeft} totalTime={totalTime.current} isRunning={isRunning} speed={speed} marks={marks} ambientOn={ambientOn} toggleAmbient={toggleAmbient} toggleTimer={toggleTimer} skipTime={skipTime} resetTimer={resetTimer} trackHue={trackHue} countdown={countdown} isAutoTrackHue={isAutoTrackHue} mode={mode} />
+            <TimerDashboard 
+              cfg={cfg} 
+              themeVals={themeVals} 
+              timeLeft={timeLeft} 
+              totalTime={totalTime.current} 
+              isRunning={isRunning} 
+              speed={speed} 
+              marks={marks} 
+              ambientOn={ambientOn} 
+              toggleAmbient={toggleAmbient} 
+              toggleTimer={toggleTimer} 
+              skipTime={skipTime} 
+              resetTimer={resetTimer} 
+              trackHue={trackHue} 
+              countdown={countdown} 
+              isAutoTrackHue={isAutoTrackHue} 
+              mode={mode} 
+              onTimeUp={handleTimeUp}
+              timeLeftRef={timeLeftRef}
+              setTimeLeft={setTimeLeft}
+            />
           </div>
 
           <RightPanelWidget 

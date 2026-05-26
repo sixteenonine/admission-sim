@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { Play, Pause, Volume2, VolumeX, RefreshCcw, FastForward } from 'lucide-react';
 import { getTipColor } from '../../utils/helpers';
 
@@ -11,9 +11,50 @@ const StaticClockFace = memo(({ textSubColor }) => (
   </svg>
 ));
 
-const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, speed, marks, ambientOn, toggleAmbient, toggleTimer, skipTime, resetTimer, trackHue, countdown, isAutoTrackHue, mode }) => {
+const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, speed, marks, ambientOn, toggleAmbient, toggleTimer, skipTime, resetTimer, trackHue, countdown, isAutoTrackHue, mode, onTimeUp, timeLeftRef, setTimeLeft }) => {
   const [isClockMode, setIsClockMode] = useState(false);
   const { bg, theme, raisedGradient, indentedGradient, shadowOuter, shadowCap, shadowPlateau, shadowTrench, shadowDimple } = themeVals;
+
+  const minRef = useRef(null);
+  const secRef = useRef(null);
+
+  // Timer Optimization Loop
+  useEffect(() => {
+    let animationFrame;
+    let lastTick = performance.now();
+
+    const updateTimer = (currentTime) => {
+      const deltaMs = currentTime - lastTick;
+      
+      if (deltaMs >= (1000 / speed)) {
+        if (timeLeftRef && timeLeftRef.current > 0) {
+          timeLeftRef.current -= (deltaMs / 1000) * speed;
+          lastTick = currentTime;
+
+          const displayTime = Math.max(0, Math.ceil(timeLeftRef.current));
+          
+          // 1. อัปเดต DOM โดยตรง ไม่ผ่าน React State (เพื่อความลื่นไหลสูงสุด)
+          if (minRef.current && secRef.current) {
+            minRef.current.textContent = Math.floor(displayTime / 60).toString().padStart(2, '0');
+            secRef.current.textContent = (displayTime % 60).toString().padStart(2, '0');
+          }
+
+          // 2. Sync กลับไปให้ Simulator ทุกวินาที (เพื่อให้ Audio/LCD ทำงานตามปกติ)
+          if (setTimeLeft) setTimeLeft(timeLeftRef.current);
+
+          if (timeLeftRef.current <= 0) {
+            cancelAnimationFrame(animationFrame);
+            if (onTimeUp) onTimeUp();
+            return;
+          }
+        }
+      }
+      if (isRunning) animationFrame = requestAnimationFrame(updateTimer);
+    };
+
+    if (isRunning) animationFrame = requestAnimationFrame(updateTimer);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isRunning, speed, onTimeUp, setTimeLeft, timeLeftRef]);
 
   const isIdle = timeLeft === totalTime && !isRunning && countdown === null;
   
@@ -95,9 +136,9 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
                   </div>
                   <div className="relative z-10 flex flex-col items-center pointer-events-none w-full" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
                     <div className="flex justify-center leading-none tracking-tight drop-shadow-[1px_1px_1px_rgba(255,255,255,0.05)]" style={{ color: theme.textHighlight, fontWeight: 200, fontSize: `${cfg.timeFontSize}rem`, transform: `translateY(${cfg.timeY}px)` }}>
-                      <span className="w-[1.2em] text-right">{Math.floor(Math.ceil(timeLeft) / 60).toString().padStart(2, '0')}</span>
+                      <span className="w-[1.2em] text-right" ref={minRef}>{Math.floor(Math.ceil(timeLeft) / 60).toString().padStart(2, '0')}</span>
                       <span className="w-[0.3em] text-center">:</span>
-                      <span className="w-[1.2em] text-left">{(Math.ceil(timeLeft) % 60).toString().padStart(2, '0')}</span>
+                      <span className="w-[1.2em] text-left" ref={secRef}>{(Math.ceil(timeLeft) % 60).toString().padStart(2, '0')}</span>
                     </div>
                     <span className="tracking-[0.15em] uppercase" style={{ color: theme.textSub, fontWeight: 400, fontSize: `${cfg.labelFontSize}px`, transform: `translateY(${cfg.labelY}px)` }}>Minutes</span>
                   </div>
@@ -106,7 +147,6 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
             </div>
           </div>
         </div>
- 
       </div>
 
       <div 
@@ -114,8 +154,8 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
         style={{ transform: `scale(${cfg.controlPanelScale}) translate(${cfg.controlPanelX}px, ${cfg.controlPanelY}px)`, transformOrigin: 'center center', transition: 'transform 0.1s' }}
       >
         <button onClick={toggleAmbient} disabled={mode !== 'full'} className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border border-white/5 ${mode !== 'full' ? 'opacity-30 cursor-not-allowed' : 'active:scale-[0.98]'}`} style={{ background: bg, color: ambientOn && mode === 'full' ? '#3b82f6' : theme.textMain, boxShadow: shadowPlateau }}>
-  {ambientOn && mode === 'full' ? <Volume2 size={20} /> : <VolumeX size={20} />}
-</button>
+          {ambientOn && mode === 'full' ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </button>
         <button onClick={toggleTimer} className="w-[84px] h-[84px] rounded-full flex items-center justify-center transition-all active:scale-[0.98] border border-white/5" style={{ background: bg, color: theme.textMain, boxShadow: shadowPlateau }}>
           {isRunning ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-2" />}
         </button>
