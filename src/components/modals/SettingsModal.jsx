@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { X, Plus, Trash2, Edit, GripVertical } from 'lucide-react';
-import { RECOMMENDED_SEQUENCE } from '../../utils/constants';
+import { RECOMMENDED_SEQUENCE, MODES } from '../../utils/constants';
 import { getDifficultyColor } from '../../utils/helpers';
 
-const SortableItem = memo(({ item, index, isEditable, isDraggingItem, isAnimatingDrop, offsetY, shiftOffset, handlePointerDown, themeVals, dotColor, isDropping }) => {
+const SortableItem = memo(({ item, index, isEditable, isDraggingItem, isAnimatingDrop, offsetY, shiftOffset, handlePointerDown, themeVals, dotColor, isDropping, isPortrait }) => {
   const { bg, shadowPlateau, theme, shadowCap, raisedGradient } = themeVals;
   const isDarkMode = theme.bg === "#1e2229";
 
   let transformStyle = 'translateY(0px)';
   let zIndex = 1;
   let scale = 1;
-  let shadow = shadowPlateau;
+  let shadow = isPortrait ? 'none' : shadowPlateau;
   let transitionStyle = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
 
   if (isDropping) {
@@ -26,31 +26,68 @@ const SortableItem = memo(({ item, index, isEditable, isDraggingItem, isAnimatin
   }
 
   return (
-    <div className={`exam-item flex items-center justify-between p-5 rounded-2xl border relative ${isDraggingItem ? 'border-white/20' : 'border-white/5'} ${isEditable ? 'hover:border-white/10' : 'cursor-default'}`} style={{ background: bg, boxShadow: shadow, transform: `${transformStyle} scale(${scale})`, zIndex: zIndex, transition: transitionStyle }}>
-      <div className="flex items-center gap-4">
+    <div className={`exam-item flex items-center justify-between ${isPortrait ? 'p-3.5 px-4' : 'p-5'} rounded-2xl border relative ${isDraggingItem ? 'border-white/20' : 'border-white/5'} ${isEditable ? 'hover:border-white/10' : 'cursor-default'}`} style={{ background: (isDraggingItem && isPortrait) ? raisedGradient : bg, boxShadow: shadow, transform: `${transformStyle} scale(${scale})`, zIndex: zIndex, transition: transitionStyle }}>
+      <div className={`flex items-center ${isPortrait ? 'gap-3' : 'gap-4'}`}>
         {isEditable && (
           <div 
             onPointerDown={(e) => handlePointerDown(e, index)} 
-            className="cursor-grab active:cursor-grabbing p-2 -ml-2"
-            style={{ touchAction: 'none' }} 
+            className={`cursor-grab active:cursor-grabbing p-2 -ml-2 ${isPortrait ? 'text-white/30 hover:text-white/70 transition-colors' : ''}`}
+            style={{ touchAction: 'none', color: !isPortrait ? theme.textHighlight : undefined }} 
           >
-            <GripVertical size={20} style={{ color: theme.textHighlight }} />
+            <GripVertical size={isPortrait ? 18 : 20} />
           </div>
         )}
-        <div className="flex flex-col"><span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>{item.part}</span><span className="text-[14px] font-medium" style={{ color: theme.textMain }}>{item.label}</span></div>
+        <div className="flex flex-col"><span className={`${isPortrait ? 'text-[9px] opacity-60' : 'text-[10px]'} uppercase tracking-wider font-bold`} style={{ color: isPortrait ? theme.textMain : theme.textHighlight }}>{item.part}</span><span className={`${isPortrait ? 'text-[13px] font-semibold' : 'text-[14px] font-medium'}`} style={{ color: theme.textMain }}>{item.label}</span></div>
       </div>
-      <div className="flex items-center gap-3 px-3 py-1.5 rounded-full border border-white/10 shrink-0" style={{ background: raisedGradient, boxShadow: shadowCap }}><div className="w-2 h-2 rounded-full" style={{ backgroundColor: dotColor, boxShadow: `0 0 6px ${dotColor}` }} /><span className="text-[12px] font-bold w-4 text-center opacity-70" style={{ color: theme.textSub }}>{index + 1}</span></div>
+      <div className={`flex items-center ${isPortrait ? 'gap-2.5 px-2.5 py-1' : 'gap-3 px-3 py-1.5'} rounded-full border ${isPortrait ? 'border-white/5' : 'border-white/10'} shrink-0`} style={{ background: raisedGradient, boxShadow: isPortrait ? 'none' : shadowCap }}><div className={`${isPortrait ? 'w-1.5 h-1.5' : 'w-2 h-2'} rounded-full`} style={{ backgroundColor: dotColor, boxShadow: `0 0 6px ${dotColor}` }} /><span className={`${isPortrait ? 'text-[11px]' : 'text-[12px]'} font-bold w-4 text-center opacity-70`} style={{ color: theme.textSub }}>{index + 1}</span></div>
     </div>
   );
 });
 
-const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, setExamSequence, customPresets, setCustomPresets, activePresetId, setActivePresetId, editingPresetId, setEditingPresetId, sfxEnabled, setSfxEnabled }) => {
+const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, setExamSequence, customPresets, setCustomPresets, activePresetId, setActivePresetId, editingPresetId, setEditingPresetId, sfxEnabled, setSfxEnabled, mode, onModeSelect, isTimerStarted }) => {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap } = themeVals;
 
   const isMounted = useRef(true);
   useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes sheetSlideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+      }
+      @keyframes backdropFadeIn {
+        from { 
+          background-color: transparent; 
+          backdrop-filter: blur(0px);
+          -webkit-backdrop-filter: blur(0px);
+        }
+        to { 
+          background-color: transparent; 
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+        }
+      }
+      .animate-sheet-slide-up {
+        animation: sheetSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .animate-backdrop-fade-in {
+        animation: backdropFadeIn 0.3s ease-out forwards;
+      }
+    `;
+    document.head.appendChild(style);
     isMounted.current = true;
-    return () => { isMounted.current = false; };
+    return () => {
+      isMounted.current = false;
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  const [isPortrait, setIsPortrait] = useState(window.matchMedia('(orientation: portrait)').matches);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(orientation: portrait)');
+    const handleOrientationChange = (e) => setIsPortrait(e.matches);
+    mediaQuery.addEventListener('change', handleOrientationChange);
+    return () => mediaQuery.removeEventListener('change', handleOrientationChange);
   }, []);
 
   const [dragInfo, setDragInfo] = useState({
@@ -68,7 +105,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
     e.stopPropagation();
     e.target.setPointerCapture(e.pointerId); 
     const itemEl = e.currentTarget.closest('.exam-item');
-    const itemHeight = itemEl ? itemEl.getBoundingClientRect().height + 16 : 96; 
+    const itemHeight = itemEl ? itemEl.getBoundingClientRect().height + (isPortrait ? 8 : 16) : (isPortrait ? 70 : 96); 
     const clientY = e.clientY;
     const startScrollY = scrollContainerRef.current ? scrollContainerRef.current.scrollTop : 0;
     pointerY.current = clientY;
@@ -76,7 +113,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
     setDragInfo({
       isDragging: true, isAnimatingDrop: false, startIndex: index, hoverIndex: index, offsetY: 0
     });
-  }, [activePresetId]);
+  }, [activePresetId, isPortrait]);
 
   const handleAddPreset = useCallback(() => {
     const newId = `custom-${Date.now()}`;
@@ -199,6 +236,165 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
     };
   }, [dragInfo.isDragging, examSequence.length, activePresetId, setExamSequence, setCustomPresets]);
 
+  const renderSortableItems = () => (
+    examSequence.map((item, index) => {
+      const isEditable = activePresetId !== 'recommend';
+      const dotColor = getDifficultyColor(item.difficulty);
+      const isDraggingItem = dragInfo.isDragging && dragConfigRef.current.startIndex === index;
+      const isAnimatingDrop = dragInfo.isAnimatingDrop;
+      
+      let shiftOffset = 0;
+      if (dragInfo.isDragging && !isDraggingItem) {
+        const { startIndex } = dragConfigRef.current;
+        const hoverIndex = dragInfo.hoverIndex;
+        const itemHeight = dragConfigRef.current.itemHeight;
+        if (startIndex < hoverIndex && index > startIndex && index <= hoverIndex) {
+          shiftOffset = -itemHeight;
+        } else if (startIndex > hoverIndex && index >= hoverIndex && index < startIndex) {
+          shiftOffset = itemHeight;
+        }
+      }
+      
+      return (
+        <SortableItem 
+          key={item.id} 
+          item={item} 
+          index={index} 
+          isEditable={isEditable} 
+          isDraggingItem={isDraggingItem} 
+          isAnimatingDrop={isAnimatingDrop} 
+          offsetY={isDraggingItem ? dragInfo.offsetY : 0} 
+          shiftOffset={shiftOffset} 
+          handlePointerDown={handlePointerDown} 
+          themeVals={themeVals} 
+          dotColor={dotColor} 
+          isDropping={isDropping}
+          isPortrait={isPortrait}
+        />
+      );
+    })
+  );
+
+  if (isPortrait) {
+    return (
+      <div className="fixed inset-0 z-[150] flex flex-col justify-end items-center bg-transparent px-0 animate-backdrop-fade-in">
+        <div className="w-full flex flex-col relative overflow-hidden transition-all duration-300 rounded-t-[2.5rem] h-[85vh] shadow-2xl animate-sheet-slide-up" style={{ background: bg, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          
+          <div className="w-full flex justify-center pt-3 pb-2 absolute top-0 z-20">
+            <div className="w-12 h-1.5 rounded-full bg-white/20"></div>
+          </div>
+
+          <div className="flex justify-between items-center px-6 pt-8 pb-4 border-b border-white/5 shrink-0 z-10 relative" style={{ background: bg }}>
+            <div>
+              <h3 className="text-xl font-bold tracking-wide" style={{ color: theme.textMain }}>Settings</h3>
+              <p className="text-xs font-medium opacity-60 mt-0.5" style={{ color: theme.textSub }}>Customize display & sequence</p>
+            </div>
+            <button onClick={() => setIsSettingOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/10" style={{ background: raisedGradient, color: theme.textMain }}><X size={20} /></button>
+          </div>
+
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar flex flex-col px-6 py-6 gap-8 relative">
+            <div className="flex flex-col gap-3">
+              <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Exam Mode</span>
+              <div className="grid grid-cols-2 gap-2.5">
+                {MODES && Object.entries(MODES).map(([key, { label }]) => {
+                  const isSelected = mode === key;
+                  return (
+                    <button
+                      key={key}
+                      disabled={isTimerStarted}
+                      onClick={() => onModeSelect(key)}
+                      className="p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-95 disabled:opacity-50"
+                      style={{
+                        background: isSelected ? raisedGradient : 'transparent',
+                        borderColor: isSelected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
+                        boxShadow: isSelected ? shadowCap : 'none',
+                        color: isSelected ? theme.textMain : theme.textSub
+                      }}
+                    >
+                      <span className="text-[13px] font-bold truncate">{label}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full transition-opacity ${isSelected ? 'bg-blue-400 shadow-[0_0_8px_#60a5fa]' : 'opacity-0'}`} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>General</span>
+              <div className="flex items-center justify-between p-4 rounded-2xl border border-white/5" style={{ background: raisedGradient, boxShadow: shadowCap }}>
+                <div className="flex flex-col">
+                  <span className="text-[13px] font-bold tracking-wide" style={{ color: theme.textMain }}>SFX Sounds</span>
+                  <span className="text-[11px] opacity-60 mt-0.5" style={{ color: theme.textSub }}>เสียงกระดาษ, ปากกา, เก้าอี้</span>
+                </div>
+                <button onClick={() => setSfxEnabled(!sfxEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${sfxEnabled ? 'bg-emerald-500' : 'bg-white/10'}`}>
+                   <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${sfxEnabled ? 'left-[26px]' : 'left-1'}`} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Presets</span>
+                <button onClick={handleAddPreset} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 transition-all active:scale-95 hover:border-white/20" style={{ background: raisedGradient, color: theme.textMain }}>
+                  <Plus size={12} strokeWidth={3} />
+                  <span className="text-[10px] font-bold uppercase">Add New</span>
+                </button>
+              </div>
+              
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-6 px-6 snap-x snap-mandatory">
+                <div onClick={() => handleSelectPreset('recommend')} className="snap-start shrink-0 w-[140px] p-4 rounded-2xl flex flex-col justify-between transition-all border cursor-pointer h-[100px]" style={{ background: activePresetId === 'recommend' ? raisedGradient : 'transparent', borderColor: activePresetId === 'recommend' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', boxShadow: activePresetId === 'recommend' ? shadowCap : 'none' }}>
+                  <div className="flex justify-between items-start">
+                     <span className="text-[13px] font-bold truncate pr-2" style={{ color: activePresetId === 'recommend' ? theme.textMain : theme.textSub }}>Recommend</span>
+                     <div className={`w-2 h-2 rounded-full shrink-0 transition-opacity mt-1 ${activePresetId === 'recommend' ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'opacity-0'}`} />
+                  </div>
+                  <span className="text-[10px] opacity-60 leading-tight" style={{ color: theme.textSub }}>Standard<br/>A-Level Order</span>
+                </div>
+
+                {customPresets.map((preset) => (
+                  <div key={preset.id} onClick={() => handleSelectPreset(preset.id)} className="snap-start shrink-0 w-[140px] p-4 rounded-2xl flex flex-col justify-between transition-all border cursor-pointer h-[100px] relative group" style={{ background: activePresetId === preset.id ? raisedGradient : 'transparent', borderColor: activePresetId === preset.id ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', boxShadow: activePresetId === preset.id ? shadowCap : 'none' }}>
+                    <div className="flex justify-between items-start w-full">
+                       {editingPresetId === preset.id ? (
+                         <input autoFocus value={preset.name} onChange={(e) => handleUpdatePresetName(preset.id, e.target.value)} onBlur={() => setEditingPresetId(null)} onKeyDown={(e) => e.key === 'Enter' && setEditingPresetId(null)} className="bg-transparent outline-none border-b border-blue-400 w-full text-blue-400 pb-0.5 text-[13px] font-bold" onClick={(e) => e.stopPropagation()} />
+                       ) : (
+                         <span className="text-[13px] font-bold truncate pr-2" style={{ color: activePresetId === preset.id ? theme.textMain : theme.textSub }}>{preset.name}</span>
+                       )}
+                       {editingPresetId !== preset.id && (
+                         <div className={`w-2 h-2 rounded-full shrink-0 transition-opacity mt-1 ${activePresetId === preset.id ? 'bg-blue-400 shadow-[0_0_8px_#60a5fa]' : 'opacity-0'}`} />
+                       )}
+                    </div>
+                    
+                    {activePresetId === preset.id && editingPresetId !== preset.id ? (
+                      <div className="flex items-center gap-3">
+                        <button onClick={(e) => { e.stopPropagation(); setEditingPresetId(preset.id); }} className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"><Edit size={10}/> Edit</button>
+                        <button onClick={(e) => handleDeletePreset(e, preset.id)} className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"><Trash2 size={10}/> Del</button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] opacity-60" style={{ color: theme.textSub }}>Custom Sequence</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 pb-12">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Exam Sequence</span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-[#34d399]"></div><span className="text-[9px] uppercase font-bold" style={{ color: theme.textSub }}>ง่าย</span></div>
+                  <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]"></div><span className="text-[9px] uppercase font-bold" style={{ color: theme.textSub }}>กลาง</span></div>
+                  <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-[#f87171]"></div><span className="text-[9px] uppercase font-bold" style={{ color: theme.textSub }}>ยาก</span></div>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                {renderSortableItems()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop View
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-transparent backdrop-blur-md px-4">
       <div className="w-full max-w-3xl rounded-[2.5rem] border border-white/30 transition-all relative" style={{ padding: '9px', boxShadow: shadowPlateau, background: bg }}>
@@ -261,41 +457,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
                 </div>
               </div>
               <div ref={scrollContainerRef} className="flex flex-col gap-4 max-h-[55vh] overflow-y-auto no-scrollbar px-8 pb-12 pt-4 -mx-4">
-                {examSequence.map((item, index) => {
-                  const isEditable = activePresetId !== 'recommend';
-                  const dotColor = getDifficultyColor(item.difficulty);
-                  const isDraggingItem = dragInfo.isDragging && dragConfigRef.current.startIndex === index;
-                  const isAnimatingDrop = dragInfo.isAnimatingDrop;
-                  
-                  let shiftOffset = 0;
-                  if (dragInfo.isDragging && !isDraggingItem) {
-                    const { startIndex } = dragConfigRef.current;
-                    const hoverIndex = dragInfo.hoverIndex;
-                    const itemHeight = dragConfigRef.current.itemHeight;
-                    if (startIndex < hoverIndex && index > startIndex && index <= hoverIndex) {
-                      shiftOffset = -itemHeight;
-                    } else if (startIndex > hoverIndex && index >= hoverIndex && index < startIndex) {
-                      shiftOffset = itemHeight;
-                    }
-                  }
-                  
-                  return (
-                    <SortableItem 
-                      key={item.id} 
-                      item={item} 
-                      index={index} 
-                      isEditable={isEditable} 
-                      isDraggingItem={isDraggingItem} 
-                      isAnimatingDrop={isAnimatingDrop} 
-                      offsetY={isDraggingItem ? dragInfo.offsetY : 0} 
-                      shiftOffset={shiftOffset} 
-                      handlePointerDown={handlePointerDown} 
-                      themeVals={themeVals} 
-                      dotColor={dotColor} 
-                      isDropping={isDropping}
-                    />
-                  );
-                })}
+                {renderSortableItems()}
               </div>
             </div>
           </div>
