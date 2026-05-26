@@ -735,9 +735,7 @@ export default function App() {
         />
       )}
 
-      {isSettingOpen && (
-        <SettingsModal cfg={cfg} themeVals={themeVals} setIsSettingOpen={setIsSettingOpen} examSequence={examSequence} setExamSequence={setExamSequence} customPresets={customPresets} setCustomPresets={setCustomPresets} activePresetId={activePresetId} setActivePresetId={setActivePresetId} editingPresetId={editingPresetId} setEditingPresetId={setEditingPresetId} sfxEnabled={sfxEnabled} setSfxEnabled={setSfxEnabled} />
-      )}
+      
       {isSettingOpen && (
         <SettingsModal cfg={cfg} themeVals={themeVals} setIsSettingOpen={setIsSettingOpen} examSequence={examSequence} setExamSequence={setExamSequence} customPresets={customPresets} setCustomPresets={setCustomPresets} activePresetId={activePresetId} setActivePresetId={setActivePresetId} editingPresetId={editingPresetId} setEditingPresetId={setEditingPresetId} sfxEnabled={sfxEnabled} setSfxEnabled={setSfxEnabled} mode={mode} onModeSelect={handleModeSelect} isTimerStarted={isTimerStarted} />
       )}
