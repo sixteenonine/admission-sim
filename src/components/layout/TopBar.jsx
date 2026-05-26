@@ -37,7 +37,11 @@ export default function TopBar({ setIsSidebarOpen, setIsAuthModalOpen, setIsProf
 
   return (
     <header className="fixed top-0 left-0 right-0 h-[100px] px-6 sm:px-8 flex items-start pt-6 justify-between z-[100] pointer-events-none">
-      <div className="absolute inset-0 h-[80px] z-[-1]" style={{ backgroundColor: themeVals.bg }}></div>
+      <div className="absolute top-0 left-0 w-full h-[80px] z-[-1] pointer-events-none" style={{ 
+        backgroundColor: themeVals.bg, 
+        WebkitMaskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)', 
+        maskImage: 'linear-gradient(to bottom, black 40%, transparent 100%)' 
+      }}></div>
       
       {/* ส่วนซ้าย: โลโก้ */}
       <div className="w-1/3 flex justify-start pointer-events-auto items-center mt-2">
