@@ -292,10 +292,12 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
             <button onClick={() => setIsSettingOpen(false)} className="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 border border-white/10" style={{ background: raisedGradient, color: theme.textMain }}><X size={20} /></button>
           </div>
 
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar flex flex-col px-6 py-6 gap-8 relative">
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar flex flex-col px-6 py-6 gap-7 relative">
+            
+            {/* 1. Exam Mode */}
             <div className="flex flex-col gap-3">
-              <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Exam Mode</span>
-              <div className="grid grid-cols-2 gap-2.5">
+              <span className="text-[10px] uppercase tracking-widest font-bold opacity-50" style={{ color: theme.textMain }}>Exam Mode</span>
+              <div className="grid grid-cols-2 gap-2">
                 {MODES && Object.entries(MODES).map(([key, { label }]) => {
                   const isSelected = mode === key;
                   return (
@@ -303,27 +305,56 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
                       key={key}
                       disabled={isTimerStarted}
                       onClick={() => onModeSelect(key)}
-                      className="p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-95 disabled:opacity-50"
-                      style={{
-                        background: isSelected ? raisedGradient : 'transparent',
-                        borderColor: isSelected ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-                        boxShadow: isSelected ? shadowCap : 'none',
-                        color: isSelected ? theme.textMain : theme.textSub
-                      }}
+                      className={`py-3 px-4 rounded-xl border text-center transition-all active:scale-95 disabled:opacity-50 ${isSelected ? 'border-white/20 bg-white/10 shadow-sm' : 'border-white/5 bg-transparent hover:bg-white/5'}`}
+                      style={{ color: isSelected ? theme.textMain : theme.textSub }}
                     >
-                      <span className="text-[13px] font-bold truncate">{label}</span>
-                      <div className={`w-1.5 h-1.5 rounded-full transition-opacity ${isSelected ? 'bg-blue-400 shadow-[0_0_8px_#60a5fa]' : 'opacity-0'}`} />
+                      <span className="text-[13px] font-semibold">{label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
+
+            {/* 2. Presets - ปรับเป็น Tags แทน Card */}
             <div className="flex flex-col gap-3">
-              <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>General</span>
-              <div className="flex items-center justify-between p-4 rounded-2xl border border-white/5" style={{ background: raisedGradient, boxShadow: shadowCap }}>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50" style={{ color: theme.textMain }}>Presets</span>
+                <button onClick={handleAddPreset} className="flex items-center gap-1 text-[10px] font-bold uppercase text-blue-400 active:scale-95 transition-transform">
+                  <Plus size={12} strokeWidth={3} /> Add
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => handleSelectPreset('recommend')} className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${activePresetId === 'recommend' ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-white/5 bg-transparent'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${activePresetId === 'recommend' ? 'bg-emerald-400 shadow-[0_0_6px_#34d399]' : 'bg-transparent'}`} />
+                  <span className="text-[12px] font-medium" style={{ color: activePresetId === 'recommend' ? theme.textMain : theme.textSub }}>Recommend</span>
+                </button>
+                
+                {customPresets.map((preset) => (
+                  <div key={preset.id} onClick={() => handleSelectPreset(preset.id)} className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all cursor-pointer ${activePresetId === preset.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-white/5 bg-transparent'}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${activePresetId === preset.id ? 'bg-blue-400 shadow-[0_0_6px_#60a5fa]' : 'bg-transparent'}`} />
+                    {editingPresetId === preset.id ? (
+                      <input autoFocus value={preset.name} onChange={(e) => handleUpdatePresetName(preset.id, e.target.value)} onBlur={() => setEditingPresetId(null)} onKeyDown={(e) => e.key === 'Enter' && setEditingPresetId(null)} className="bg-transparent outline-none w-[60px] text-blue-400 text-[12px] font-medium" onClick={(e) => e.stopPropagation()} />
+                    ) : (
+                      <span className="text-[12px] font-medium" style={{ color: activePresetId === preset.id ? theme.textMain : theme.textSub }}>{preset.name}</span>
+                    )}
+                    {activePresetId === preset.id && editingPresetId !== preset.id && (
+                      <div className="flex items-center gap-2 ml-1 border-l border-white/20 pl-3">
+                        <button onClick={(e) => { e.stopPropagation(); setEditingPresetId(preset.id); }} className="text-white/50 hover:text-white transition-colors"><Edit size={12}/></button>
+                        <button onClick={(e) => handleDeletePreset(e, preset.id)} className="text-white/50 hover:text-red-400 transition-colors"><Trash2 size={12}/></button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. General Settings - ปรับเป็น List ธรรมดาไม่มีกรอบ */}
+            <div className="flex flex-col gap-3">
+              <span className="text-[10px] uppercase tracking-widest font-bold opacity-50" style={{ color: theme.textMain }}>General</span>
+              <div className="flex items-center justify-between py-1">
                 <div className="flex flex-col">
-                  <span className="text-[13px] font-bold tracking-wide" style={{ color: theme.textMain }}>SFX Sounds</span>
-                  <span className="text-[11px] opacity-60 mt-0.5" style={{ color: theme.textSub }}>เสียงกระดาษ, ปากกา, เก้าอี้</span>
+                  <span className="text-[13px] font-semibold tracking-wide" style={{ color: theme.textMain }}>SFX Sounds</span>
+                  <span className="text-[11px] opacity-50 mt-0.5" style={{ color: theme.textSub }}>เสียงกระดาษ, ปากกา, เก้าอี้</span>
                 </div>
                 <button onClick={() => setSfxEnabled(!sfxEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${sfxEnabled ? 'bg-emerald-500' : 'bg-white/10'}`}>
                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${sfxEnabled ? 'left-[26px]' : 'left-1'}`} />
@@ -331,53 +362,10 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
               </div>
             </div>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center">
-                <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Presets</span>
-                <button onClick={handleAddPreset} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 transition-all active:scale-95 hover:border-white/20" style={{ background: raisedGradient, color: theme.textMain }}>
-                  <Plus size={12} strokeWidth={3} />
-                  <span className="text-[10px] font-bold uppercase">Add New</span>
-                </button>
-              </div>
-              
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-6 px-6 snap-x snap-mandatory">
-                <div onClick={() => handleSelectPreset('recommend')} className="snap-start shrink-0 w-[140px] p-4 rounded-2xl flex flex-col justify-between transition-all border cursor-pointer h-[100px]" style={{ background: activePresetId === 'recommend' ? raisedGradient : 'transparent', borderColor: activePresetId === 'recommend' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', boxShadow: activePresetId === 'recommend' ? shadowCap : 'none' }}>
-                  <div className="flex justify-between items-start">
-                     <span className="text-[13px] font-bold truncate pr-2" style={{ color: activePresetId === 'recommend' ? theme.textMain : theme.textSub }}>Recommend</span>
-                     <div className={`w-2 h-2 rounded-full shrink-0 transition-opacity mt-1 ${activePresetId === 'recommend' ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'opacity-0'}`} />
-                  </div>
-                  <span className="text-[10px] opacity-60 leading-tight" style={{ color: theme.textSub }}>Standard<br/>A-Level Order</span>
-                </div>
-
-                {customPresets.map((preset) => (
-                  <div key={preset.id} onClick={() => handleSelectPreset(preset.id)} className="snap-start shrink-0 w-[140px] p-4 rounded-2xl flex flex-col justify-between transition-all border cursor-pointer h-[100px] relative group" style={{ background: activePresetId === preset.id ? raisedGradient : 'transparent', borderColor: activePresetId === preset.id ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', boxShadow: activePresetId === preset.id ? shadowCap : 'none' }}>
-                    <div className="flex justify-between items-start w-full">
-                       {editingPresetId === preset.id ? (
-                         <input autoFocus value={preset.name} onChange={(e) => handleUpdatePresetName(preset.id, e.target.value)} onBlur={() => setEditingPresetId(null)} onKeyDown={(e) => e.key === 'Enter' && setEditingPresetId(null)} className="bg-transparent outline-none border-b border-blue-400 w-full text-blue-400 pb-0.5 text-[13px] font-bold" onClick={(e) => e.stopPropagation()} />
-                       ) : (
-                         <span className="text-[13px] font-bold truncate pr-2" style={{ color: activePresetId === preset.id ? theme.textMain : theme.textSub }}>{preset.name}</span>
-                       )}
-                       {editingPresetId !== preset.id && (
-                         <div className={`w-2 h-2 rounded-full shrink-0 transition-opacity mt-1 ${activePresetId === preset.id ? 'bg-blue-400 shadow-[0_0_8px_#60a5fa]' : 'opacity-0'}`} />
-                       )}
-                    </div>
-                    
-                    {activePresetId === preset.id && editingPresetId !== preset.id ? (
-                      <div className="flex items-center gap-3">
-                        <button onClick={(e) => { e.stopPropagation(); setEditingPresetId(preset.id); }} className="text-[10px] uppercase font-bold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"><Edit size={10}/> Edit</button>
-                        <button onClick={(e) => handleDeletePreset(e, preset.id)} className="text-[10px] uppercase font-bold text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"><Trash2 size={10}/> Del</button>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] opacity-60" style={{ color: theme.textSub }}>Custom Sequence</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
+            {/* 4. Sequence */}
             <div className="flex flex-col gap-3 pb-12">
               <div className="flex justify-between items-center">
-                <span className="text-[11px] uppercase tracking-wider font-bold" style={{ color: theme.textHighlight }}>Exam Sequence</span>
+                <span className="text-[10px] uppercase tracking-widest font-bold opacity-50" style={{ color: theme.textMain }}>Exam Sequence</span>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-[#34d399]"></div><span className="text-[9px] uppercase font-bold" style={{ color: theme.textSub }}>ง่าย</span></div>
                   <div className="flex items-center gap-1"><div className="w-1.5 h-1.5 rounded-full bg-[#60a5fa]"></div><span className="text-[9px] uppercase font-bold" style={{ color: theme.textSub }}>กลาง</span></div>
@@ -388,6 +376,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
                 {renderSortableItems()}
               </div>
             </div>
+            
           </div>
         </div>
       </div>
