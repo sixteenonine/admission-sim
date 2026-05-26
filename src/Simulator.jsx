@@ -9,7 +9,7 @@ import { useTheme } from './contexts/ThemeContext.jsx';
 
 import { AVATARS, MODES, RECOMMENDED_SEQUENCE, EXAM_PARTS, FLAT_EXAM_SUBS, TECHNIQUE_GUIDES, PACING_RULES, UI_CFG } from './utils/constants';
 import { calculateScores, calculateWinner, rgbToHex, getTipColor, getDifficultyColor, buildExamTimeline, calculateProgressState, generateReflectionPoints } from './utils/helpers';
-
+import { db } from './utils/db';
 import TimerDashboard from './components/widgets/TimerDashboard';
 import RightPanelWidget from './components/widgets/RightPanelWidget';
 import GameBoyWidget from './components/widgets/GameBoyWidget';
@@ -64,7 +64,22 @@ export default function App() {
   const [marks, setMarks] = useState([]);
   const [sfxEnabled, setSfxEnabled] = useState(savedState.sfxEnabled ?? true);
   
-  const [reflectionHistory, setReflectionHistory] = useState(savedState.reflectionHistory?.length > 0 ? savedState.reflectionHistory : []);
+  const [reflectionHistory, setReflectionHistory] = useState([]);
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
+
+  useEffect(() => {
+    db.app_state.get('reflectionHistory').then(record => {
+      if (record && record.value) {
+        setReflectionHistory(record.value);
+      } else if (savedState.reflectionHistory?.length > 0) {
+        setReflectionHistory(savedState.reflectionHistory);
+      }
+      setIsHistoryLoaded(true);
+    }).catch(err => {
+      console.error("Failed to load history from DB", err);
+      setIsHistoryLoaded(true);
+    });
+  }, [savedState.reflectionHistory]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   
   const [draftSession, setDraftSession] = useState(null);
@@ -133,20 +148,27 @@ export default function App() {
     sfxEnabled
   });
 
+  // Save Settings to LocalStorage (เบา)
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
-        const trimmedHistory = reflectionHistory.slice(0, 30);
         const stateToSave = { 
-          examCounter, mode, examSequence, customPresets, activePresetId, customTags, reflectionHistory: trimmedHistory, targetScore, sfxEnabled 
+          examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled 
         };
         localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
       } catch (e) {
-        console.warn("Storage warning: Failed to save exam state", e);
+        console.warn("Storage warning: Failed to save exam settings", e);
       }
     }, 1500);
     return () => clearTimeout(timer);
-  }, [examCounter, mode, examSequence, customPresets, activePresetId, customTags, reflectionHistory, targetScore, sfxEnabled]);
+  }, [examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled]);
+
+  // Save History to IndexedDB (หนัก แต่ทำงานเบื้องหลัง)
+  useEffect(() => {
+    if (!isHistoryLoaded) return;
+    db.app_state.put({ key: 'reflectionHistory', value: reflectionHistory.slice(0, 30) })
+      .catch(e => console.error("IndexedDB warning: Failed to save history", e));
+  }, [reflectionHistory, isHistoryLoaded]);
 
   const prevTimeRef = useRef(timeLeft);
   useEffect(() => {
