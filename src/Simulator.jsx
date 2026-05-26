@@ -57,18 +57,9 @@ export default function App() {
   const [mode, setMode] = useState(savedState.mode || 'full');
   const initialTime = MODES[savedState.mode || 'full'].time;
   const totalTime = useRef(initialTime);
-  const timeLeftRef = useRef(initialTime);
-  const timeDisplayRef = useRef(null);
   const [timeLeft, setTimeLeft] = useState(initialTime);
-  
-  const handleTimeUp = useCallback(() => {
-    setIsRunning(false);
-    setFinishTime(totalTime.current);
-    setTimeLeft(0);
-    if (!marks.length) setMarks([{ part: 'End', time: 0, marker: true }]);
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
-    setIsScoreModalOpen(true);
-  }, [marks.length]);
+  const timeLeftRef = useRef(initialTime);
+
   const [isRunning, setIsRunning] = useState(false);
   const [ambientOn, setAmbientOn] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -138,8 +129,6 @@ export default function App() {
     }
   }, [currentUser?.id]);
 
-
-  
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   
   const [customTags, setCustomTags] = useState(savedState.customTags || ['#ลังเลศัพท์', '#ทำไม่ทัน', '#เดา']);
@@ -193,9 +182,6 @@ export default function App() {
   const timelineData = useMemo(() => buildExamTimeline(examSequence, mode), [examSequence, mode]);
   const progressState = useMemo(() => calculateProgressState(timeLeft, totalTime.current, timelineData, mode), [timeLeft, timelineData, mode]);
 
-  const timeLeftRef = useRef(timeLeft);
-  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
-
   const isRunningRef = useRef(isRunning);
   useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
 
@@ -210,9 +196,15 @@ export default function App() {
     }
   }, [countdown]);
 
-  // -------------------------------------------------------------
-  // 🚀 Timer Optimization (requestAnimationFrame) ถูกย้ายไปที่ TimerDashboard
-  // -------------------------------------------------------------
+  const handleTimeUp = useCallback(() => {
+    setIsRunning(false);
+    setFinishTime(totalTime.current);
+    setTimeLeft(0);
+    if (marks.length === 0) setMarks([{ part: 'End', time: 0, marker: true }]);
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
+    setIsScoreModalOpen(true);
+  }, [marks.length]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (currentView === 'tictactoe' && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown')) e.preventDefault(); 
@@ -246,7 +238,17 @@ export default function App() {
   }, []);
 
   const toggleAmbient = useCallback(() => setAmbientOn(p => !p), []);
-  const resetTimer = useCallback(() => { setIsRunning(false); setCountdown(null); timeLeftRef.current = totalTime.current; setTimeLeft(totalTime.current); setMarks([]); setFinishTime(null); setCurrentView('timer'); }, []);
+  
+  const resetTimer = useCallback(() => { 
+    setIsRunning(false); 
+    setCountdown(null); 
+    timeLeftRef.current = totalTime.current;
+    setTimeLeft(totalTime.current); 
+    setMarks([]); 
+    setFinishTime(null); 
+    setCurrentView('timer'); 
+  }, []);
+  
   const skipTime = useCallback(() => {
     const newTime = Math.max(0, timeLeftRef.current - 300);
     timeLeftRef.current = newTime;
@@ -293,6 +295,7 @@ export default function App() {
     
     setIsRunning(false);
     setCountdown(null);
+    timeLeftRef.current = totalTime.current;
     setTimeLeft(totalTime.current);
     setMarks([]);
     setFinishTime(null);
@@ -358,7 +361,7 @@ export default function App() {
     setReflectionHistory(prev => prev.filter(s => s.id !== idToDelete));
     if (activeSessionId === idToDelete) setActiveSessionId(null);
   }, [activeSessionId]);
-  // Orientation Detection State
+  
   const [isPortrait, setIsPortrait] = useState(window.matchMedia('(orientation: portrait)').matches);
 
   useEffect(() => {
@@ -368,38 +371,27 @@ export default function App() {
     return () => mediaQuery.removeEventListener('change', handleOrientationChange);
   }, []);
 
-  // Centralized Portrait UI Scale, Position, Width, and Height Configuration
   const portraitCfg = useMemo(() => ({
-    // 0. Header Text Settings
-    headerScale: 1.0,         // สเกลขนาดตัวอักษร Header
-    headerX: 0,               // ตำแหน่งแนวแกนนอน Header (ติดลบขยับซ้าย / บวกขยับขวา)
-    headerY: 30,               // ตำแหน่งแนวแกนตั้ง Header (ติดลบขยับขึ้น / บวกขยับลง)
-    // 1. LCD Screen Settings
-    lcdWidth: "70%",         // ความกว้างของจอ LCD (เช่น "100%", "320px")
-    lcdHeight: "120%",  // ความสูงของจอ LCD (ดึงค่าเริ่มต้นมา หรือระบุเป็นตัวเลข px)
-    lcdScale: 1.0,            // สเกลขยาย/ย่อ จอ LCD
-    lcdX: 0,                  // ตำแหน่งแกน X จอ LCD (px)
-    lcdY: 25,                  // ตำแหน่งแกน Y จอ LCD (px)
-
-    // 2. Timer Dial (หน้าปัดนาฬิกา)
-    dialScale: 0.75,          // สเกลขยาย/ย่อ หน้าปัด
-    dialX: 0,                 // ตำแหน่งแกน X หน้าปัด
-    dialY: 20,                 // ตำแหน่งแกน Y หน้าปัด
-
-    // 3. Control Buttons (ปุ่มควบคุมด้านล่างหน้าปัด Play, Skip, Reset, Ambient)
-    controlScale: 0.85,      // สเกลขยาย/ย่อ แผงปุ่มควบคุมเวลา
-    controlX: 0,              // ตำแหน่งแกน X แผงควบคุมเวลา
-    controlY: -80,              // ตำแหน่งแกน Y แผงควบคุมเวลา
-
-    // 4. Feature Menu Buttons (ปุ่มฟีเจอร์ Game, History, Techniques, Settings)
-    featuresScale: 1.5,       // สเกลขยาย/ย่อ แผงปุ่มฟีเจอร์
-    featuresX: 0,             // ตำแหน่งแกน X แผงปุ่มฟีเจอร์
-    featuresY: 60,             // ตำแหน่งแกน Y แผงปุ่มฟีเจอร์
-
-    // 5. Action Buttons (ปุ่มแอกชัน Mark, Finish ด้านล่างสุด)
-    actionScale: 1.1,         // สเกลขยาย/ย่อ ปุ่มแอกชัน
-    actionX: 0,               // ตำแหน่งแกน X ปุ่มแอกชัน
-    actionY: -80,               // ตำแหน่งแกน Y ปุ่มแอกชัน
+    headerScale: 1.0,         
+    headerX: 0,               
+    headerY: 30,               
+    lcdWidth: "70%",         
+    lcdHeight: "120%",  
+    lcdScale: 1.0,            
+    lcdX: 0,                  
+    lcdY: 25,                  
+    dialScale: 0.75,          
+    dialX: 0,                 
+    dialY: 20,                 
+    controlScale: 0.85,      
+    controlX: 0,              
+    controlY: -80,              
+    featuresScale: 1.5,       
+    featuresX: 0,             
+    featuresY: 60,             
+    actionScale: 1.1,         
+    actionX: 0,               
+    actionY: -80,               
   }), [cfg]);
 
   const mobileCfg = useMemo(() => ({
@@ -411,6 +403,7 @@ export default function App() {
     controlPanelX: portraitCfg.controlX,
     controlPanelY: portraitCfg.controlY
   }), [cfg, portraitCfg]);
+
   if (isAuthChecking) {
     return (
       <div className="fixed inset-0 w-full h-full flex items-center justify-center transition-colors duration-300" style={{ backgroundColor: themeVals.bg }}>
@@ -477,7 +470,7 @@ export default function App() {
 
             {/* Main Timer Dial & Controls from Desktop Component */}
             <div className="relative flex flex-col items-center justify-center w-full scale-130 min-h-[380px] overflow-visible select-none">
-            <TimerDashboard 
+              <TimerDashboard 
                 cfg={mobileCfg} 
                 themeVals={themeVals} 
                 timeLeft={timeLeft} 
@@ -758,7 +751,6 @@ export default function App() {
         />
       )}
 
-      
       {isSettingOpen && (
         <SettingsModal cfg={cfg} themeVals={themeVals} setIsSettingOpen={setIsSettingOpen} examSequence={examSequence} setExamSequence={setExamSequence} customPresets={customPresets} setCustomPresets={setCustomPresets} activePresetId={activePresetId} setActivePresetId={setActivePresetId} editingPresetId={editingPresetId} setEditingPresetId={setEditingPresetId} sfxEnabled={sfxEnabled} setSfxEnabled={setSfxEnabled} mode={mode} onModeSelect={handleModeSelect} isTimerStarted={isTimerStarted} />
       )}

@@ -18,7 +18,7 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
   const minRef = useRef(null);
   const secRef = useRef(null);
 
-  // Timer Optimization Loop
+  // Timer Optimization Loop (Zero-Render)
   useEffect(() => {
     let animationFrame;
     let lastTick = performance.now();
@@ -39,7 +39,7 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
             secRef.current.textContent = (displayTime % 60).toString().padStart(2, '0');
           }
 
-          // 2. Sync กลับไปให้ Simulator ทุกวินาที (เพื่อให้ Audio/LCD ทำงานตามปกติ)
+          // 2. Sync กลับไปให้ Simulator (เพื่อให้ Audio/LCD ทำงานตามปกติ)
           if (setTimeLeft) setTimeLeft(timeLeftRef.current);
 
           if (timeLeftRef.current <= 0) {
@@ -52,7 +52,10 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
       if (isRunning) animationFrame = requestAnimationFrame(updateTimer);
     };
 
-    if (isRunning) animationFrame = requestAnimationFrame(updateTimer);
+    if (isRunning) {
+      lastTick = performance.now(); // รีเซ็ตเวลาเริ่มต้น
+      animationFrame = requestAnimationFrame(updateTimer);
+    }
     return () => cancelAnimationFrame(animationFrame);
   }, [isRunning, speed, onTimeUp, setTimeLeft, timeLeftRef]);
 
