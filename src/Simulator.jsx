@@ -515,9 +515,8 @@ export default function App() {
         ) : (
           /* --- Desktop View (Horizontal Layout) --- */
           <div className="mt-16 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 z-0 w-full max-w-6xl px-4 relative animate-in fade-in duration-300">
-          <div className="flex flex-col items-center relative">
-            {/* สวิตช์เลือกโหมด (ย้ายจาก TopBar มาไว้ที่นี่) */}
-            <div className="absolute top-[-40px] z-50 flex justify-center w-full">
+          {/* สวิตช์เลือกโหมด (ย้ายมาไว้ตรงกลางจอด้านบนสุด) */}
+            <div className="absolute top-[-60px] left-1/2 -translate-x-1/2 z-[100] flex justify-center w-full">
               <div className="relative">
                 {isModeDropdownOpen && <div className="fixed inset-0 z-40" onClick={() => setIsModeDropdownOpen(false)}></div>}
                 <button 
@@ -547,6 +546,8 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            <div className="flex flex-col items-center relative">
             <div onClick={() => { if (!isRunning && mode === 'full') setIsSettingOpen(true); }} className={`absolute z-10 flex items-center justify-center transition-all ${(isRunning || mode !== 'full') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ width: '100px', height: '100px', borderRadius: '24px', background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, transform: `scale(${cfg.settingBtnScale}) translate(${cfg.settingBtnX}px, ${cfg.settingBtnY}px)`, transformOrigin: 'center center' }} title={mode !== 'full' ? "Settings available in ALL PARTS mode only" : "Settings"}>
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
