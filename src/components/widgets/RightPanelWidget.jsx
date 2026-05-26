@@ -1,12 +1,34 @@
-import React, { useState, useMemo, memo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Asterisk, CheckCircle } from 'lucide-react';
 
-const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, setLcdHue, trackHue, setTrackHue, isAutoTrackHue, setIsAutoTrackHue, lcdBrightness, lcdScrollSpeed, lcdScrollGap, addMark, isRunning, finishTime, onFinishClick }) => {
-  const [customLcdText, setCustomLcdText] = useState("CUSTOM");
-  const [lcdDisplayMode, setLcdDisplayMode] = useState('exam');
-  const [isLcdEditOpen, setIsLcdEditOpen] = useState(false);
+const RightPanelWidget = memo(({ 
+  cfg, 
+  themeVals, 
+  part, 
+  subPart, 
+  qText, 
+  lcdHue, 
+  setLcdHue, 
+  trackHue, 
+  setTrackHue, 
+  isAutoTrackHue, 
+  setIsAutoTrackHue, 
+  lcdBrightness, 
+  lcdScrollSpeed, 
+  lcdScrollGap, 
+  addMark, 
+  isRunning, 
+  finishTime, 
+  onFinishClick,
+  customLcdText,
+  setCustomLcdText,
+  lcdDisplayMode,
+  setLcdDisplayMode,
+  isLcdEditOpen,
+  setIsLcdEditOpen
+}) => {
 
-  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap, shadowTrench } = themeVals;
+  const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowTrench } = themeVals;
 
   const displayedLcdText = lcdDisplayMode === 'exam' ? qText : customLcdText;
   
@@ -15,12 +37,7 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
   const lcdBg = theme.bg === "#1e2229" ? '#0f2b10' : '#1b3f1c';
   const lcdShadow = "inset 6px 6px 16px rgba(0,0,0,0.9), inset -6px -6px 16px rgba(255,255,255,0.05)";
 
-  const marqueeElements = useMemo(() => {
-    if (lcdDisplayMode === 'exam' || displayedLcdText.length <= 5) return null;
-    return Array(10).fill(displayedLcdText).map((txt, i) => (
-      <span key={i} className="tracking-widest leading-none whitespace-nowrap mt-2" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: lcdText, textShadow: lcdTextGlow, marginRight: `${lcdScrollGap}px` }}>{txt}</span>
-    ));
-  }, [displayedLcdText, lcdDisplayMode, cfg.lcdFontSize, lcdText, lcdTextGlow, lcdScrollGap]);
+  // Removed static marqueeElements condition to force scrolling
 
   return (
     <div className="w-full flex flex-col items-center gap-5 transition-all relative z-[60] pointer-events-none" style={{ maxWidth: `${cfg.lcdWidth}px`, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
@@ -34,13 +51,19 @@ const RightPanelWidget = memo(({ cfg, themeVals, part, subPart, qText, lcdHue, s
           <div onClick={() => setIsLcdEditOpen(!isLcdEditOpen)} className="w-full flex items-center overflow-hidden border border-black/5 transition-all duration-300 relative cursor-pointer" style={{ height: `${cfg.lcdHeight}px`, borderRadius: `${cfg.lcdRadiusInner}px`, boxShadow: lcdShadow, background: lcdBg, filter: `hue-rotate(${lcdHue}deg) brightness(${lcdBrightness})` }}>
             <div className="absolute inset-0 pointer-events-none rounded-[inherit]" style={{ background: 'linear-gradient(110deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 30%, transparent 35%)' }}></div>
             <div className="absolute inset-0 pointer-events-none rounded-[inherit]" style={{ background: 'radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.4) 120%)' }}></div>
-            {marqueeElements ? (
-              <div className="flex animate-marquee z-10" style={{ animationDuration: `${lcdScrollSpeed * 2}s` }}>
-                {marqueeElements}
+            {lcdDisplayMode === 'exam' || (lcdDisplayMode === 'custom' && customLcdText.length <= 5) ? (
+              <div className="w-full flex justify-center z-10 mt-2">
+                <span className="tracking-widest leading-none whitespace-nowrap" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: lcdText, textShadow: lcdTextGlow }}>
+                  {displayedLcdText}
+                </span>
               </div>
             ) : (
-              <div className="w-full flex justify-center z-10 mt-2">
-                <span className="tracking-widest leading-none whitespace-nowrap" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: lcdText, textShadow: lcdTextGlow }}>{displayedLcdText}</span>
+              <div className="flex animate-marquee z-10" style={{ animationDuration: '12s' }}>
+                {Array(10).fill(displayedLcdText).map((txt, i) => (
+                  <span key={i} className="tracking-widest leading-none whitespace-nowrap mt-2" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: lcdText, textShadow: lcdTextGlow, marginRight: `${lcdScrollGap}px` }}>
+                    {txt}
+                  </span>
+                ))}
               </div>
             )}
             <div className="absolute inset-0 opacity-20 pointer-events-none z-20" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.8) 1px, transparent 1px)', backgroundSize: '3px 3px' }}></div>

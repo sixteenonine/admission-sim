@@ -77,6 +77,9 @@ export default function App() {
   const [isAutoTrackHue, setIsAutoTrackHue] = useState(false);
 
   const [currentView, setCurrentView] = useState('timer');
+  const [customLcdText, setCustomLcdText] = useState("CUSTOM");
+  const [lcdDisplayMode, setLcdDisplayMode] = useState('exam');
+  const [isLcdEditOpen, setIsLcdEditOpen] = useState(false);
   
   const [examSequence, setExamSequence] = useState(savedState.examSequence || [...RECOMMENDED_SEQUENCE]);
   const [customPresets, setCustomPresets] = useState(savedState.customPresets || []);
@@ -333,6 +336,59 @@ export default function App() {
     setReflectionHistory(prev => prev.filter(s => s.id !== idToDelete));
     if (activeSessionId === idToDelete) setActiveSessionId(null);
   }, [activeSessionId]);
+  // Orientation Detection State
+  const [isPortrait, setIsPortrait] = useState(window.matchMedia('(orientation: portrait)').matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(orientation: portrait)');
+    const handleOrientationChange = (e) => setIsPortrait(e.matches);
+    mediaQuery.addEventListener('change', handleOrientationChange);
+    return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+  }, []);
+
+  // Centralized Portrait UI Scale, Position, Width, and Height Configuration
+  const portraitCfg = useMemo(() => ({
+    // 0. Header Text Settings
+    headerScale: 1.0,         // สเกลขนาดตัวอักษร Header
+    headerX: 0,               // ตำแหน่งแนวแกนนอน Header (ติดลบขยับซ้าย / บวกขยับขวา)
+    headerY: 30,               // ตำแหน่งแนวแกนตั้ง Header (ติดลบขยับขึ้น / บวกขยับลง)
+    // 1. LCD Screen Settings
+    lcdWidth: "70%",         // ความกว้างของจอ LCD (เช่น "100%", "320px")
+    lcdHeight: "120%",  // ความสูงของจอ LCD (ดึงค่าเริ่มต้นมา หรือระบุเป็นตัวเลข px)
+    lcdScale: 1.0,            // สเกลขยาย/ย่อ จอ LCD
+    lcdX: 0,                  // ตำแหน่งแกน X จอ LCD (px)
+    lcdY: 25,                  // ตำแหน่งแกน Y จอ LCD (px)
+
+    // 2. Timer Dial (หน้าปัดนาฬิกา)
+    dialScale: 0.75,          // สเกลขยาย/ย่อ หน้าปัด
+    dialX: 0,                 // ตำแหน่งแกน X หน้าปัด
+    dialY: 20,                 // ตำแหน่งแกน Y หน้าปัด
+
+    // 3. Control Buttons (ปุ่มควบคุมด้านล่างหน้าปัด Play, Skip, Reset, Ambient)
+    controlScale: 0.85,      // สเกลขยาย/ย่อ แผงปุ่มควบคุมเวลา
+    controlX: 0,              // ตำแหน่งแกน X แผงควบคุมเวลา
+    controlY: -80,              // ตำแหน่งแกน Y แผงควบคุมเวลา
+
+    // 4. Feature Menu Buttons (ปุ่มฟีเจอร์ Game, History, Techniques, Settings)
+    featuresScale: 1.5,       // สเกลขยาย/ย่อ แผงปุ่มฟีเจอร์
+    featuresX: 0,             // ตำแหน่งแกน X แผงปุ่มฟีเจอร์
+    featuresY: 60,             // ตำแหน่งแกน Y แผงปุ่มฟีเจอร์
+
+    // 5. Action Buttons (ปุ่มแอกชัน Mark, Finish ด้านล่างสุด)
+    actionScale: 1.1,         // สเกลขยาย/ย่อ ปุ่มแอกชัน
+    actionX: 0,               // ตำแหน่งแกน X ปุ่มแอกชัน
+    actionY: -80,               // ตำแหน่งแกน Y ปุ่มแอกชัน
+  }), [cfg]);
+
+  const mobileCfg = useMemo(() => ({
+    ...cfg,
+    leftPanelScale: portraitCfg.dialScale,
+    leftPanelX: portraitCfg.dialX,
+    leftPanelY: portraitCfg.dialY,
+    controlPanelScale: portraitCfg.controlScale,
+    controlPanelX: portraitCfg.controlX,
+    controlPanelY: portraitCfg.controlY
+  }), [cfg, portraitCfg]);
   if (isAuthChecking) {
     return (
       <div className="fixed inset-0 w-full h-full flex items-center justify-center transition-colors duration-300" style={{ backgroundColor: themeVals.bg }}>
@@ -345,7 +401,120 @@ export default function App() {
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' ? 'justify-start overflow-y-auto' : 'justify-center overflow-hidden'} p-6 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
             
       {currentView === 'timer' && (
-        <div className="mt-16 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 z-0 w-full max-w-6xl px-4 relative animate-in fade-in duration-300">
+        isPortrait ? (
+          /* --- True Portrait Mode UI (Vertical Layout) --- */
+          <div className="flex flex-col items-center justify-start w-full max-w-[340px] mx-auto relative z-0 animate-in fade-in duration-300 gap-5 overflow-visible">
+            {/* Header */}
+            <div className="flex flex-col items-center text-center gap-1 w-full mt-2" style={{ transform: `scale(${portraitCfg.headerScale}) translate(${portraitCfg.headerX}px, ${portraitCfg.headerY}px)`, transformOrigin: 'center center' }}>
+              <span className="text-[11px] uppercase tracking-[0.2em] font-medium" style={{ color: themeVals.textSub }}>{progressState.part}</span>
+              <h2 className="text-[26px] leading-[1.1] font-light tracking-wide whitespace-nowrap" style={{ color: themeVals.textMain }}>{progressState.subPart}</h2>
+            </div>
+
+            {/* Desktop-Style LCD Screen with Interactive Dropdown Settings */}
+            <div className="relative w-full z-[100]" style={{ width: portraitCfg.lcdWidth, transform: `scale(${portraitCfg.lcdScale}) translate(${portraitCfg.lcdX}px, ${portraitCfg.lcdY}px)`, transformOrigin: 'center center' }}>
+              <div onClick={() => setIsLcdEditOpen(!isLcdEditOpen)} className="w-full flex items-center overflow-hidden border border-black/5 transition-all duration-300 relative cursor-pointer" style={{ height: typeof portraitCfg.lcdHeight === 'number' ? `${portraitCfg.lcdHeight}px` : portraitCfg.lcdHeight, borderRadius: `${cfg.lcdRadiusInner}px`, boxShadow: "inset 6px 6px 16px rgba(0,0,0,0.9), inset -6px -6px 16px rgba(255,255,255,0.05)", background: themeVals.bg === "#1e2229" ? '#0f2b10' : '#1b3f1c', filter: `hue-rotate(${lcdHue}deg) brightness(1.1)` }}>
+                <div className="absolute inset-0 pointer-events-none rounded-[inherit]" style={{ background: 'linear-gradient(110deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 30%, transparent 35%)' }}></div>
+                <div className="absolute inset-0 pointer-events-none rounded-[inherit]" style={{ background: 'radial-gradient(circle at center, transparent 50%, rgba(0,0,0,0.4) 120%)' }}></div>
+                {lcdDisplayMode === 'exam' || (lcdDisplayMode === 'custom' && customLcdText.length <= 5) ? (
+                  <div className="w-full flex justify-center z-10 mt-2">
+                    <span className="tracking-widest leading-none whitespace-nowrap" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: '#4cfc23', textShadow: "0 0 5px rgba(76,252,35,0.8), 0 0 15px rgba(76,252,35,0.4)" }}>
+                      {lcdDisplayMode === 'exam' ? progressState.qText : customLcdText}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex animate-marquee z-10" style={{ animationDuration: '12s' }}>
+                    {Array(8).fill(customLcdText).map((txt, i) => (
+                      <span key={i} className="tracking-widest leading-none whitespace-nowrap mt-2" style={{ fontSize: `${cfg.lcdFontSize}px`, fontFamily: "'Share Tech Mono', monospace", color: '#4cfc23', textShadow: "0 0 5px rgba(76,252,35,0.8), 0 0 15px rgba(76,252,35,0.4)", marginRight: '60px' }}>{txt}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="absolute inset-0 opacity-20 pointer-events-none z-20" style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.8) 1px, transparent 1px)', backgroundSize: '3px 3px' }}></div>
+              </div>
+
+              {isLcdEditOpen && (
+                 <div className="absolute top-full left-0 right-0 mt-2 w-full rounded-[1.5rem] p-2.5 border border-white/20 z-[100] transition-all flex flex-col gap-1" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+                    <button onClick={(e) => { e.stopPropagation(); setLcdDisplayMode('exam'); }} className="w-full text-left px-5 py-3.5 text-[13px] font-medium tracking-wide transition-all flex items-center justify-between" style={{ borderRadius: `${cfg.dropRadius}px`, background: lcdDisplayMode === 'exam' ? themeVals.bg : 'transparent', boxShadow: lcdDisplayMode === 'exam' ? themeVals.shadowDeepInset : 'none', color: lcdDisplayMode === 'exam' ? themeVals.theme?.textMain : themeVals.theme?.textSub }} >
+                      <span>Exam Progress</span>
+                      <div className={`w-1.5 h-1.5 rounded-full transition-opacity ${lcdDisplayMode === 'exam' ? 'bg-blue-400 opacity-100 shadow-[0_0_8px_#60a5fa]' : 'bg-transparent opacity-0'}`} />
+                    </button>
+                    <div className="w-full px-5 py-3.5 flex items-center justify-between transition-all cursor-text" style={{ borderRadius: `${cfg.dropRadius}px`, background: lcdDisplayMode === 'custom' ? themeVals.bg : 'transparent', boxShadow: lcdDisplayMode === 'custom' ? themeVals.shadowDeepInset : 'none' }} onClick={(e) => { e.stopPropagation(); setLcdDisplayMode('custom'); }}>
+                      <input type="text" maxLength={25} value={customLcdText} onChange={(e) => { setCustomLcdText(e.target.value.toUpperCase()); setLcdDisplayMode('custom'); }} className="w-full bg-transparent outline-none text-[13px] font-medium tracking-wide placeholder:text-current/50" style={{ color: lcdDisplayMode === 'custom' ? themeVals.theme?.textMain : themeVals.theme?.textSub, fontFamily: "'Outfit', 'Prompt', sans-serif" }} placeholder="Custom" />
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 transition-opacity ${lcdDisplayMode === 'custom' ? 'bg-blue-400 opacity-100 shadow-[0_0_8px_#60a5fa]' : 'bg-transparent opacity-0'}`} />
+                    </div>
+                    <div className="w-full px-5 pt-3 pb-2 mt-1 flex flex-col gap-3 border-t border-white/5">
+                      <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: themeVals.theme?.textSub }}>LCD Hue</span><span className="text-[10px] font-mono font-medium" style={{ color: themeVals.theme?.textSub }}>{lcdHue}°</span></div>
+                      <input type="range" min="0" max="360" value={lcdHue} onChange={(e) => setLcdHue(e.target.value)} onTouchStart={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#10b981] bg-black/10 outline-none" style={{ boxShadow: themeVals.shadowTrench }} />
+                    </div>
+                    <div className="w-full px-5 pt-2 pb-3 flex flex-col gap-3 border-t border-white/5">
+                      <div className="flex justify-between items-center"><span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: themeVals.theme?.textSub }}>Track Hue</span><span className="text-[10px] font-mono font-medium" style={{ color: themeVals.theme?.textSub }}>{Math.round(trackHue)}°</span></div>
+                      <input type="range" min="0" max="360" value={trackHue} onChange={(e) => setTrackHue(e.target.value)} onTouchStart={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="w-full h-1.5 rounded-full accent-[#3b82f6] bg-black/10 outline-none" style={{ boxShadow: themeVals.shadowTrench }} />
+                    </div>
+                </div>
+              )}
+            </div>
+
+            {/* Main Timer Dial & Controls from Desktop Component */}
+            <div className="relative flex flex-col items-center justify-center w-full scale-130 min-h-[380px] overflow-visible select-none">
+              <TimerDashboard 
+                cfg={mobileCfg} 
+                themeVals={themeVals} 
+                timeLeft={timeLeft} 
+                totalTime={totalTime.current} 
+                isRunning={isRunning} 
+                speed={speed} 
+                marks={marks} 
+                ambientOn={ambientOn} 
+                toggleAmbient={toggleAmbient} 
+                toggleTimer={toggleTimer} 
+                skipTime={skipTime} 
+                resetTimer={resetTimer} 
+                trackHue={trackHue} 
+                countdown={countdown} 
+                isAutoTrackHue={isAutoTrackHue} 
+                mode={mode} 
+              />
+            </div>
+
+            {/* Features Menu */}
+            <div className="flex items-center justify-center gap-4 w-full mt-1" style={{ transform: `scale(${portraitCfg.featuresScale}) translate(${portraitCfg.featuresX}px, ${portraitCfg.featuresY}px)`, transformOrigin: 'center center' }}>
+              <button onClick={() => { if (!isRunning) setCurrentView('tictactoe'); }} disabled={isRunning} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
+                 <Gamepad2 size={18} className="text-blue-400 opacity-80" />
+              </button>
+              <button onClick={() => { if (!isRunning) { setDraftSession(null); setCurrentView('skill_profile'); } }} disabled={isRunning} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
+                 <Clock size={18} className="text-blue-400 opacity-80" />
+              </button>
+              <button onClick={() => { if (!isRunning) { setDraftSession(null); setCurrentView('technique_hub'); } }} disabled={isRunning} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
+                 <BookOpen size={18} className="text-emerald-400 opacity-80" />
+              </button>
+              <button onClick={() => { if (!isRunning && mode === 'full') setIsSettingOpen(true); }} disabled={isRunning || mode !== 'full'} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
+                 <Settings size={18} className="opacity-80" />
+              </button>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4 w-full mt-1 pb-6" style={{ transform: `scale(${portraitCfg.actionScale}) translate(${portraitCfg.actionX}px, ${portraitCfg.actionY}px)`, transformOrigin: 'center center' }}>
+               <button onClick={addMark} disabled={!isRunning} className="flex-1 h-16 rounded-[1.25rem] flex items-center justify-center gap-2 border border-white/10 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.bg, boxShadow: themeVals.shadowPlateau, color: themeVals.textSub }}>
+                  <Asterisk size={18} className="text-[#ea580c] mb-0.5" strokeWidth={3} />
+                  <span className="font-bold tracking-widest uppercase text-[13px]">Mark</span>
+               </button>
+               <button onClick={handleFinishClick} disabled={!isRunning && !finishTime} className="flex-1 h-16 rounded-[1.25rem] flex flex-col items-center justify-center border border-white/10 transition-transform active:scale-95 disabled:opacity-50" style={{ background: finishTime ? '#10b981' : themeVals.bg, boxShadow: themeVals.shadowPlateau, color: finishTime ? '#fff' : themeVals.textSub }}>
+                  {finishTime ? (
+                    <>
+                      <span className="font-bold uppercase opacity-90 text-[9px]">Done in {Math.floor(finishTime/60)}:{(Math.floor(finishTime)%60).toString().padStart(2,'0')}</span>
+                      <span className="font-black tracking-[0.1em] uppercase mt-0.5 text-[13px]">End Exam</span>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={18} strokeWidth={2.5} />
+                      <span className="font-bold tracking-widest uppercase text-[13px]">Finish</span>
+                    </div>
+                  )}
+               </button>
+            </div>
+          </div>
+        ) : (
+          /* --- Desktop View (Horizontal Layout) --- */
+          <div className="mt-16 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 z-0 w-full max-w-6xl px-4 relative animate-in fade-in duration-300">
           <div className="flex flex-col items-center relative">
             {/* สวิตช์เลือกโหมด (ย้ายจาก TopBar มาไว้ที่นี่) */}
             <div className="absolute top-[-40px] z-50 flex justify-center w-full">
@@ -455,9 +624,16 @@ export default function App() {
             isRunning={isRunning} 
             finishTime={finishTime} 
             onFinishClick={handleFinishClick} 
-          />
+            customLcdText={customLcdText}
+            setCustomLcdText={setCustomLcdText}
+            lcdDisplayMode={lcdDisplayMode}
+            setLcdDisplayMode={setLcdDisplayMode}
+            isLcdEditOpen={isLcdEditOpen}
+            setIsLcdEditOpen={setIsLcdEditOpen}
+          />          
         </div>
-      )}
+        )    
+        )}
 
       {currentView === 'tictactoe' && (
         <GameBoyWidget cfg={cfg} themeVals={themeVals} setCurrentView={setCurrentView} />
