@@ -41,8 +41,8 @@ export default function App() {
 
   const { isDarkMode, themeVals } = useTheme();
 
-  // Synchronous Lazy Initialization
-  const savedState = useMemo(() => {
+  // Synchronous Lazy Initialization (Safe from React re-renders)
+  const [savedState] = useState(() => {
     try {
       const data = localStorage.getItem('bwYouExamState');
       if (data) return JSON.parse(data);
@@ -50,7 +50,7 @@ export default function App() {
       console.error("Failed to parse saved exam state", e);
     }
     return {};
-  }, []);
+  });
 
   const [examCounter, setExamCounter] = useState(savedState.examCounter || 0);
 
@@ -148,17 +148,19 @@ export default function App() {
     sfxEnabled
   });
 
-  // Save Settings to LocalStorage (เบา)
+  // Save Settings to LocalStorage แบบไม่บล็อก Main Thread
   useEffect(() => {
     const timer = setTimeout(() => {
-      try {
-        const stateToSave = { 
-          examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled 
-        };
-        localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
-      } catch (e) {
-        console.warn("Storage warning: Failed to save exam settings", e);
-      }
+      const saveTask = () => {
+        try {
+          const stateToSave = { examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled };
+          localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
+        } catch (e) {
+          console.warn("Storage warning: Failed to save exam settings", e);
+        }
+      };
+      if (window.requestIdleCallback) window.requestIdleCallback(saveTask);
+      else saveTask();
     }, 1500);
     return () => clearTimeout(timer);
   }, [examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled]);
@@ -326,13 +328,15 @@ export default function App() {
     }));
   }, []);
 
-  const handleSaveDraft = useCallback(async () => {
+  const handleSaveDraft = useCallback(() => {
     if (draftSession) {
       setReflectionHistory(prev => [draftSession, ...prev]);
       
       if (currentUser) {
-        try {
-          await fetch('/api/history', {
+        // Background sync with Jitter (1-10s) เพื่อกระจายโหลดและป้องกัน API พัง
+        const jitterMs = Math.floor(Math.random() * 9000) + 1000;
+        setTimeout(() => {
+          fetch('/api/history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -341,10 +345,8 @@ export default function App() {
               score: draftSession.finalScore,
               reflectionData: draftSession
             })
-          });
-        } catch (error) {
-          console.error("Failed to save history:", error);
-        }
+          }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error));
+        }, jitterMs);
       }
 
       setDraftSession(null);

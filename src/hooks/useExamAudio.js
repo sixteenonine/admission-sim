@@ -14,13 +14,13 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
 
   // 1. โหลดไฟล์เสียงทั้งหมดรอไว้ล่วงหน้า และปลดล็อก Safari
   useEffect(() => {
-    soundsRef.current['start'] = new Howl({ src: ['/sounds/start.mp3'], volume: 0.8 });
-    soundsRef.current['30t'] = new Howl({ src: ['/sounds/30t.mp3'], volume: 0.8 });
-    soundsRef.current['05'] = new Howl({ src: ['/sounds/05.mp3'], volume: 0.8 });
-    soundsRef.current['finished'] = new Howl({ src: ['/sounds/finished.mp3'], volume: 0.8 });
+    soundsRef.current['start'] = new Howl({ src: ['/sounds/start.mp3'], volume: 0.8, preload: false, html5: true });
+    soundsRef.current['30t'] = new Howl({ src: ['/sounds/30t.mp3'], volume: 0.8, preload: false, html5: true });
+    soundsRef.current['05'] = new Howl({ src: ['/sounds/05.mp3'], volume: 0.8, preload: false, html5: true });
+    soundsRef.current['finished'] = new Howl({ src: ['/sounds/finished.mp3'], volume: 0.8, preload: false, html5: true });
 
     sfxFiles.forEach(file => {
-      soundsRef.current[file] = new Howl({ src: [file], volume: 0.4 });
+      soundsRef.current[file] = new Howl({ src: [file], volume: 0.4, preload: false });
     });
 
     const unlockSafariAudio = () => {
