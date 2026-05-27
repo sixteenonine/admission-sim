@@ -58,6 +58,11 @@ export const AuthProvider = ({ children }) => {
           'Expires': '0'
         }
       });
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Auth check failed: Expected JSON but got HTML.");
+      }
+
       const data = await res.json();
       if (data.status === 'success') {
         setCurrentUser(data.user);

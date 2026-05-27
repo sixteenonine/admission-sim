@@ -362,13 +362,30 @@ export default function App() {
     if (activeSessionId === idToDelete) setActiveSessionId(null);
   }, [activeSessionId]);
   
-  const [isPortrait, setIsPortrait] = useState(window.matchMedia('(orientation: portrait)').matches);
+  const [isPortrait, setIsPortrait] = useState(window.innerWidth < 1024);
+  const [showRotateWarning, setShowRotateWarning] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(orientation: portrait)');
-    const handleOrientationChange = (e) => setIsPortrait(e.matches);
-    mediaQuery.addEventListener('change', handleOrientationChange);
-    return () => mediaQuery.removeEventListener('change', handleOrientationChange);
+    const handleResize = () => {
+      // ใช้ความกว้างหน้าจอเพื่อบล็อกบั๊กคีย์บอร์ดเด้ง
+      const isMobileDevice = Math.min(window.screen.width, window.screen.height) < 768 || window.innerWidth < 1024;
+      setIsPortrait(isMobileDevice); 
+      
+      if (isMobileDevice) {
+        // ตรวจจับองศาเครื่องจริงๆ เพื่อแสดง Soft Lock
+        const isLandscape = window.screen?.orientation?.type?.startsWith('landscape') || Math.abs(window.orientation) === 90;
+        setShowRotateWarning(isLandscape);
+      } else {
+        setShowRotateWarning(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   const portraitCfg = useMemo(() => ({
@@ -414,6 +431,7 @@ export default function App() {
 
   return (
     <div className={`fixed inset-0 w-full h-full flex flex-col items-center ${currentView.includes('reflection') || currentView === 'score_edit' || currentView === 'skill_profile' || currentView === 'technique_hub' || currentView === 'technique_detail' || (currentView === 'timer' && isPortrait) ? 'justify-start overflow-y-auto no-scrollbar pb-12' : 'justify-center overflow-hidden'} p-20 select-none transition-colors duration-300`} style={{ backgroundColor: themeVals.bg, fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
+      
             
       {currentView === 'timer' && (
         isPortrait ? (
@@ -504,7 +522,7 @@ export default function App() {
               <button onClick={() => { if (!isRunning) { setDraftSession(null); setCurrentView('technique_hub'); } }} disabled={isRunning} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
                  <BookOpen size={18} className="text-emerald-400 opacity-80" />
               </button>
-              <button onClick={() => { if (!isRunning && mode === 'full') setIsSettingOpen(true); }} disabled={isRunning || mode !== 'full'} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
+              <button onClick={() => { if (!isRunning) setIsSettingOpen(true); }} disabled={isRunning} className="w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5 transition-transform active:scale-95 disabled:opacity-50" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, color: themeVals.textMain }}>
                  <Settings size={18} className="opacity-80" />
               </button>
             </div>
@@ -566,7 +584,7 @@ export default function App() {
             </div>
 
             <div className="flex flex-col items-center relative">
-            <div onClick={() => { if (!isRunning && mode === 'full') setIsSettingOpen(true); }} className={`absolute z-10 flex items-center justify-center transition-all ${(isRunning || mode !== 'full') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ width: '100px', height: '100px', borderRadius: '24px', background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, transform: `scale(${cfg.settingBtnScale}) translate(${cfg.settingBtnX}px, ${cfg.settingBtnY}px)`, transformOrigin: 'center center' }} title={mode !== 'full' ? "Settings available in ALL PARTS mode only" : "Settings"}>
+            <div onClick={() => { if (!isRunning) setIsSettingOpen(true); }} className={`absolute z-10 flex items-center justify-center transition-all ${isRunning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`} style={{ width: '100px', height: '100px', borderRadius: '24px', background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau, transform: `scale(${cfg.settingBtnScale}) translate(${cfg.settingBtnX}px, ${cfg.settingBtnY}px)`, transformOrigin: 'center center' }} title="Settings">
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center border border-black/5" style={{ background: themeVals.indentedGradient, boxShadow: themeVals.shadowTrench }}>
                 <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center" style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
                   <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center relative border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowCap }}>

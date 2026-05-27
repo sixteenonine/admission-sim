@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { X, Plus, Trash2, Edit, GripVertical } from 'lucide-react';
 import { RECOMMENDED_SEQUENCE, MODES } from '../../utils/constants';
 import { getDifficultyColor } from '../../utils/helpers';
@@ -99,6 +99,10 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
   const scrollContainerRef = useRef(null);
   const pointerY = useRef(0);
   const autoScrollFrame = useRef(null);
+  const visibleSequence = useMemo(() => {
+    if (mode === 'full') return examSequence;
+    return examSequence.filter(item => item.part === MODES[mode].partPrefix);
+  }, [examSequence, mode]);
 
   const handlePointerDown = useCallback((e, index) => {
     if (activePresetId === 'recommend') return;
@@ -161,7 +165,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
       const currentScrollY = scrollContainerRef.current ? scrollContainerRef.current.scrollTop : dragConfigRef.current.startScrollY;
       const newOffsetY = (clientY - dragConfigRef.current.startY) + (currentScrollY - dragConfigRef.current.startScrollY);
       const shift = Math.round(newOffsetY / dragConfigRef.current.itemHeight);
-      const newHoverIndex = Math.max(0, Math.min(examSequence.length - 1, dragConfigRef.current.startIndex + shift));
+      const newHoverIndex = Math.max(0, Math.min(visibleSequence.length - 1, dragConfigRef.current.startIndex + shift));
       
       setDragInfo(prev => {
         if (prev.isAnimatingDrop) return prev;
@@ -179,9 +183,21 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
           if (!isMounted.current) return;
           if (prev.startIndex !== prev.hoverIndex) {
             setExamSequence(currentSeq => {
+               // 1. ล็อคสล็อต (หาตำแหน่งดั้งเดิมใน Array แม่)
+               const currentVisible = mode === 'full' ? currentSeq : currentSeq.filter(item => item.part === MODES[mode].partPrefix);
+               const slotIndices = currentVisible.map(vItem => currentSeq.findIndex(gItem => gItem.id === vItem.id));
+               
+               // 2. สลับตำแหน่งกันเองเฉพาะพาร์ทที่โชว์อยู่
+               let reorderedVisible = [...currentVisible];
+               const item = reorderedVisible.splice(prev.startIndex, 1)[0];
+               reorderedVisible.splice(prev.hoverIndex, 0, item);
+               
+               // 3. หยอดข้อมูลที่สลับแล้วกลับลงสล็อตเดิม (พาร์ทที่ถูกซ่อนจะไม่ขยับ)
                let _seq = [...currentSeq];
-               const item = _seq.splice(prev.startIndex, 1)[0];
-               _seq.splice(prev.hoverIndex, 0, item);
+               slotIndices.forEach((globalIndex, i) => {
+                 _seq[globalIndex] = reorderedVisible[i];
+               });
+               
                setCustomPresets(presets => presets.map(p => p.id === activePresetId ? { ...p, sequence: _seq } : p));
                return _seq;
             });
@@ -215,7 +231,7 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
               if (prev.isAnimatingDrop) return prev;
               const newOffsetY = (pointerY.current - dragConfigRef.current.startY) + (currentScrollY - dragConfigRef.current.startScrollY);
               const shift = Math.round(newOffsetY / dragConfigRef.current.itemHeight);
-              const newHoverIndex = Math.max(0, Math.min(examSequence.length - 1, dragConfigRef.current.startIndex + shift));
+              const newHoverIndex = Math.max(0, Math.min(visibleSequence.length - 1, dragConfigRef.current.startIndex + shift));
               return { ...prev, offsetY: newOffsetY, hoverIndex: newHoverIndex };
            });
          }
@@ -234,10 +250,10 @@ const SettingsModal = memo(({ cfg, themeVals, setIsSettingOpen, examSequence, se
       window.removeEventListener('pointerup', handleUp);
       window.removeEventListener('pointercancel', handleUp);
     };
-  }, [dragInfo.isDragging, examSequence.length, activePresetId, setExamSequence, setCustomPresets]);
+  }, [dragInfo.isDragging, visibleSequence.length, activePresetId, mode, setExamSequence, setCustomPresets]);
 
   const renderSortableItems = () => (
-    examSequence.map((item, index) => {
+    visibleSequence.map((item, index) => {
       const isEditable = activePresetId !== 'recommend';
       const dotColor = getDifficultyColor(item.difficulty);
       const isDraggingItem = dragInfo.isDragging && dragConfigRef.current.startIndex === index;
