@@ -13,13 +13,12 @@ const themeVals = {
   shadowOuter: "12px 12px 24px #c8d4e2, -12px -12px 24px #ffffff",
   shadowDeepInset: "inset 6px 6px 12px #c8d4e2, inset -6px -6px 12px #ffffff"
 };
-
-export default function LandingApp() {
+const CountdownWidget = () => {
   const [examType, setExamType] = useState('TGAT');
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    const targetString = examType === 'TGAT' ? "January 30, 2027 09:00:00" : "March 13, 2027 09:00:00";
+    const targetString = examType === 'TGAT' ? "2027-01-30T09:00:00+07:00" : "2027-03-13T09:00:00+07:00";
     const targetDate = new Date(targetString).getTime();
 
     const timer = setInterval(() => {
@@ -41,9 +40,61 @@ export default function LandingApp() {
 
     return () => clearInterval(timer);
   }, [examType]);
-  // Helper สำหรับเติมเลข 0 ข้างหน้า
+
   const formatNum = (num) => num.toString().padStart(2, '0');
 
+  return (
+    <div className="relative rounded-[2rem] md:rounded-[3rem] p-4 sm:p-8 md:p-12 mb-16 flex flex-col items-center justify-center border border-white/50 w-full overflow-hidden" 
+         style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
+      
+      <div className="flex flex-col items-center mb-6 md:mb-8 relative z-30 w-full max-w-[280px] md:max-w-none">
+        <div className="relative mb-3 w-full text-center">
+          <select 
+            value={examType}
+            onChange={(e) => setExamType(e.target.value)}
+            className="w-full md:w-auto pl-4 pr-10 py-2 md:py-1.5 rounded-2xl font-medium text-base md:text-[30px] tracking-widest uppercase bg-transparent border border-white/60 outline-none cursor-pointer appearance-none transition-all active:scale-95 text-center md:text-left"
+            style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowOuter, color: themeVals.textMain }}
+          >
+            <option value="TGAT">นับถอยหลัง Tgat 70</option>
+            <option value="ALEVEL">นับถอยหลัง A-LEVEL 70</option>
+          </select>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" style={{ color: themeVals.textMain }}>
+            <ChevronDown size={16} />
+          </div>
+        </div>
+        <div className="h-0 w-12 rounded-full bg-blue-500/20"></div>
+      </div>
+
+      <div className="flex items-baseline gap-1 sm:gap-2 md:gap-4 relative z-10 w-full justify-center">
+        <div className="flex flex-col items-center">
+           <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{timeLeft.days}</span>
+           <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">วัน</span>
+        </div>
+        <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
+        <div className="flex flex-col items-center">
+           <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{formatNum(timeLeft.hours)}</span>
+           <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">ชั่วโมง</span>
+        </div>
+        <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
+        <div className="flex flex-col items-center">
+           <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{formatNum(timeLeft.minutes)}</span>
+           <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">นาที</span>
+        </div>
+        <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
+        <div className="flex flex-col items-center w-[55px] sm:w-[80px] md:w-[130px] lg:w-[220px]">
+           <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter text-orange-500">{formatNum(timeLeft.seconds)}</span>
+           <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">วินาที</span>
+        </div>
+      </div>
+      
+      <div className="mt-6 md:mt-8 px-4 sm:px-8 py-2 md:py-3 rounded-full bg-white/40 text-sm md:text-2xl lg:text-[40px] font-medium tracking-wide shadow-inner border border-white/20 relative z-10 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
+        {examType === 'TGAT' ? 'วันศุกร์, 30 มกราคม, 2570' : 'วันเสาร์, 13 มีนาคม, 2570'}
+      </div>
+    </div>
+  );
+};
+
+export default function LandingApp() {
   return (
     <div className="min-h-screen font-['Outfit','Prompt',sans-serif] overflow-x-hidden" style={{ backgroundColor: themeVals.bg, color: themeVals.textMain }}>
       
@@ -76,55 +127,7 @@ export default function LandingApp() {
       <section id="home" className="pt-28 md:pt-32 pb-16 md:pb-20 px-4 md:px-6 max-w-7xl mx-auto min-h-screen flex flex-col justify-center">
         
         {/* Main Countdown Display */}
-        <div className="relative rounded-[2rem] md:rounded-[3rem] p-4 sm:p-8 md:p-12 mb-16 flex flex-col items-center justify-center border border-white/50 w-full overflow-hidden" 
-             style={{ background: themeVals.bg, boxShadow: themeVals.shadowOuter }}>
-          
-          <div className="flex flex-col items-center mb-6 md:mb-8 relative z-30 w-full max-w-[280px] md:max-w-none">
-            <div className="relative mb-3 w-full text-center">
-              <select 
-                value={examType}
-                onChange={(e) => setExamType(e.target.value)}
-                className="w-full md:w-auto pl-4 pr-10 py-2 md:py-1.5 rounded-2xl font-medium text-base md:text-[30px] tracking-widest uppercase bg-transparent border border-white/60 outline-none cursor-pointer appearance-none transition-all active:scale-95 text-center md:text-left"
-                style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowOuter, color: themeVals.textMain }}
-              >
-                <option value="TGAT">นับถอยหลัง Tgat 70</option>
-                <option value="ALEVEL">นับถอยหลัง A-LEVEL 70</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" style={{ color: themeVals.textMain }}>
-                <ChevronDown size={16} />
-              </div>
-            </div>
-            <div className="h-0 w-12 rounded-full bg-blue-500/20"></div>
-          </div>
-
-          {/* Clock Digits */}
-          <div className="flex items-baseline gap-1 sm:gap-2 md:gap-4 relative z-10 w-full justify-center">
-            <div className="flex flex-col items-center">
-               <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{timeLeft.days}</span>
-               <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">วัน</span>
-            </div>
-            <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
-            <div className="flex flex-col items-center">
-               <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{formatNum(timeLeft.hours)}</span>
-               <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">ชั่วโมง</span>
-            </div>
-            <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
-            <div className="flex flex-col items-center">
-               <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter">{formatNum(timeLeft.minutes)}</span>
-               <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">นาที</span>
-            </div>
-            <span className="text-[2rem] sm:text-[3rem] md:text-[5rem] lg:text-[7rem] font-light opacity-20 animate-pulse pb-3 md:pb-6">:</span>
-            <div className="flex flex-col items-center w-[55px] sm:w-[80px] md:w-[130px] lg:w-[220px]">
-               <span className="text-[3rem] sm:text-[4rem] md:text-[7rem] lg:text-[10rem] font-light leading-none tracking-tighter text-orange-500">{formatNum(timeLeft.seconds)}</span>
-               <span className="text-[10px] md:text-[20px] font-bold uppercase opacity-30 tracking-widest">วินาที</span>
-            </div>
-          </div>
-          
-          {/* Date Label */}
-          <div className="mt-6 md:mt-8 px-4 sm:px-8 py-2 md:py-3 rounded-full bg-white/40 text-sm md:text-2xl lg:text-[40px] font-medium tracking-wide shadow-inner border border-white/20 relative z-10 text-center whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
-            {examType === 'TGAT' ? 'วันศุกร์, 30 มกราคม, 2569' : 'วันเสาร์, 13 มีนาคม, 2569'}
-          </div>
-        </div>
+        <CountdownWidget />
         {/* Bottom Milestone Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 px-2 md:px-4">
           <div className="flex flex-col text-center md:text-left">
