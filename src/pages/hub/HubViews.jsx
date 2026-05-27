@@ -232,16 +232,25 @@ export function HubFlashcardDecks() {
                   <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 flex flex-col items-center justify-center z-20 ${isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                     <span className="text-white font-bold mb-2 tracking-widest text-sm drop-shadow-md">SELECT LEVEL</span>
                     <div className="flex w-full h-20 px-6 sm:px-8 gap-4 sm:gap-4">
-                      {[1, 2, 3].map(lvl => (
-                        <button
-                          key={lvl}
-                          onClick={(e) => { e.stopPropagation(); handleStartLevel(cat.name, cat.color, lvl); }}
-                          className="flex-1 py-3 sm:py-4 rounded-2xl bg-white font-black text-xl sm:text-2xl hover:-translate-y-1 active:scale-95 transition-transform shadow-xl flex items-center justify-center"
-                          style={{ color: cat.color }}
-                        >
-                          {lvl}
-                        </button>
-                      ))}
+                      {[1, 2, 3].map(lvl => {
+                        let levelWordCount = 0;
+                        if (decksData && decksData[cat.name] && Array.isArray(decksData[cat.name].levels) && decksData[cat.name].levels[lvl - 1]) {
+                          levelWordCount = decksData[cat.name].levels[lvl - 1].length;
+                        }
+                        return (
+                          <button
+                            key={lvl}
+                            onClick={(e) => { e.stopPropagation(); handleStartLevel(cat.name, cat.color, lvl); }}
+                            className="flex-1 py-2 rounded-2xl bg-white hover:-translate-y-1 active:scale-95 transition-transform shadow-xl flex flex-col items-center justify-center"
+                            style={{ color: cat.color }}
+                          >
+                            <span className="font-black text-xl sm:text-2xl leading-none">{lvl}</span>
+                            <span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1">
+                              {isDataLoaded ? `${levelWordCount} terms` : '...'}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
