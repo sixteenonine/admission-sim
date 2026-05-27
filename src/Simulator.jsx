@@ -333,20 +333,18 @@ export default function App() {
       setReflectionHistory(prev => [draftSession, ...prev]);
       
       if (currentUser) {
-        // Background sync with Jitter (1-10s) เพื่อกระจายโหลดและป้องกัน API พัง
-        const jitterMs = Math.floor(Math.random() * 9000) + 1000;
-        setTimeout(() => {
-          fetch('/api/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: currentUser.id,
-              mode: draftSession.mode,
-              score: draftSession.finalScore,
-              reflectionData: draftSession
-            })
-          }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error));
-        }, jitterMs);
+        // Real-time Background Sync (Non-blocking) + keepalive ป้องกันข้อมูลหายเมื่อปิดแท็บ
+        fetch('/api/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+          body: JSON.stringify({
+            userId: currentUser.id,
+            mode: draftSession.mode,
+            score: draftSession.finalScore,
+            reflectionData: draftSession
+          })
+        }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error));
       }
 
       setDraftSession(null);

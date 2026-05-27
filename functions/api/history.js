@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
     }
 
     const { results } = await db.prepare(
-      "SELECT reflection_data FROM exam_history WHERE user_id = ? ORDER BY created_at DESC"
+      "SELECT reflection_data FROM exam_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 30"
     ).bind(userId).all();
     
     const historyData = results.map(row => JSON.parse(row.reflection_data));
@@ -46,9 +46,11 @@ export async function onRequestPost(context) {
 
     const historyId = reflectionData.id || crypto.randomUUID();
 
-    await db.prepare(
-      "INSERT INTO exam_history (id, user_id, mode, score, reflection_data) VALUES (?, ?, ?, ?, ?)"
+    const insertPromise = db.prepare(
+      "INSERT OR REPLACE INTO exam_history (id, user_id, mode, score, reflection_data) VALUES (?, ?, ?, ?, ?)"
     ).bind(historyId, userId, mode || "full", score || 0, JSON.stringify(reflectionData)).run();
+
+    context.waitUntil(insertPromise);
 
     return new Response(JSON.stringify({ status: "success", message: "บันทึกประวัติสำเร็จ" }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
