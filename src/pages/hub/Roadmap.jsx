@@ -20,11 +20,11 @@ export default function Roadmap() {
   
 
   return (
-    <div className="flex flex-col items-center gap-0 animate-in fade-in duration-300 w-full max-w-[100vw] overflow-x-hidden pt-2 pb-12">
+    <div className="flex flex-col items-center gap-0 animate-in fade-in duration-300 w-full max-w-[100vw] overflow-x-hidden pt-0 pb-0">
       
       {/* Header Text */}
-      <div className="flex flex-col items-center text-center gap-3 px-4 mt-2 mb-4">
-        <h1 className="text-3xl md:text-6xl font-black tracking-tight" style={{ color: themeVals.textMain }}>
+      <div className="flex flex-col items-center text-center gap-2 px-4 mt-2 mb-0">
+        <h1 className="text-3xl md:text-6xl font-medium font-black tracking-tight" style={{ color: themeVals.textMain }}>
           พบกันเร็วๆนี้
         </h1>
         <p className="text-sm md:text-base font-medium max-w-md leading-relaxed opacity-80" style={{ color: themeVals.textMain }}>
@@ -35,7 +35,7 @@ export default function Roadmap() {
       {/* Center Dynamic Slider */}
       <div className="w-full relative flex justify-center items-center h-[520px]">
         <div 
-          className="flex gap-8 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform"
+          className="flex gap-3 transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] will-change-transform"
           style={{
             transform: `translate3d(calc(50% - 150px - ${activeIndex * 332}px), 0, 0)`
             // 150px คือครึ่งหนึ่งของความกว้างการ์ด และ 332px คือความกว้างการ์ดรวมกับ Gap ระยะห่าง
@@ -48,10 +48,10 @@ export default function Roadmap() {
                 key={item.id}
                 onClick={() => setActiveIndex(index)}
                 className={`relative rounded-[2.5rem] border border-white/30 h-[390px] w-[320px] shrink-0 transition-[transform,opacity,box-shadow,z-index] duration-700 cursor-pointer will-change-transform group ${
-                  isActive ? 'scale-105 z-20 opacity-100' : 'scale-90 z-10 opacity-30'
+                  isActive ? 'scale-110 z-20 opacity-100' : 'scale-90 z-10 opacity-30'
                 }`}
                 style={{ 
-                  padding: '9px',
+                  padding: '10px',
                   background: themeVals.bg,
                   boxShadow: isActive ? `0 30px 60px -15px ${item.color}99` : themeVals.shadowPlateau
                 }}
@@ -77,7 +77,7 @@ export default function Roadmap() {
                     <h3 className="text-3xl font-bold tracking-tight mb-2 text-black leading-tight">
                       {item.title}
                     </h3>
-                    <p className="text-sm font-semibold leading-relaxed text-black/90">
+                    <p className="text-sm font-medium leading-relaxed text-black/90">
                       {item.desc}
                     </p>
                   </div>

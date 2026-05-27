@@ -5,7 +5,9 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {animation: {
+    extend: {fontFamily: {
+        sans: ['Prompt', 'sans-serif'],
+      },animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
       },
       keyframes: {

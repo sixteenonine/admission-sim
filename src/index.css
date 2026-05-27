@@ -1,5 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&family=Inter:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Prompt", sans-serif;
+}
+
+body {
+  font-family: "Prompt", sans-serif;
+}
 /* Story Diary Legacy Styles */
 .font-solway {
   font-family: 'Solway', serif;
