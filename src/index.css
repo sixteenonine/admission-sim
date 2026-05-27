@@ -56,3 +56,11 @@
   border-color: #007AFF;
   opacity: 0.5;
 }
+@keyframes fadeInEffect {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeInEffect 0.2s ease-out forwards;
+}

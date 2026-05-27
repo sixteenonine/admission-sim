@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HubLayout from './components/layout/HubLayout.jsx';
 import { HubHome, HubFlashcards, HubFlashcardDecks, HubSpeedRead } from './pages/hub/HubViews.jsx';
 import FlashcardPlayer from './pages/hub/FlashcardPlayer.jsx';
@@ -11,35 +11,39 @@ import StoryLobby from './pages/hub/StoryLobby.jsx';
 import StoryReader from './pages/hub/StoryReader.jsx';
 import StoryAdmin from './pages/admin/StoryAdmin.jsx';
 import LandingApp from './LandingApp.jsx';
+import Roadmap from './pages/hub/Roadmap.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
 
 export default function App() {
+  const location = useLocation();
+
   return (
     <AuthProvider>
       <ThemeProvider>
-    <Routes>
-      <Route path="/admin/storydiary" element={<StoryAdmin />} />
-      <Route path="/" element={<LandingApp />} />
-      
-      <Route element={<HubLayout />}>
-        <Route path="/home" element={<HubHome />} />
-        <Route path="/vocab" element={<HubFlashcards />} />
-        <Route path="/vocab/decks" element={<HubFlashcardDecks />} />
-        <Route path="/vocab/play" element={<FlashcardPlayer />} />
-        <Route path="/hub" element={<HubSpeedRead />} />
-        <Route path="speedread" element={<SpeedReadLobby />} />
-        <Route path="speedread/play" element={<SpeedRead />} />
-        <Route path="/subscription" element={<Subscription />} />
-        <Route path="/storydiary" element={<StoryLobby />} />
-        <Route path="/storydiary/play" element={<StoryReader />} />
-        <Route path="decks" element={<HubFlashcardDecks />} />
-        <Route path="/admissim" element={<Simulator />} />
-      </Route>
-
-      
-    </Routes>
-    </ThemeProvider>
+        <div key={location.pathname} className="animate-fade-in w-full h-full">
+          <Routes>
+            <Route path="/admin/storydiary" element={<StoryAdmin />} />
+            <Route path="/" element={<LandingApp />} />
+            
+            <Route element={<HubLayout />}>
+              <Route path="/home" element={<HubHome />} />
+              <Route path="/vocab" element={<HubFlashcards />} />
+              <Route path="/vocab/decks" element={<HubFlashcardDecks />} />
+              <Route path="/vocab/play" element={<FlashcardPlayer />} />
+              <Route path="/hub" element={<HubSpeedRead />} />
+              <Route path="speedread" element={<SpeedReadLobby />} />
+              <Route path="speedread/play" element={<SpeedRead />} />
+              <Route path="/subscription" element={<Subscription />} />
+              <Route path="/storydiary" element={<StoryLobby />} />
+              <Route path="/storydiary/play" element={<StoryReader />} />
+              <Route path="/roadmap" element={<Roadmap />} />
+              <Route path="decks" element={<HubFlashcardDecks />} />
+              <Route path="/admissim" element={<Simulator />} />
+            </Route>
+          </Routes>
+        </div>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

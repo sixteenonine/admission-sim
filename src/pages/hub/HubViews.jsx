@@ -14,37 +14,32 @@ export function HubHome() {
   const themeVals = useOutletContext();
   const navigate = useNavigate();
   return (
-    <div className="flex flex-col items-center gap-10 animate-in fade-in duration-300 w-full -mt-[30px]">
-      <h1 className="text-3xl font-black tracking-tight text-center" style={{ color: themeVals.textMain }}>
-        เหลือเวลาเตรียมตัวอีก 295 วัน
-      </h1>
-      {/* ใช้ flex และ justify-center เพื่อให้อยู่ตรงกลางเสมอ */}
-      <div className="flex flex-col md:flex-row flex-wrap justify-center items-stretch gap-6 w-full max-w-5xl mx-auto h-[60vh] min-h-[350px]">
-        {/* กล่องที่ 1 ปรับความกว้างด้วย md:w-[เปอร์เซ็นต์ หรือ px] */}
-        <Link to="/admissim" className="w-full md:w-[25%] rounded-[1.5rem] flex items-end justify-center pb-10 transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+    <div className="flex flex-col items-center gap-10 animate-in fade-in duration-300 w-full -mt-[-90px]">
+      <div className="flex flex-col md:flex-row flex-wrap justify-center items-stretch gap-6 w-full max-w-5xl mx-auto md:h-[60vh] md:min-h-[350px]">
+        {/* กล่องที่ 1 */}
+        <Link to="/admissim" className="w-full md:w-[25%] aspect-[21/9] md:aspect-auto rounded-[2rem] flex items-end justify-center pb-8 md:pb-10 transition-colors border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
           <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>ADMiSSiM</span>
         </Link>
+        
         {/* กล่องที่ 2 */}
         <div 
           onClick={() => navigate('/speedread')}
-          className="w-full md:w-[25%] rounded-[1.5rem] flex items-end justify-center pb-10 cursor-pointer transition-transform active:scale-95 border border-white/10" 
+          className="w-full md:w-[25%] aspect-[21/9] md:aspect-auto rounded-[2rem] flex items-end justify-center pb-8 md:pb-10 cursor-pointer transition-transform active:scale-95 border border-white/10" 
           style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}
         >
           <span className="text-xl font-black tracking-widest uppercase text-center leading-none transition-colors" style={{ color: themeVals.textMain }}>
             ULTRA<br/>SPEEDREAD
           </span>
         </div>
+        
         {/* กล่องที่ 3 (รวม 2 กล่องย่อยแนวตั้ง) */}
         <div className="w-full md:w-[25%] flex flex-col gap-6">
-          <Link to="/vocab" className="flex-1 rounded-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/vocab" className="w-full aspect-[21/9] md:aspect-auto flex-1 rounded-[2rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>FLASHCARDS</span>
           </Link>
-          <Link to="/storydiary" className="flex-1 rounded-[1.5rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <Link to="/storydiary" className="w-full aspect-[21/9] md:aspect-auto flex-1 rounded-[2rem] flex items-center justify-center cursor-pointer transition-transform active:scale-95 border border-white/10" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
             <span className="text-xl font-black tracking-widest uppercase transition-colors" style={{ color: themeVals.textMain }}>STORY DiARY</span>
           </Link>
-          
-          
-          
         </div>
       </div>
     </div>

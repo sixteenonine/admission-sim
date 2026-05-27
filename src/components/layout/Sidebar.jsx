@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Clock, Zap, CreditCard, Book, X } from 'lucide-react';
+import { Home, Clock, Zap, CreditCard, Book, X, Map } from 'lucide-react';
 
 const MENU_ITEMS = [
   { path: '/home', label: 'Home', icon: Home },
+  { path: '/roadmap', label: 'Roadmap', icon: Map },
   { path: '/admissim', label: 'ADMiSSIM', icon: Clock },
   { path: '/speedread', label: 'UltraSpeedReed', icon: Zap },
   { path: '/vocab', label: 'Flashcards', icon: CreditCard },
