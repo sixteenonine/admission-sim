@@ -147,8 +147,8 @@ export function HubFlashcardDecks() {
   const navigate = useNavigate();
   const [decksData, setDecksData] = React.useState(null);
   const [favCount, setFavCount] = React.useState(null);
+  const [activeCategory, setActiveCategory] = React.useState(null);
 
-  // ลบตัวแปร categories เดิมออก และใช้ FLASHCARD_CATEGORIES ที่ประกาศไว้ด้านบนแทน
   React.useEffect(() => {
     async function loadDecks() {
        try {
@@ -169,12 +169,16 @@ export function HubFlashcardDecks() {
     loadDecks();
   }, []);
 
-  const goToLevelSelection = (catName, color) => {
+  const handleStartLevel = (catName, color, levelIdx) => {
     if (catName === 'MY FAVORITE') {
       navigate('/vocab/play', { state: { deckTitle: catName, level: 1, color: color } });
-    } else {
-      navigate('/vocab/levels', { state: { category: catName, color: color, decksData: decksData ? decksData[catName] : null } });
+      return;
     }
+    const recent = JSON.parse(localStorage.getItem('recent_decks') || '[]');
+    const newDeck = { deckTitle: catName, level: levelIdx, color: color };
+    const updated = [newDeck, ...recent.filter(d => d.deckTitle !== catName || d.level !== levelIdx)].slice(0, 3);
+    localStorage.setItem('recent_decks', JSON.stringify(updated));
+    navigate('/vocab/play', { state: newDeck });
   };
 
   return (
@@ -186,7 +190,7 @@ export function HubFlashcardDecks() {
         <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: themeVals.textMain }}>ALL DECKS</h1>
         <div className="w-12 h-12"></div>
       </div>
-      
+
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
         {FLASHCARD_CATEGORIES.map((cat, i) => {
           let wordCount = 0;
@@ -197,31 +201,50 @@ export function HubFlashcardDecks() {
             isDataLoaded = favCount !== null;
           } else {
             isDataLoaded = decksData !== null;
-            // ป้องกันแครชหาก API ส่งข้อมูลมาแต่ไม่มีฟิลด์ levels
             if (decksData && decksData[cat.name] && Array.isArray(decksData[cat.name].levels)) {
               wordCount = decksData[cat.name].levels.flat().length;
             } else {
               wordCount = 0;
             }
           }
-          
-          return (
-            <div key={i} onClick={() => goToLevelSelection(cat.name, cat.color)} className="relative w-full aspect-[21/9] md:aspect-[16/9] cursor-pointer group" style={{ perspective: '1000px' }}>
-              {/* Layer 1-3 เหมือนเดิม... */}
-              
-              {/* ... (คงส่วน Layer 1 และ 2 ไว้เหมือนเดิม) */}
 
-              {/* Layer 3 (Top Code-Based Card) */}
-              <div className="absolute inset-0 rounded-[2rem] flex flex-col justify-center items-center text-white transition-all duration-300 group-hover:-translate-y-1 group-active:scale-95 shadow-lg overflow-hidden" style={{ backgroundColor: cat.color, boxShadow: `0 10px 25px -5px ${cat.color}60` }}>
+          const isActive = activeCategory === cat.name;
+
+          return (
+            <div
+              key={i}
+              onClick={cat.name === 'MY FAVORITE' ? () => handleStartLevel(cat.name, cat.color, 1) : () => setActiveCategory(isActive ? null : cat.name)}
+              className="relative w-full aspect-[21/9] md:aspect-[16/9] cursor-pointer"
+              style={{ perspective: '1000px' }}
+            >
+              <div className={`absolute inset-0 rounded-[2rem] flex flex-col justify-center items-center text-white transition-all duration-300 shadow-lg overflow-hidden ${!isActive ? 'hover:-translate-y-1' : ''}`} style={{ backgroundColor: cat.color, boxShadow: `0 10px 25px -5px ${cat.color}60` }}>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] select-none text-black z-0">
                   {cat.diamonds}
                 </div>
-                <div className="flex flex-col items-center z-10">
+                <div className={`flex flex-col items-center z-10 transition-transform duration-300 ${isActive ? 'scale-95 opacity-30' : ''}`}>
                   <h2 className="text-3xl sm:text-4xl font-bold tracking-tight max-w-xs mx-auto leading-tight text-center px-4">{cat.name}</h2>
                   <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: cat.color }}>
                     {isDataLoaded ? `${wordCount} terms` : 'Loading...'}
                   </div>
                 </div>
+
+                {cat.name !== 'MY FAVORITE' && (
+                  <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 flex flex-col items-center justify-center z-20 ${isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                    <span className="text-white font-bold mb-2 tracking-widest text-sm drop-shadow-md">SELECT LEVEL</span>
+                    <div className="flex w-full h-20 px-6 sm:px-8 gap-4 sm:gap-4">
+                      {[1, 2, 3].map(lvl => (
+                        <button
+                          key={lvl}
+                          onClick={(e) => { e.stopPropagation(); handleStartLevel(cat.name, cat.color, lvl); }}
+                          className="flex-1 py-3 sm:py-4 rounded-2xl bg-white font-black text-xl sm:text-2xl hover:-translate-y-1 active:scale-95 transition-transform shadow-xl flex items-center justify-center"
+                          style={{ color: cat.color }}
+                        >
+                          {lvl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -231,133 +254,7 @@ export function HubFlashcardDecks() {
   );
 }
 
-export function HubFlashcardLevels() {
-  const themeVals = useOutletContext();
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  const category = location.state?.category || 'SCIENCE, HEALTH & NATURE';
-  const color = location.state?.color || '#22c55e';
-  
-  const [levelProgress, setLevelProgress] = React.useState([0, 0, 0]);
-  const [levelCounts, setLevelCounts] = React.useState([0, 0, 0]);
-  const [activeLevel, setActiveLevel] = React.useState(0);
 
-  React.useEffect(() => {
-    async function loadLevelData() {
-      try {
-        const res = await fetch('/api/vocab/decks');
-        const json = await res.json();
-        if (json.status !== 'success' || !json.data[category]) return;
-        
-        const catData = json.data[category];
-        const counts = catData.levels.map(lvl => lvl.length);
-        setLevelCounts(counts);
-
-        const localSrs = await db.vocab_srs.toArray();
-        const rememberedWords = new Set(localSrs.filter(s => s.interval > 0).map(s => s.eng));
-
-        const progressArr = catData.levels.map((lvlWords) => {
-          if (lvlWords.length === 0) return 0;
-          const matched = lvlWords.filter(w => rememberedWords.has(w.eng)).length;
-          return Math.round((matched / lvlWords.length) * 100);
-        });
-
-        setLevelProgress(progressArr);
-        
-        if (progressArr[0] === 100 && progressArr[1] < 100) setActiveLevel(1);
-        else if (progressArr[0] === 100 && progressArr[1] === 100) setActiveLevel(2);
-        else setActiveLevel(0);
-
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    loadLevelData();
-  }, [category]);
-
-  const handleStartLevel = (lvlIdx) => {
-    const recent = JSON.parse(localStorage.getItem('recent_decks') || '[]');
-    const newDeck = { deckTitle: category, level: lvlIdx + 1, color: color };
-    const updated = [newDeck, ...recent.filter(d => d.deckTitle !== category || d.level !== lvlIdx + 1)].slice(0, 3);
-    localStorage.setItem('recent_decks', JSON.stringify(updated));
-    navigate('/vocab/play', { state: newDeck });
-  };
-
-  return (
-    <div className="flex flex-col items-center gap-8 animate-in fade-in duration-300 w-full pt-0 pb-12 overflow-hidden relative">
-      <div className="flex items-center justify-between w-full max-w-xl px-4 mt-2 z-10">
-        <button onClick={() => navigate('/vocab/decks')} className="w-12 h-12 flex items-center justify-center rounded-full border border-white/10" style={{ background: themeVals.raisedGradient, color: themeVals.textMain }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <h1 className="text-xl font-black tracking-widest uppercase text-center truncate max-w-[250px]" style={{ color: themeVals.textMain }}>{category}</h1>
-        <div className="w-12 h-12"></div>
-      </div>
-
-      <div className="relative w-full max-w-md flex flex-col items-center justify-center px-6 mt-8">
-        <div className="flex transition-transform duration-500 ease-out gap-8 w-full justify-center">
-          {[0, 1, 2].map((lvlIdx) => {
-            const isLocked = lvlIdx > activeLevel;
-            const progress = levelProgress[lvlIdx];
-            const total = levelCounts[lvlIdx];
-            const currentDone = Math.round((progress / 100) * total);
-
-            return (
-              <div 
-                key={lvlIdx} 
-                className={`w-[280px] shrink-0 rounded-[2.5rem] p-6 border border-white/10 flex flex-col items-center transition-all duration-300 ${lvlIdx === activeLevel ? 'scale-100 opacity-100' : 'scale-90 opacity-40 pointer-events-none'}`}
-                style={{ background: themeVals.raisedGradient, boxShadow: `0 20px 40px -10px ${color}30` }}
-              >
-                <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-black text-2xl mb-4 shadow-md" style={{ background: isLocked ? '#505e72' : `linear-gradient(135deg, ${color} 0%, ${color}aa 100%)` }}>
-                  {isLocked ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  ) : lvlIdx + 1}
-                </div>
-
-                <h3 className="font-black text-lg mb-1" style={{ color: themeVals.textMain }}>LEVEL {lvlIdx + 1}</h3>
-                <span className="text-xs font-bold uppercase tracking-wider mb-6" style={{ color: color }}>
-                  {isLocked ? 'Locked' : progress === 100 ? 'Completed' : 'In Progress'}
-                </span>
-
-                <div className="w-full flex flex-col gap-2 mb-6">
-                  <div className="flex justify-between text-xs font-bold px-1" style={{ color: themeVals.textMain }}>
-                    <span>PROGRESS</span>
-                    <span>{currentDone}/{total} WORDS</span>
-                  </div>
-                  <div className="w-full h-3 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, background: color }}></div>
-                  </div>
-                </div>
-
-                {!isLocked && (
-                  <button 
-                    onClick={() => handleStartLevel(lvlIdx)}
-                    className="w-full py-4 rounded-2xl font-bold text-white text-sm transition-transform active:scale-95 shadow-md"
-                    style={{ background: color }}
-                  >
-                    START LEVEL
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-4 mt-10">
-          {[0, 1, 2].map((i) => (
-            <button 
-              key={i} 
-              onClick={() => i <= activeLevel && setActiveLevel(i)}
-              disabled={i > activeLevel}
-              className={`h-2.5 rounded-full transition-all ${i === activeLevel ? 'w-8' : 'w-2.5'} disabled:opacity-20`}
-              style={{ background: i === activeLevel ? color : '#505e72' }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function HubSpeedRead() {
   const themeVals = useOutletContext();
