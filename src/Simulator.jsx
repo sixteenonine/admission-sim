@@ -90,35 +90,35 @@ export default function App() {
   const pendingSyncsRef = useRef(new Map());
 
   useEffect(() => {
-    const syncQueue = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
-    
-    const flushPendingSyncs = () => {
-      const toSync = [...syncQueue];
+    const flushPendingSyncs = async () => {
+      const currentQueue = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
       
       if (pendingSyncsRef.current.size > 0) {
         pendingSyncsRef.current.forEach((payload, timeoutId) => {
           clearTimeout(timeoutId);
-          toSync.push(payload);
+          currentQueue.push(payload);
         });
         pendingSyncsRef.current.clear();
       }
 
-      if (toSync.length > 0 && navigator.onLine) {
-        toSync.forEach(payload => {
+      if (currentQueue.length > 0 && navigator.onLine) {
+        const requests = currentQueue.map(payload => 
           fetch('/api/history', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             keepalive: true, 
             body: JSON.stringify(payload) 
-          }).catch(() => {
-            const q = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
-            q.push(payload);
-            localStorage.setItem('bwSyncQueue', JSON.stringify(q));
-          });
-        });
-        localStorage.setItem('bwSyncQueue', '[]');
-      } else if (toSync.length > 0) {
-        localStorage.setItem('bwSyncQueue', JSON.stringify(toSync));
+          }).then(res => {
+            if (!res.ok && res.status >= 500) throw new Error('Server Down');
+            return true;
+          })
+        );
+
+        const results = await Promise.allSettled(requests);
+        const remainingQueue = currentQueue.filter((_, index) => results[index].status === 'rejected');
+        localStorage.setItem('bwSyncQueue', JSON.stringify(remainingQueue));
+      } else if (currentQueue.length > 0) {
+        localStorage.setItem('bwSyncQueue', JSON.stringify(currentQueue));
       }
     };
     
@@ -179,8 +179,16 @@ export default function App() {
       fetch(`/api/history?userId=${currentUser.id}`)
         .then(res => res.json())
         .then(data => {
-          if (data.status === 'success') {
-            setReflectionHistory(data.data);
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            setReflectionHistory(prev => {
+              const historyMap = new Map();
+              prev.forEach(item => historyMap.set(item.id, item));
+              data.data.forEach(item => historyMap.set(item.id, item));
+              
+              return Array.from(historyMap.values()).sort((a, b) => {
+                return (parseInt(b.id) || 0) - (parseInt(a.id) || 0);
+              });
+            });
           }
         })
         .catch(err => console.error("Failed to fetch history:", err));
