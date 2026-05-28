@@ -5,10 +5,10 @@ export const AVATARS = [
 ];
 
 export const MODES = {
-  full: { label: 'ALL PARTS (90m)', time: 90 * 60, partPrefix: 'all' },
-  part1: { label: 'LISTENING (14m)', time: 14 * 60, partPrefix: 'I. Listening & Speaking' },
-  part2: { label: 'READING (46m)', time: 46 * 60, partPrefix: 'II. Reading Skill' },
-  part3: { label: 'WRITING (25m)', time: 25 * 60, partPrefix: 'III. Writing Skill' }
+  full: { label: 'ALL PARTS (90m)', time: 90 * 60, partPrefix: 'all', maxQ: 80, maxScore: 100, validSubs: ['s1','s2','s3','s4','s5','s6','s7','s8','s9'] },
+  part1: { label: 'LISTENING (14m)', time: 14 * 60, partPrefix: 'I. Listening & Speaking', maxQ: 20, maxScore: 25, validSubs: ['s1','s2'] },
+  part2: { label: 'READING (46m)', time: 46 * 60, partPrefix: 'II. Reading Skill', maxQ: 40, maxScore: 50, validSubs: ['s3','s4','s5','s6','s7'] },
+  part3: { label: 'WRITING (25m)', time: 25 * 60, partPrefix: 'III. Writing Skill', maxQ: 20, maxScore: 25, validSubs: ['s8','s9'] }
 };
 
 export const RECOMMENDED_SEQUENCE = [

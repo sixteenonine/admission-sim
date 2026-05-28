@@ -774,7 +774,7 @@ export default function App() {
       )}
 
       {isScoreModalOpen && (
-        <ScoreModal themeVals={themeVals} setIsScoreModalOpen={setIsScoreModalOpen} handleFinishExam={handleFinishExam} resetTimer={resetTimer} />
+        <ScoreModal themeVals={themeVals} setIsScoreModalOpen={setIsScoreModalOpen} handleFinishExam={handleFinishExam} resetTimer={resetTimer} mode={mode} />
       )}
       
       {isLogoutModalOpen && (

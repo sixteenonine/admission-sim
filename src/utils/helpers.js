@@ -1,6 +1,7 @@
 import { MODES, PACING_RULES } from './constants';
 
-export const calculateScores = (scores) => {
+export const calculateScores = (scores, mode = 'full') => {
+  const currentMode = MODES[mode] || MODES.full;
   let listening = 0, reading = 0, writing = 0;
   const hasInput = Object.keys(scores || {}).some(k => ['s1','s2','s3','s4','s5','s6','s7','s8','s9','part1','part2','part3'].includes(k) && scores[k] !== '');
   
@@ -12,7 +13,8 @@ export const calculateScores = (scores) => {
   if (reading === 0 && scores.part2) reading = parseInt(scores.part2) || 0;
   if (writing === 0 && scores.part3) writing = parseInt(scores.part3) || 0;
 
-  const totalCorrect = listening + reading + writing;
+  let totalCorrect = listening + reading + writing;
+  totalCorrect = Math.min(totalCorrect, currentMode.maxQ);
   return { listening, reading, writing, totalCorrect, finalScore: totalCorrect * 1.25, hasInput };
 };
 

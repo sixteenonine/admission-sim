@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Award, X } from 'lucide-react';
 
-function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTimer }) {
+import { MODES } from '../../utils/constants';
+
+function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTimer, mode = 'full' }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap } = themeVals;
+  const currentMode = MODES[mode] || MODES.full;
   const [totalCorrect, setTotalCorrect] = useState('');
 
   const handleInput = (val) => {
     const num = parseInt(val.replace(/\D/g, ''), 10);
-    setTotalCorrect(isNaN(num) ? '' : Math.min(num, 80));
+    setTotalCorrect(isNaN(num) ? '' : Math.min(num, currentMode.maxQ));
   };
-
   const finalScore = totalCorrect === '' ? 0 : totalCorrect * 1.25;
 
   return (
@@ -33,7 +35,7 @@ function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTim
             <div className="flex items-center justify-between p-5 rounded-2xl border border-white/5" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
               <div className="flex flex-col">
                 <span className="text-[14px] font-semibold" style={{ color: theme.textMain }}>จำนวนข้อที่ทำถูก</span>
-                <span className="text-[10px] font-medium opacity-50 mt-0.5" style={{ color: theme.textSub }}>คะแนนรวมจากทั้งหมด 80 ข้อ</span>
+                <span className="text-[10px] font-medium opacity-50 mt-0.5" style={{ color: theme.textSub }}>คะแนนรวมจากทั้งหมด {currentMode.maxQ} ข้อ</span>
               </div>
               <div className="flex items-center gap-2">
                 <input 
@@ -44,7 +46,7 @@ function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTim
                   className="w-16 text-center bg-transparent outline-none font-black text-2xl border-b-2 transition-colors focus:border-blue-400 placeholder:opacity-30" 
                   style={{ color: theme.textMain, borderColor: theme.trackBg }} 
                 />
-                <span className="text-sm font-bold opacity-40" style={{ color: theme.textSub }}>/ 80</span>
+                <span className="text-sm font-bold opacity-40" style={{ color: theme.textSub }}>/ {currentMode.maxQ}</span>
               </div>
             </div>
           </div>
@@ -52,8 +54,8 @@ function ScoreModal({ themeVals, setIsScoreModalOpen, handleFinishExam, resetTim
           <div className="mt-2 p-5 rounded-2xl border border-white/5 flex items-center justify-between" style={{ background: theme.bg === '#1e2229' ? '#13161a' : '#e2e8f0', boxShadow: shadowDeepInset }}>
             <span className="text-sm font-bold uppercase tracking-widest" style={{ color: theme.textMain }}>Total Score</span>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black" style={{ color: finalScore >= 50 ? '#10b981' : (finalScore > 0 ? '#f87171' : theme.textMain) }}>{finalScore}</span>
-              <span className="text-sm font-bold opacity-50" style={{ color: theme.textSub }}>/ 100</span>
+              <span className="text-3xl font-black" style={{ color: (finalScore / currentMode.maxScore) >= 0.5 ? '#10b981' : (finalScore > 0 ? '#f87171' : theme.textMain) }}>{finalScore}</span>
+              <span className="text-sm font-bold opacity-50" style={{ color: theme.textSub }}>/ {currentMode.maxScore}</span>
             </div>
           </div>
 
