@@ -132,7 +132,18 @@ export default function App() {
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   
   const [customTags, setCustomTags] = useState(savedState.customTags || ['#ลังเลศัพท์', '#ทำไม่ทัน', '#เดา']);
-  const [targetScore, setTargetScore] = useState(savedState.targetScore || 80);
+  const [targetScore, setTargetScore] = useState(() => {
+    if (typeof savedState.targetScore === 'object' && savedState.targetScore !== null) {
+      return savedState.targetScore;
+    }
+    const legacyScore = typeof savedState.targetScore === 'number' ? savedState.targetScore : 80;
+    return { 
+      full: legacyScore, 
+      part1: MODES.part1?.maxScore || 25, 
+      part2: MODES.part2?.maxScore || 50, 
+      part3: MODES.part3?.maxScore || 25 
+    };
+  });
 
   const [activeTechniqueId, setActiveTechniqueId] = useState(null);
   const [techniquePrevView, setTechniquePrevView] = useState('timer');
@@ -724,8 +735,8 @@ export default function App() {
           themeVals={themeVals} 
           setCurrentView={setCurrentView} 
           history={reflectionHistory} 
-          targetScore={targetScore} 
-          setTargetScore={setTargetScore} 
+          targetScore={typeof targetScore === 'object' ? (targetScore[mode] ?? MODES[mode]?.maxScore ?? 100) : targetScore} 
+          setTargetScore={(val) => setTargetScore(prev => typeof prev === 'object' ? { ...prev, [mode]: val } : val)} 
           cfg={cfg} 
           mode={mode}
           onModeSelect={handleModeSelect}

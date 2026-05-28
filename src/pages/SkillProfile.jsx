@@ -150,7 +150,7 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
   const areaPath = points.length > 0 
     ? `${scoreLinePath} L ${points[points.length - 1].x},${height - padY} L ${points[0].x},${height - padY} Z` 
     : '';
-  const targetY = height - padY - ((Number(targetScore) || 0) / 100) * innerH;
+  const targetY = height - padY - ((Number(targetScore) || 0) / currentMaxScore) * innerH;
 
   return (
     <div className="w-full p-6 lg:p-8 rounded-[2.5rem] border border-white/5 flex flex-col gap-6 relative" style={{ background: raisedGradient, boxShadow: shadowOuter, width: cfg.spTrendContainerW > 0 ? `${cfg.spTrendContainerW}px` : '100%', height: cfg.spTrendContainerH > 0 ? `${cfg.spTrendContainerH}px` : 'auto', transform: `translate(${cfg.spTrendX}px, ${cfg.spTrendY}px)` }}>
@@ -180,14 +180,14 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
                <input 
                  type="number" 
                  min="0" 
-                 max="100" 
+                 max={currentMaxScore} 
                  value={targetScore} 
-                 onChange={(e) => setTargetScore(e.target.value === '' ? '' : Math.min(100, Math.max(0, Number(e.target.value))))} 
+                 onChange={(e) => setTargetScore(e.target.value === '' ? '' : Math.min(currentMaxScore, Math.max(0, Number(e.target.value))))} 
                  className="w-14 bg-transparent text-right outline-none font-black text-xl transition-colors focus:text-emerald-400"
                  style={{ color: '#10b981' }}
-                 placeholder="80"
+                 placeholder={currentMaxScore}
                />
-               <span className="text-[10px] font-bold opacity-50" style={{ color: theme.textSub }}>%</span>
+               <span className="text-[10px] font-bold opacity-50" style={{ color: theme.textSub }}>/ {currentMaxScore}</span>
             </div>
           </div>
        </div>
