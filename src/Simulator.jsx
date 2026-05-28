@@ -87,6 +87,26 @@ export default function App() {
   const [draftSession, setDraftSession] = useState(null);
 
   const [countdown, setCountdown] = useState(null);
+  useEffect(() => {
+    db.app_state.get('draftSession').then(record => {
+      if (record && record.value) {
+        const draft = record.value;
+        const ONE_DAY = 24 * 60 * 60 * 1000;
+        if (Date.now() - (draft.savedAt || 0) < ONE_DAY) {
+          setDraftSession(draft);
+          setCurrentView('reflection_draft');
+        } else {
+          db.app_state.delete('draftSession').catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (draftSession) {
+      db.app_state.put({ key: 'draftSession', value: draftSession }).catch(() => {});
+    }
+  }, [draftSession]);
   const pendingSyncsRef = useRef(new Map());
 
   useEffect(() => {
@@ -373,7 +393,7 @@ export default function App() {
       scores: scores || { s1: '', s2: '', s3: '', s4: '', s5: '', s6: '', s7: '', s8: '', s9: '' },
       pointsData: generateReflectionPoints(marks, totalTime.current, timelineData, mode)
     };
-    
+    newSession.savedAt = Date.now();
     setDraftSession(newSession);
     setCurrentView('reflection_draft');
     
@@ -445,12 +465,14 @@ export default function App() {
 
       setDraftSession(null);
       setCurrentView('reflection_lobby');
+      db.app_state.delete('draftSession').catch(() => {});
     }
   }, [draftSession, currentUser]);
 
   const handleDiscardDraft = useCallback(() => {
     setDraftSession(null);
     resetTimer(); 
+    db.app_state.delete('draftSession').catch(() => {});
   }, [resetTimer]);
 
   const deleteHistory = useCallback((idToDelete) => {
