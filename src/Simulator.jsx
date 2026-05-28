@@ -10,6 +10,7 @@ import { useTheme } from './contexts/ThemeContext.jsx';
 import { AVATARS, MODES, RECOMMENDED_SEQUENCE, EXAM_PARTS, FLAT_EXAM_SUBS, TECHNIQUE_GUIDES, PACING_RULES, UI_CFG } from './utils/constants';
 import { calculateScores, calculateWinner, rgbToHex, getTipColor, getDifficultyColor, buildExamTimeline, calculateProgressState, generateReflectionPoints } from './utils/helpers';
 import { db } from './utils/db';
+import { syncManager } from './utils/syncManager';
 import TimerDashboard from './components/widgets/TimerDashboard';
 import RightPanelWidget from './components/widgets/RightPanelWidget';
 import GameBoyWidget from './components/widgets/GameBoyWidget';
@@ -107,53 +108,23 @@ export default function App() {
       db.app_state.put({ key: 'draftSession', value: draftSession }).catch(() => {});
     }
   }, [draftSession]);
-  const pendingSyncsRef = useRef(new Map());
-
   useEffect(() => {
-    const flushPendingSyncs = async () => {
-      const currentQueue = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
-      
-      if (pendingSyncsRef.current.size > 0) {
-        pendingSyncsRef.current.forEach((payload, timeoutId) => {
-          clearTimeout(timeoutId);
-          currentQueue.push(payload);
-        });
-        pendingSyncsRef.current.clear();
-      }
-
-      if (currentQueue.length > 0 && navigator.onLine) {
-        const requests = currentQueue.map(payload => 
-          fetch('/api/history', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            keepalive: true, 
-            body: JSON.stringify(payload) 
-          }).then(res => {
-            if (!res.ok && res.status >= 500) throw new Error('Server Down');
-            return true;
-          })
-        );
-
-        const results = await Promise.allSettled(requests);
-        const remainingQueue = currentQueue.filter((_, index) => results[index].status === 'rejected');
-        localStorage.setItem('bwSyncQueue', JSON.stringify(remainingQueue));
-      } else if (currentQueue.length > 0) {
-        localStorage.setItem('bwSyncQueue', JSON.stringify(currentQueue));
-      }
-    };
+    syncManager.triggerSync();
     
+    const handleOnline = () => syncManager.triggerSync();
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') flushPendingSyncs();
+      if (document.visibilityState === 'hidden') syncManager.triggerSync();
     };
+    const handleUnload = () => syncManager.flushWithBeacon();
 
-    window.addEventListener('beforeunload', flushPendingSyncs);
-    window.addEventListener('online', flushPendingSyncs);
+    window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('beforeunload', handleUnload);
     
     return () => {
-      window.removeEventListener('beforeunload', flushPendingSyncs);
-      window.removeEventListener('online', flushPendingSyncs);
+      window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
   const [finishTime, setFinishTime] = useState(null);
@@ -435,7 +406,6 @@ export default function App() {
       setReflectionHistory(prev => [draftSession, ...prev]);
       
       if (currentUser) {
-        const jitterMs = Math.floor(Math.random() * (45000 - 5000 + 1) + 5000);
         const payload = {
           userId: currentUser.id,
           mode: draftSession.mode,
@@ -443,24 +413,7 @@ export default function App() {
           reflectionData: draftSession,
           timestamp: Date.now()
         };
-
-        const timeoutId = setTimeout(() => {
-          fetch('/api/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-            body: JSON.stringify(payload)
-          }).catch(error => {
-            console.warn("Background sync failed, queueing", error);
-            const q = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
-            q.push(payload);
-            localStorage.setItem('bwSyncQueue', JSON.stringify(q));
-          }).finally(() => {
-             pendingSyncsRef.current.delete(timeoutId);
-          });
-        }, jitterMs);
-        
-        pendingSyncsRef.current.set(timeoutId, payload);
+        syncManager.addToQueue(payload);
       }
 
       setDraftSession(null);
