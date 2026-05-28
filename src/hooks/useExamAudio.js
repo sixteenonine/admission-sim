@@ -35,7 +35,9 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
     document.addEventListener('touchstart', unlockSafariAudio);
 
     return () => {
-      Howler.unload();
+      Object.values(soundsRef.current).forEach(sound => {
+        if (sound && typeof sound.unload === 'function') sound.unload();
+      });
       document.removeEventListener('click', unlockSafariAudio);
       document.removeEventListener('touchstart', unlockSafariAudio);
     };
@@ -63,17 +65,17 @@ export default function useExamAudio({ timeLeft, totalTime, isRunning, ambientOn
 
     const elapsed = totalTime - timeLeft;
 
-    if (isRunning && elapsed > 0 && elapsed < 5 && !flags.current.start) {
+    if (isRunning && elapsed > 0 && !flags.current.start) {
       soundsRef.current['start']?.play();
       flags.current.start = true;
     }
 
-    if (isRunning && elapsed >= 1800 && elapsed < 1805 && !flags.current.thirty) {
+    if (isRunning && elapsed >= 1800 && !flags.current.thirty) {
       soundsRef.current['30t']?.play();
       flags.current.thirty = true;
     }
 
-    if (isRunning && timeLeft <= 300 && timeLeft > 295 && !flags.current.fiveMin) {
+    if (isRunning && timeLeft <= 300 && !flags.current.fiveMin) {
       soundsRef.current['05']?.play();
       flags.current.fiveMin = true;
     }

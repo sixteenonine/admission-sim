@@ -57,22 +57,12 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
       }
     };
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isRunning) {
-        updateTimer(); 
-      }
-    };
-
     if (isRunning) {
       lastRealTime = Date.now();
       animationFrame = requestAnimationFrame(updateTimer);
-      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
 
-    return () => {
-      cancelAnimationFrame(animationFrame);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => cancelAnimationFrame(animationFrame);
   }, [isRunning, speed, onTimeUp, setTimeLeft, timeLeftRef]);
 
   const isIdle = timeLeft === totalTime && !isRunning && countdown === null;

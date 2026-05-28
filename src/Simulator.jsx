@@ -90,13 +90,35 @@ export default function App() {
   const pendingSyncsRef = useRef(new Map());
 
   useEffect(() => {
+    const syncQueue = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
+    
     const flushPendingSyncs = () => {
+      const toSync = [...syncQueue];
+      
       if (pendingSyncsRef.current.size > 0) {
         pendingSyncsRef.current.forEach((payload, timeoutId) => {
           clearTimeout(timeoutId);
-          fetch('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true, body: JSON.stringify(payload) }).catch(() => {});
+          toSync.push(payload);
         });
         pendingSyncsRef.current.clear();
+      }
+
+      if (toSync.length > 0 && navigator.onLine) {
+        toSync.forEach(payload => {
+          fetch('/api/history', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            keepalive: true, 
+            body: JSON.stringify(payload) 
+          }).catch(() => {
+            const q = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
+            q.push(payload);
+            localStorage.setItem('bwSyncQueue', JSON.stringify(q));
+          });
+        });
+        localStorage.setItem('bwSyncQueue', '[]');
+      } else if (toSync.length > 0) {
+        localStorage.setItem('bwSyncQueue', JSON.stringify(toSync));
       }
     };
     
@@ -105,10 +127,12 @@ export default function App() {
     };
 
     window.addEventListener('beforeunload', flushPendingSyncs);
+    window.addEventListener('online', flushPendingSyncs);
     document.addEventListener('visibilitychange', handleVisibility);
     
     return () => {
       window.removeEventListener('beforeunload', flushPendingSyncs);
+      window.removeEventListener('online', flushPendingSyncs);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, []);
@@ -388,7 +412,8 @@ export default function App() {
           userId: currentUser.id,
           mode: draftSession.mode,
           score: draftSession.finalScore,
-          reflectionData: draftSession
+          reflectionData: draftSession,
+          timestamp: Date.now()
         };
 
         const timeoutId = setTimeout(() => {
@@ -397,8 +422,12 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             keepalive: true,
             body: JSON.stringify(payload)
-          }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error))
-          .finally(() => {
+          }).catch(error => {
+            console.warn("Background sync failed, queueing", error);
+            const q = JSON.parse(localStorage.getItem('bwSyncQueue') || '[]');
+            q.push(payload);
+            localStorage.setItem('bwSyncQueue', JSON.stringify(q));
+          }).finally(() => {
              pendingSyncsRef.current.delete(timeoutId);
           });
         }, jitterMs);
@@ -438,12 +467,19 @@ export default function App() {
         setShowRotateWarning(false);
       }
     };
+    let resizeTimer;
+    const debouncedResize = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(handleResize, 100);
+    };
+
     handleResize();
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', handleResize);
+    window.addEventListener('resize', debouncedResize);
+    window.addEventListener('orientationchange', debouncedResize);
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('orientationchange', handleResize);
+      clearTimeout(resizeTimer);
+      window.removeEventListener('resize', debouncedResize);
+      window.removeEventListener('orientationchange', debouncedResize);
     };
   }, []);
 
