@@ -114,7 +114,9 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
               </g>
               
               {marks.map((markPercent, i) => {
-                const markAngleRad = ((markPercent / 100) * 360) * (Math.PI / 180);
+                const safePercent = typeof markPercent === 'object' ? 100 : Number(markPercent);
+                if (isNaN(safePercent)) return null;
+                const markAngleRad = ((safePercent / 100) * 360) * (Math.PI / 180);
                 const cx = trackSize / 2, cy = trackSize / 2;
                 const innerR = cfg.trackRadius - 10, outerR = cfg.trackRadius + 10;
                 const x1 = cx + innerR * Math.cos(markAngleRad), y1 = cy + innerR * Math.sin(markAngleRad);

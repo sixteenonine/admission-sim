@@ -275,7 +275,7 @@ export default function App() {
     setIsRunning(false);
     setFinishTime(totalTime.current);
     setTimeLeft(0);
-    if (marks.length === 0) setMarks([{ part: 'End', time: 0, marker: true }]);
+    if (marks.length === 0) setMarks([100]);
     if (navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 500]);
     setIsScoreModalOpen(true);
   }, [marks.length]);

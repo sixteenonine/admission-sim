@@ -108,7 +108,8 @@ export const calculateProgressState = (timeLeft, totalTime, timeline, mode) => {
 
 export const generateReflectionPoints = (marks, totalTime, timeline, mode) => {
   return marks.map((percent, index) => {
-    const elapsedSeconds = (percent / 100) * totalTime;
+    const safePercent = typeof percent === 'object' ? 100 : Number(percent);
+    const elapsedSeconds = (safePercent / 100) * totalTime;
     const mins = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
     const secs = Math.floor(elapsedSeconds % 60).toString().padStart(2, '0');
     
