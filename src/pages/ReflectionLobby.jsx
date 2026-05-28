@@ -51,7 +51,9 @@ export default function ReflectionLobby({ themeVals, setCurrentView, reflectionH
               <div className="flex flex-col gap-2 mt-auto">
                 <div className="px-3 py-2 lg:px-4 lg:py-3 rounded-2xl flex items-center justify-between gap-1 border border-white/5" style={{ background: shadowDeepInset ? 'transparent' : bg, boxShadow: shadowDeepInset }}>
                   <span className="text-[9px] lg:text-[10px] uppercase font-bold tracking-widest opacity-60" style={{ color: theme.textSub }}>Score</span>
-                  <span className="text-lg lg:text-2xl font-black" style={{ color: session.finalScore >= 50 ? '#10b981' : (session.finalScore > 0 ? '#f87171' : theme.textMain) }}>{session.finalScore > 0 ? session.finalScore : '-'}</span>
+                  <span className="text-lg lg:text-2xl font-black" style={{ color: session.finalScore > 0 ? ((session.finalScore / (MODES[session.mode]?.maxScore || 100)) >= 0.5 ? '#10b981' : '#f87171') : theme.textMain }}>
+                    {session.finalScore > 0 ? `${session.finalScore}/${MODES[session.mode]?.maxScore || 100}` : '-'}
+                  </span>
                 </div>
                 <div className="px-3 py-2 lg:px-4 lg:py-3 rounded-2xl flex items-center justify-between gap-1 border border-white/5" style={{ background: shadowDeepInset ? 'transparent' : bg, boxShadow: shadowDeepInset }}>
                   <span className="text-[9px] lg:text-[10px] uppercase font-bold tracking-widest opacity-60" style={{ color: theme.textSub }}>Marks</span>

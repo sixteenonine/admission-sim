@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Award, ChevronRight, History, Tag, MessageSquare, Clock, Asterisk, X, Plus } from 'lucide-react';
-import { EXAM_PARTS, FLAT_EXAM_SUBS } from '../utils/constants';
+import { EXAM_PARTS, FLAT_EXAM_SUBS, MODES } from '../utils/constants';
 import { calculateScores } from '../utils/helpers';
 
 function NoteInputArea({ initialNote, onSave, onClose, themeVals, cfg }) {
@@ -183,8 +183,11 @@ export function ReflectionView({ themeVals, setCurrentView, sessionData, isDraft
 
   if (!sessionData) return null;
   
+  const currentMode = MODES[sessionData.mode] || MODES.full;
+  const activeParts = EXAM_PARTS.filter(part => part.subs.some(sub => currentMode.validSubs.includes(sub.id)));
+
   const pointsData = Array.isArray(sessionData.pointsData) ? sessionData.pointsData : [];
-  const currentCalculatedScores = calculateScores(sessionData.scores || {});
+  const currentCalculatedScores = calculateScores(sessionData.scores || {}, sessionData.mode);
   const safeCustomTags = Array.isArray(customTags) ? customTags : [];
 
   return (
@@ -209,8 +212,8 @@ export function ReflectionView({ themeVals, setCurrentView, sessionData, isDraft
             <div className="flex items-center gap-2 mt-1 text-xs font-medium opacity-80 uppercase tracking-widest truncate" style={{ color: theme.textSub }}>
               <span className="truncate">{sessionData.date || 'Unknown Date'}</span>
               <span className="w-1 h-1 rounded-full bg-current shrink-0"></span>
-              <span className="font-bold shrink-0" style={{ color: sessionData.finalScore >= 50 ? '#10b981' : '#f87171' }}>
-                SCORE: {sessionData.finalScore != null ? sessionData.finalScore : '-'}/100
+              <span className="font-bold shrink-0" style={{ color: (sessionData.finalScore / currentMode.maxScore) >= 0.5 ? '#10b981' : '#f87171' }}>
+                SCORE: {sessionData.finalScore != null ? sessionData.finalScore : '-'}/{currentMode.maxScore}
               </span>
               {sessionData.finishTime != null && (
                 <>
@@ -247,7 +250,7 @@ export function ReflectionView({ themeVals, setCurrentView, sessionData, isDraft
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {EXAM_PARTS.map(part => (
+          {activeParts.map(part => (
             <div key={part.id} className="p-4 rounded-[1.25rem] border border-white/5 flex flex-col gap-1" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest truncate" style={{ color: theme.textSub }} title={part.label}>{part.label}</span>
               <div className="flex items-baseline gap-1 mt-1">
@@ -314,6 +317,8 @@ export function ReflectionView({ themeVals, setCurrentView, sessionData, isDraft
 export function ScoreEditView({ themeVals, sessionData, onSave, onCancel, cfg }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, indentedGradient, shadowCap } = themeVals;
   const [editScoresState, setEditScoresState] = useState(sessionData?.scores || {});
+  const currentMode = MODES[sessionData?.mode] || MODES.full;
+  const activeSubs = FLAT_EXAM_SUBS.filter(sub => currentMode.validSubs.includes(sub.id));
 
   const handleEditScoreChange = useCallback((partId, val, max) => {
     const num = parseInt(val.replace(/\D/g, ''), 10);
@@ -321,7 +326,7 @@ export function ScoreEditView({ themeVals, sessionData, onSave, onCancel, cfg })
   }, []);
 
   const handleSaveEditedScores = () => {
-    const { finalScore } = calculateScores(editScoresState);
+    const { finalScore } = calculateScores(editScoresState, sessionData?.mode);
     onSave(editScoresState, finalScore);
   };
 
@@ -341,7 +346,7 @@ export function ScoreEditView({ themeVals, sessionData, onSave, onCancel, cfg })
 
       <div className="w-full p-6 lg:p-8 rounded-[2.5rem] border border-white/5 flex flex-col gap-6" style={{ background: bg, boxShadow: shadowOuter }}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {FLAT_EXAM_SUBS.map(sub => (
+          {activeSubs.map(sub => (
             <div key={sub.id} className="p-5 rounded-[1.5rem] border border-white/5 transition-colors flex flex-col justify-between" style={{ background: indentedGradient, boxShadow: shadowDeepInset }}>
               <div className="flex flex-col mb-4">
                 <div className="flex items-center justify-between mb-1.5">
