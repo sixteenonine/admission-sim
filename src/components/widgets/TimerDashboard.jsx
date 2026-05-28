@@ -21,42 +21,58 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
   // Timer Optimization Loop (Zero-Render)
   useEffect(() => {
     let animationFrame;
-    let lastTick = performance.now();
+    let lastRealTime = Date.now();
+    let lastDisplayTime = Math.max(0, Math.ceil(timeLeftRef.current));
 
-    const updateTimer = (currentTime) => {
-      const deltaMs = currentTime - lastTick;
+    const updateTimer = () => {
+      const now = Date.now();
+      const elapsedRealMs = now - lastRealTime;
       
-      if (deltaMs >= (1000 / speed)) {
-        if (timeLeftRef && timeLeftRef.current > 0) {
-          timeLeftRef.current -= (deltaMs / 1000) * speed;
-          lastTick = currentTime;
+      if (elapsedRealMs > 0) {
+        timeLeftRef.current -= (elapsedRealMs * speed) / 1000;
+        lastRealTime = now;
 
-          const displayTime = Math.max(0, Math.ceil(timeLeftRef.current));
+        const currentDisplayTime = Math.max(0, Math.ceil(timeLeftRef.current));
+        
+        if (currentDisplayTime !== lastDisplayTime) {
+          lastDisplayTime = currentDisplayTime;
           
-          // 1. อัปเดต DOM โดยตรง ไม่ผ่าน React State (เพื่อความลื่นไหลสูงสุด)
           if (minRef.current && secRef.current) {
-            minRef.current.textContent = Math.floor(displayTime / 60).toString().padStart(2, '0');
-            secRef.current.textContent = (displayTime % 60).toString().padStart(2, '0');
+            minRef.current.textContent = Math.floor(currentDisplayTime / 60).toString().padStart(2, '0');
+            secRef.current.textContent = (currentDisplayTime % 60).toString().padStart(2, '0');
           }
 
-          // 2. Sync กลับไปให้ Simulator (เพื่อให้ Audio/LCD ทำงานตามปกติ)
-          if (setTimeLeft) setTimeLeft(timeLeftRef.current);
+          if (setTimeLeft) setTimeLeft(currentDisplayTime);
 
-          if (timeLeftRef.current <= 0) {
+          if (currentDisplayTime <= 0) {
             cancelAnimationFrame(animationFrame);
             if (onTimeUp) onTimeUp();
             return;
           }
         }
       }
-      if (isRunning) animationFrame = requestAnimationFrame(updateTimer);
+      
+      if (isRunning) {
+        animationFrame = requestAnimationFrame(updateTimer);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isRunning) {
+        updateTimer(); 
+      }
     };
 
     if (isRunning) {
-      lastTick = performance.now(); // รีเซ็ตเวลาเริ่มต้น
+      lastRealTime = Date.now();
       animationFrame = requestAnimationFrame(updateTimer);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
     }
-    return () => cancelAnimationFrame(animationFrame);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isRunning, speed, onTimeUp, setTimeLeft, timeLeftRef]);
 
   const isIdle = timeLeft === totalTime && !isRunning && countdown === null;

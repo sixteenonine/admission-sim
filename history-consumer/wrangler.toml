@@ -1,0 +1,13 @@
+name = "admission-history-consumer"
+main = "index.js"
+compatibility_date = "2026-05-08"
+
+[[queues.consumers]]
+queue = "admission-history-queue"
+max_batch_size = 100 # ดึงข้อมูลมาครั้งละสูงสุด 100 รายการ
+max_batch_timeout = 5 # หรือรอครบ 5 วินาที แล้วจับมัดรวมกัน
+
+[[d1_databases]]
+binding = "DB"
+database_name = "admission-sim-db"
+database_id = "2154b60b-9bf5-4ba1-b0be-8e1c902cd3ab"

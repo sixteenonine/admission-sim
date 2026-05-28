@@ -25,5 +25,13 @@
 			"id": "9034108157ba405ca15cb65addc512c8",
 			"remote": true
 		}
-	]
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "HISTORY_QUEUE",
+				"queue": "admission-history-queue"
+			}
+		]
+	}
 }

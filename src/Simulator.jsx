@@ -87,6 +87,31 @@ export default function App() {
   const [draftSession, setDraftSession] = useState(null);
 
   const [countdown, setCountdown] = useState(null);
+  const pendingSyncsRef = useRef(new Map());
+
+  useEffect(() => {
+    const flushPendingSyncs = () => {
+      if (pendingSyncsRef.current.size > 0) {
+        pendingSyncsRef.current.forEach((payload, timeoutId) => {
+          clearTimeout(timeoutId);
+          fetch('/api/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true, body: JSON.stringify(payload) }).catch(() => {});
+        });
+        pendingSyncsRef.current.clear();
+      }
+    };
+    
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flushPendingSyncs();
+    };
+
+    window.addEventListener('beforeunload', flushPendingSyncs);
+    document.addEventListener('visibilitychange', handleVisibility);
+    
+    return () => {
+      window.removeEventListener('beforeunload', flushPendingSyncs);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
   const [finishTime, setFinishTime] = useState(null);
 
   const [lcdHue, setLcdHue] = useState(0);
@@ -103,6 +128,15 @@ export default function App() {
   const [activePresetId, setActivePresetId] = useState(savedState.activePresetId || 'recommend');
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
+  useEffect(() => {
+    db.app_state.get('examSequence').then(record => {
+      if (record && record.value) setExamSequence(record.value);
+    }).catch(() => {});
+    
+    db.app_state.get('customPresets').then(record => {
+      if (record && record.value) setCustomPresets(record.value);
+    }).catch(() => {});
+  }, []);
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
   const isTimerStarted = isRunning && timeLeft < totalTime.current;
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -164,8 +198,13 @@ export default function App() {
     const timer = setTimeout(() => {
       const saveTask = () => {
         try {
-          const stateToSave = { examCounter, mode, examSequence, customPresets, activePresetId, customTags, targetScore, sfxEnabled };
-          localStorage.setItem('bwYouExamState', JSON.stringify(stateToSave));
+          const lightStateToSave = { examCounter, mode, activePresetId, customTags, targetScore, sfxEnabled };
+          localStorage.setItem('bwYouExamState', JSON.stringify(lightStateToSave));
+          
+          db.app_state.bulkPut([
+            { key: 'examSequence', value: examSequence },
+            { key: 'customPresets', value: customPresets }
+          ]).catch(e => console.warn("IDB Save warning", e));
         } catch (e) {
           console.warn("Storage warning: Failed to save exam settings", e);
         }
@@ -344,18 +383,27 @@ export default function App() {
       setReflectionHistory(prev => [draftSession, ...prev]);
       
       if (currentUser) {
-        // Real-time Background Sync (Non-blocking) + keepalive ป้องกันข้อมูลหายเมื่อปิดแท็บ
-        fetch('/api/history', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          keepalive: true,
-          body: JSON.stringify({
-            userId: currentUser.id,
-            mode: draftSession.mode,
-            score: draftSession.finalScore,
-            reflectionData: draftSession
-          })
-        }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error));
+        const jitterMs = Math.floor(Math.random() * (45000 - 5000 + 1) + 5000);
+        const payload = {
+          userId: currentUser.id,
+          mode: draftSession.mode,
+          score: draftSession.finalScore,
+          reflectionData: draftSession
+        };
+
+        const timeoutId = setTimeout(() => {
+          fetch('/api/history', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
+            body: JSON.stringify(payload)
+          }).catch(error => console.warn("Background sync failed, data is safe in IndexedDB", error))
+          .finally(() => {
+             pendingSyncsRef.current.delete(timeoutId);
+          });
+        }, jitterMs);
+        
+        pendingSyncsRef.current.set(timeoutId, payload);
       }
 
       setDraftSession(null);

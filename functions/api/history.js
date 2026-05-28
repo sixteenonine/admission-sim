@@ -46,13 +46,16 @@ export async function onRequestPost(context) {
 
     const historyId = reflectionData.id || crypto.randomUUID();
 
-    const insertPromise = db.prepare(
-      "INSERT OR REPLACE INTO exam_history (id, user_id, mode, score, reflection_data) VALUES (?, ?, ?, ?, ?)"
-    ).bind(historyId, userId, mode || "full", score || 0, JSON.stringify(reflectionData)).run();
+    // โยนข้อมูลเข้า Cloudflare Queue เพื่อลดภาระ Database
+    await context.env.HISTORY_QUEUE.send({
+      historyId,
+      userId,
+      mode: mode || "full",
+      score: score || 0,
+      reflectionData
+    });
 
-    context.waitUntil(insertPromise);
-
-    return new Response(JSON.stringify({ status: "success", message: "บันทึกประวัติสำเร็จ" }), {
+    return new Response(JSON.stringify({ status: "success", message: "บันทึกประวัติเข้าคิวสำเร็จ" }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
     });
 
