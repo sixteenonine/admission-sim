@@ -1,6 +1,6 @@
-import React, { useMemo, memo } from 'react';
-import { TrendingUp, Tag, Award, Asterisk, ArrowLeft, History } from 'lucide-react';
-import { FLAT_EXAM_SUBS } from '../utils/constants';
+import React, { useState, useMemo, memo } from 'react';
+import { TrendingUp, Tag, Award, Asterisk, ArrowLeft, History, ChevronDown } from 'lucide-react';
+import { FLAT_EXAM_SUBS, MODES } from '../utils/constants';
 
 const LatestInsightWidget = memo(({ history, themeVals, cfg }) => {
   const { bg, theme, raisedGradient, shadowOuter } = themeVals;
@@ -108,12 +108,19 @@ const LatestInsightWidget = memo(({ history, themeVals, cfg }) => {
   );
 });
 
-const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTargetScore, cfg }) => {
+const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTargetScore, cfg, trendMode }) => {
   const { bg, theme, raisedGradient, shadowOuter, shadowDeepInset } = themeVals;
+
+  const currentModeData = MODES[trendMode] || MODES.full;
+  const currentMaxScore = currentModeData.maxScore || 100;
+  const currentMaxTime = (currentModeData.time || 90 * 60) / 60;
 
   const chartData = useMemo(() => {
     if (!history || history.length === 0) return [];
-    return history.slice(0, 5).reverse().map((s, idx) => {
+    return history
+      .slice(0, 5)
+      .reverse()
+      .map((s, idx) => {
        return {
          label: `รอบ ${s.sessionNumber || idx + 1}`,
          score: s.finalScore || 0,
@@ -121,8 +128,6 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
        };
     });
   }, [history]);
-
-  if (chartData.length < 2) return null;
 
   const width = cfg.spTrendWidth;
   const height = cfg.spTrendHeight;
@@ -135,8 +140,8 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
   
   const points = chartData.map((d, i) => {
      const x = padX + i * step;
-     const scoreY = height - padY - (d.score / 100) * innerH;
-     const timeY = height - padY - (d.time / 90) * innerH;
+     const scoreY = height - padY - (d.score / currentMaxScore) * innerH;
+     const timeY = height - padY - (d.time / currentMaxTime) * innerH;
      return { x, scoreY, timeY, score: d.score, time: d.time, label: d.label };
   });
 
@@ -149,13 +154,13 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
 
   return (
     <div className="w-full p-6 lg:p-8 rounded-[2.5rem] border border-white/5 flex flex-col gap-6 relative" style={{ background: raisedGradient, boxShadow: shadowOuter, width: cfg.spTrendContainerW > 0 ? `${cfg.spTrendContainerW}px` : '100%', height: cfg.spTrendContainerH > 0 ? `${cfg.spTrendContainerH}px` : 'auto', transform: `translate(${cfg.spTrendX}px, ${cfg.spTrendY}px)` }}>
-       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 w-full relative z-10">
+       <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 w-full relative z-30">
          <div className="flex flex-col">
            <h3 className="font-bold tracking-wide" style={{ color: theme.textMain, transform: `translate(${cfg.spTrendTitleX}px, ${cfg.spTrendTitleY}px)`, fontSize: `${cfg.spTrendTitleSize}px` }}>Score Trend</h3>
            <p className="font-medium opacity-60 uppercase tracking-widest mt-1" style={{ color: theme.textSub, transform: `translate(${cfg.spTrendSubX}px, ${cfg.spTrendSubY}px)`, fontSize: `${cfg.spTrendSubSize}px` }}>สถิติคะแนนและเวลาที่ใช้เทียบกับเป้าหมาย</p>
          </div>
          
-         <div className="flex items-center gap-4 sm:gap-6 shrink-0 flex-wrap justify-end relative z-10" style={{ transform: `translate(${cfg.spTrendInputX}px, ${cfg.spTrendInputY}px)` }}>
+         <div className="flex items-center gap-4 sm:gap-6 shrink-0 flex-wrap justify-end relative z-30" style={{ transform: `translate(${cfg.spTrendInputX}px, ${cfg.spTrendInputY}px)` }}>
             <div className="flex items-center gap-3 hidden sm:flex">
                <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-0.5 rounded-full" style={{ background: '#b46bcf' }}></div>
@@ -182,11 +187,19 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
                  style={{ color: '#10b981' }}
                  placeholder="80"
                />
+               <span className="text-[10px] font-bold opacity-50" style={{ color: theme.textSub }}>%</span>
             </div>
           </div>
        </div>
        
        <div className="w-full overflow-x-auto no-scrollbar relative z-10" style={{ transform: `translate(${cfg.spTrendSvgX}px, ${cfg.spTrendSvgY}px)` }}>
+          {chartData.length < 2 ? (
+            <div className="w-full h-[240px] flex flex-col items-center justify-center opacity-50" style={{ color: theme.textSub }}>
+              <TrendingUp size={40} className="mb-3 opacity-20" />
+              <span className="font-bold text-sm">ข้อมูลโหมด {currentModeData.label.split(' ')[0]} ไม่เพียงพอ</span>
+              <span className="text-[10px] mt-1 uppercase tracking-widest">ต้องทำข้อสอบโหมดนี้อย่างน้อย 2 รอบเพื่อวิเคราะห์กราฟ</span>
+            </div>
+          ) : (
           <div className="min-w-[500px]">
             <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
               <defs>
@@ -196,10 +209,11 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
                 </linearGradient>
               </defs>
               {[0, 25, 50, 75, 100].map(v => {
+                const scoreVal = (v / 100) * currentMaxScore;
                 const y = height - padY - (v/100) * innerH;
                 return (
                   <g key={v}>
-                    <text x={padX - 15} y={y + 4} textAnchor="end" fill={theme.textSub} fontSize="10" opacity="0.6" className="font-mono">{v}</text>
+                    <text x={padX - 15} y={y + 4} textAnchor="end" fill={theme.textSub} fontSize="10" opacity="0.6" className="font-mono">{scoreVal}</text>
                     <line x1={padX} y1={y} x2={width-padX} y2={y} stroke={theme.textMain} strokeOpacity={v===0?0.2:0.05} strokeWidth="1" strokeDasharray={v===0?"none":"4 4"} />
                   </g>
                 )
@@ -239,6 +253,7 @@ const RecentScoreChartWidget = memo(({ history, themeVals, targetScore, setTarge
               })}
             </svg>
           </div>
+          )}
        </div>
     </div>
   );
@@ -371,9 +386,11 @@ const TopMarkedPartsWidget = memo(({ history, themeVals, cfg }) => {
   );
 });
 
-const SubPartHeatmapWidget = memo(({ history, themeVals, cfg, onPartClick }) => {
+const SubPartHeatmapWidget = memo(({ history, themeVals, cfg, onPartClick, trendMode = 'full' }) => {
   const { bg, theme, raisedGradient, shadowOuter } = themeVals;
   const isDarkMode = theme.bg === "#1e2229";
+  const currentModeData = MODES[trendMode] || MODES.full;
+  const activeSubs = FLAT_EXAM_SUBS.filter(sub => currentModeData.validSubs.includes(sub.id));
 
   const sessions = useMemo(() => {
     if (!history || history.length === 0) return [];
@@ -417,7 +434,7 @@ const SubPartHeatmapWidget = memo(({ history, themeVals, cfg, onPartClick }) => 
              </div>
              
              <div className="flex flex-col gap-2">
-                 {FLAT_EXAM_SUBS.map(sub => (
+                 {activeSubs.map(sub => (
                    <div key={sub.id} className="flex gap-2 items-center group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-xl p-1 -ml-1 transition-colors" onClick={() => onPartClick(sub.id)}>
                        <div className="shrink-0 font-bold uppercase tracking-wider text-right pr-1 leading-tight group-hover:text-blue-500 transition-colors" style={{ color: theme.textSub, width: `${cfg.spHeatLblW}px`, fontSize: `${cfg.spHeatLblSize}px` }} title={`คลิกเพื่อดูเทคนิคทำพาร์ท ${sub.label}`}>
                           {SHORT_LABELS[sub.id]}
@@ -448,8 +465,15 @@ const SubPartHeatmapWidget = memo(({ history, themeVals, cfg, onPartClick }) => 
   );
 });
 
-export default function SkillProfileView({ themeVals, setCurrentView, history, targetScore, setTargetScore, cfg, onPartClick }) {
+export default function SkillProfileView({ themeVals, setCurrentView, history, targetScore, setTargetScore, cfg, onPartClick, mode = 'full', onModeSelect }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient } = themeVals;
+  const [isModeOpen, setIsModeOpen] = useState(false);
+  const currentModeData = MODES[mode] || MODES.full;
+  
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    return history.filter(s => (s.mode || 'full') === mode);
+  }, [history, mode]);
   return (
     <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in duration-300 mx-auto max-w-6xl gap-8">
       <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/10" style={{ background: raisedGradient, boxShadow: shadowPlateau }}>
@@ -462,20 +486,53 @@ export default function SkillProfileView({ themeVals, setCurrentView, history, t
             <p className="font-medium opacity-60 uppercase tracking-widest mt-1 truncate" style={{ color: theme.textSub, fontSize: `${cfg.spMainSubSize}px` }}>สรุปและวิเคราะห์ผลการสอบ</p>
           </div>
         </div>
-        <button 
-          onClick={() => setCurrentView('reflection_lobby')}
-          className="hidden md:flex px-6 py-3.5 rounded-full font-bold tracking-widest text-[11px] uppercase items-center gap-2 border border-white/10 transition-transform active:scale-95"
-          style={{ background: raisedGradient, boxShadow: shadowOuter, color: theme.textMain }}
-        >
-          <History size={14} className="text-blue-500" />
-          <span>History Lobby</span>
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3 z-30">
+          <div className="relative">
+            {isModeOpen && <div className="fixed inset-0 z-40" onClick={() => setIsModeOpen(false)}></div>}
+            <button 
+              onClick={() => setIsModeOpen(!isModeOpen)}
+              className="flex items-center gap-2 px-4 py-3 sm:py-3.5 rounded-full border border-white/10 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
+              style={{ background: raisedGradient, boxShadow: shadowOuter, color: theme.textMain }}
+            >
+              {currentModeData.label.split(' ')[0]} <ChevronDown size={14} className={`transition-transform duration-300 ${isModeOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            <div 
+              className={`absolute right-0 top-full mt-2 w-[160px] sm:w-[180px] rounded-2xl p-2 border border-white/10 transition-all duration-300 origin-top-right z-50 flex flex-col gap-1 ${isModeOpen ? 'opacity-100 scale-100 pointer-events-auto translate-y-0' : 'opacity-0 scale-95 pointer-events-none -translate-y-2'}`}
+              style={{ boxShadow: shadowOuter, background: raisedGradient }}
+            >
+              {Object.entries(MODES).map(([key, { label }]) => {
+                const isSelected = mode === key;
+                return (
+                  <button 
+                    key={key} 
+                    onClick={() => { onModeSelect(key); setIsModeOpen(false); }} 
+                    className={`w-full text-left px-3 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-wide transition-all flex items-center justify-between rounded-xl hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`} 
+                    style={{ background: isSelected ? (theme.bg === '#1e2229' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent', color: isSelected ? theme.textMain : theme.textSub }}
+                  >
+                    <span>{label.split(' ')[0]}</span>
+                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button 
+            onClick={() => setCurrentView('reflection_lobby')}
+            className="hidden md:flex px-6 py-3.5 rounded-full font-bold tracking-widest text-[11px] uppercase items-center gap-2 border border-white/10 transition-transform active:scale-95"
+            style={{ background: raisedGradient, boxShadow: shadowOuter, color: theme.textMain }}
+          >
+            <History size={14} className="text-blue-500" />
+            <span>History Lobby</span>
+          </button>
+        </div>
       </div>
 
-      <LatestInsightWidget history={history} themeVals={themeVals} cfg={cfg} />
-      <RecentScoreChartWidget history={history} themeVals={themeVals} targetScore={targetScore} setTargetScore={setTargetScore} cfg={cfg} />
+      <LatestInsightWidget history={filteredHistory} themeVals={themeVals} cfg={cfg} />
+      <RecentScoreChartWidget history={filteredHistory} themeVals={themeVals} targetScore={targetScore} setTargetScore={setTargetScore} cfg={cfg} trendMode={mode} />
 
-      {history.length < 2 && (
+      {filteredHistory.length < 2 && (
          <div className="w-full p-8 rounded-[2rem] border border-white/5 opacity-70 flex flex-col items-center justify-center text-center mt-4" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textSub }}>
             <TrendingUp size={48} className="mb-4 opacity-20" />
             <span className="text-lg font-bold" style={{ color: theme.textMain }}>ข้อมูลยังไม่เพียงพอสำหรับการเปรียบเทียบ</span>
@@ -483,11 +540,11 @@ export default function SkillProfileView({ themeVals, setCurrentView, history, t
          </div>
       )}
 
-      {history.length >= 2 && (
+      {filteredHistory.length >= 2 && (
          <div className="w-full flex flex-col gap-6">
-           <TopTagsWidget history={history} themeVals={themeVals} cfg={cfg} />
-           <TopMarkedPartsWidget history={history} themeVals={themeVals} cfg={cfg} />
-           <SubPartHeatmapWidget history={history} themeVals={themeVals} cfg={cfg} onPartClick={onPartClick} />
+           <TopTagsWidget history={filteredHistory} themeVals={themeVals} cfg={cfg} />
+           <TopMarkedPartsWidget history={filteredHistory} themeVals={themeVals} cfg={cfg} />
+           <SubPartHeatmapWidget history={filteredHistory} themeVals={themeVals} cfg={cfg} onPartClick={onPartClick} trendMode={mode} />
          </div>
       )}
 

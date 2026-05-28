@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, History, CalendarDays, Trash2 } from 'lucide-react';
+import { ArrowLeft, History, CalendarDays, Trash2, ChevronDown, Filter } from 'lucide-react';
 import { MODES } from '../utils/constants';
 
 export default function ReflectionLobby({ themeVals, setCurrentView, reflectionHistory, setActiveSessionId, deleteHistory }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap, indentedGradient } = themeVals;
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [filterMode, setFilterMode] = useState('all');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  const filteredHistory = reflectionHistory.filter(session => 
+    filterMode === 'all' || (session.mode || 'full') === filterMode
+  );
 
   return (
     <div className="mt-24 mb-10 w-full px-4 flex flex-col z-10 animate-in fade-in slide-in-from-right-8 duration-300 mx-auto max-w-5xl gap-6">
@@ -19,17 +25,61 @@ export default function ReflectionLobby({ themeVals, setCurrentView, reflectionH
             <p className="text-xs font-medium opacity-60 uppercase tracking-widest mt-1 truncate" style={{ color: theme.textSub }}>ประวัติการทบทวนกลยุทธ์สอบ</p>
           </div>
         </div>
+        <div className="relative shrink-0">
+          {isFilterOpen && <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)}></div>}
+          <button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl border border-white/5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all active:scale-95"
+            style={{ background: shadowDeepInset ? 'transparent' : bg, boxShadow: shadowDeepInset, color: theme.textMain }}
+          >
+            <Filter size={14} className="opacity-70" />
+            <span className="hidden sm:inline">{filterMode === 'all' ? 'ALL MODES' : MODES[filterMode]?.label.split(' ')[0]}</span>
+            <ChevronDown size={14} className={`transition-transform duration-300 ${isFilterOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <div 
+            className={`absolute right-0 top-full mt-2 w-[160px] sm:w-[180px] rounded-2xl p-2 border border-white/10 transition-all duration-300 origin-top-right z-50 flex flex-col gap-1 ${isFilterOpen ? 'opacity-100 scale-100 pointer-events-auto translate-y-0' : 'opacity-0 scale-95 pointer-events-none -translate-y-2'}`}
+            style={{ boxShadow: shadowOuter, background: raisedGradient }}
+          >
+            <button 
+              onClick={() => { setFilterMode('all'); setIsFilterOpen(false); }} 
+              className={`w-full text-left px-3 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-wide transition-all flex items-center justify-between rounded-xl hover:bg-black/5 dark:hover:bg-white/5 ${filterMode === 'all' ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`} 
+              style={{ background: filterMode === 'all' ? (theme.bg === '#1e2229' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent', color: filterMode === 'all' ? theme.textMain : theme.textSub }}
+            >
+              <span>ALL MODES</span>
+              {filterMode === 'all' && <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />}
+            </button>
+            {Object.entries(MODES).map(([key, { label }]) => {
+              const isSelected = filterMode === key;
+              return (
+                <button 
+                  key={key} 
+                  onClick={() => { setFilterMode(key); setIsFilterOpen(false); }} 
+                  className={`w-full text-left px-3 py-2 sm:px-4 sm:py-2.5 text-[10px] sm:text-[11px] font-bold tracking-wide transition-all flex items-center justify-between rounded-xl hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`} 
+                  style={{ background: isSelected ? (theme.bg === '#1e2229' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)') : 'transparent', color: isSelected ? theme.textMain : theme.textSub }}
+                >
+                  <span>{label.split(' ')[0]}</span>
+                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_#60a5fa]" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {reflectionHistory.length === 0 ? (
+      {filteredHistory.length === 0 ? (
         <div className="w-full flex flex-col items-center justify-center p-16 rounded-[2.5rem] border border-white/5 opacity-50" style={{ background: raisedGradient, boxShadow: shadowPlateau, color: theme.textSub }}>
           <History size={64} className="mb-4 opacity-20" />
-          <p className="font-medium text-lg">ยังไม่มีประวัติการสอบ</p>
-          <p className="text-sm mt-1">ข้อมูลจะถูกบันทึกเมื่อคุณทำข้อสอบจนเวลาหมดและกรอกคะแนน</p>
+          <p className="font-medium text-lg">
+            {reflectionHistory.length === 0 ? 'ยังไม่มีประวัติการสอบ' : 'ไม่พบประวัติในโหมดที่เลือก'}
+          </p>
+          <p className="text-sm mt-1 text-center">
+            {reflectionHistory.length === 0 ? 'ข้อมูลจะถูกบันทึกเมื่อคุณทำข้อสอบจนเวลาหมดและกรอกคะแนน' : 'ลองเปลี่ยนตัวกรองเป็นโหมดอื่นเพื่อดูประวัติเพิ่มเติม'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6 auto-rows-max">
-          {reflectionHistory.map(session => (
+          {filteredHistory.map(session => (
             <div key={session.id} className="relative group p-4 lg:p-6 rounded-[2rem] lg:rounded-[2.5rem] border border-white/5 flex flex-col justify-between transition-all hover:scale-[1.02] cursor-pointer aspect-square" style={{ background: raisedGradient, boxShadow: shadowOuter }} onClick={() => { setActiveSessionId(session.id); setCurrentView('reflection'); }}>
               
               <div className="flex items-start justify-between">

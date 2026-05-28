@@ -727,6 +727,8 @@ export default function App() {
           targetScore={targetScore} 
           setTargetScore={setTargetScore} 
           cfg={cfg} 
+          mode={mode}
+          onModeSelect={handleModeSelect}
           onPartClick={(id) => { 
             setActiveTechniqueId(id); 
             setTechniquePrevView('skill_profile'); 
