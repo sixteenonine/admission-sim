@@ -156,7 +156,7 @@ export function HubFlashcards() {
 export function HubFlashcardDecks() {
   const themeVals = useOutletContext();
   const navigate = useNavigate();
-  const [decksData, setDecksData] = React.useState(null);
+  
   const [favCount, setFavCount] = React.useState(null);
   const [activeCategory, setActiveCategory] = React.useState(null);
 
