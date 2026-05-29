@@ -1,14 +1,67 @@
 import React, { useState } from 'react';
 import { ArrowLeft, History, CalendarDays, Trash2, ChevronDown, Filter } from 'lucide-react';
 import { MODES } from '../utils/constants';
-
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { syncManager } from '../utils/syncManager';
 export default function ReflectionLobby({ themeVals, setCurrentView, reflectionHistory, setActiveSessionId, deleteHistory }) {
   const { bg, theme, shadowPlateau, shadowOuter, raisedGradient, shadowDeepInset, shadowCap, indentedGradient } = themeVals;
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [filterMode, setFilterMode] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const filteredHistory = reflectionHistory.filter(session => 
+  const queryClient = useQueryClient();
+
+  const { data: rawHistory = [] } = useQuery({
+    queryKey: ['reflectionHistory', themeVals.currentUser?.id],
+    queryFn: async () => {
+      if (!themeVals.currentUser?.id) return [];
+      const res = await fetch(`/api/history?userId=${themeVals.currentUser.id}`);
+      if (!res.ok) throw new Error('Failed to fetch history');
+      const json = await res.json();
+      return json.data || [];
+    },
+    enabled: !!themeVals.currentUser?.id,
+  });
+
+  // ผสานข้อมูลจาก Local (กรณีออฟไลน์หรือเพิ่งสอบเสร็จ)
+  const localHistoryStr = localStorage.getItem('bw_syncQueue');
+  const localHistory = localHistoryStr ? JSON.parse(localHistoryStr).map(item => item.reflectionData) : [];
+  
+  const mergedHistoryMap = new Map();
+  [...rawHistory, ...localHistory].forEach(session => {
+     if (!mergedHistoryMap.has(session.id)) {
+       mergedHistoryMap.set(session.id, session);
+     }
+  });
+  const currentReflectionHistory = Array.from(mergedHistoryMap.values()).sort((a, b) => b.savedAt - a.savedAt);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (idToDelete) => {
+      // อัปเดตใน Local ทันทีเพื่อให้ UI หายไปก่อน
+      const queueStr = localStorage.getItem('bw_syncQueue');
+      let queue = queueStr ? JSON.parse(queueStr) : [];
+      queue = queue.filter(item => item.reflectionData?.id !== idToDelete);
+      localStorage.setItem('bw_syncQueue', JSON.stringify(queue));
+
+      // ส่งคำสั่งลบไปเซิร์ฟเวอร์
+      const response = await fetch('/api/history', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: themeVals.currentUser?.id, id: idToDelete })
+      });
+      if (!response.ok) throw new Error('Failed to delete on server');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reflectionHistory'] });
+    }
+  });
+
+  const handleDelete = (id) => {
+    deleteMutation.mutate(id);
+    if(typeof deleteHistory === 'function') deleteHistory(id); // เผื่อ props เดิมยังส่งมา
+  };
+
+  const filteredHistory = currentReflectionHistory.filter(session => 
     filterMode === 'all' || (session.mode || 'full') === filterMode
   );
 

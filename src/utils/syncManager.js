@@ -1,19 +1,17 @@
-import { db } from './db';
-
 const CHUNK_SIZE = 10;
 let isSyncing = false;
 
 export const syncManager = {
   async addToQueue(payload) {
-    const record = await db.app_state.get('syncQueue');
-    const queue = record ? record.value : [];
+    const queueStr = localStorage.getItem('bw_syncQueue');
+    const queue = queueStr ? JSON.parse(queueStr) : [];
     
     const sessionId = payload.reflectionData?.id;
     const exists = queue.find(item => item.reflectionData?.id === sessionId);
     
     if (!exists) {
       queue.push(payload);
-      await db.app_state.put({ key: 'syncQueue', value: queue });
+      localStorage.setItem('bw_syncQueue', JSON.stringify(queue));
     }
     
     this.triggerSync();
@@ -24,8 +22,8 @@ export const syncManager = {
     
     try {
       isSyncing = true;
-      let record = await db.app_state.get('syncQueue');
-      let queue = record ? record.value : [];
+      const queueStr = localStorage.getItem('bw_syncQueue');
+      let queue = queueStr ? JSON.parse(queueStr) : [];
       
       if (queue.length === 0) return;
 
@@ -41,11 +39,11 @@ export const syncManager = {
         const result = await response.json();
         const successIds = result.successIds || chunk.map(p => p.reflectionData.id);
         
-        record = await db.app_state.get('syncQueue'); 
-        queue = record ? record.value : [];
+        const freshQueueStr = localStorage.getItem('bw_syncQueue');
+        queue = freshQueueStr ? JSON.parse(freshQueueStr) : [];
         queue = queue.filter(item => !successIds.includes(item.reflectionData.id));
         
-        await db.app_state.put({ key: 'syncQueue', value: queue });
+        localStorage.setItem('bw_syncQueue', JSON.stringify(queue));
         
         if (queue.length > 0) {
           setTimeout(() => this.triggerSync(), 2000);
@@ -61,13 +59,12 @@ export const syncManager = {
   },
 
   flushWithBeacon() {
-    db.app_state.get('syncQueue').then(record => {
-      const queue = record ? record.value : [];
-      if (queue.length > 0) {
-        const chunk = queue.slice(0, CHUNK_SIZE);
-        const blob = new Blob([JSON.stringify({ data: chunk, isBeacon: true })], { type: 'application/json' });
-        navigator.sendBeacon('/api/history/bulk', blob);
-      }
-    }).catch(() => {});
+    const queueStr = localStorage.getItem('bw_syncQueue');
+    const queue = queueStr ? JSON.parse(queueStr) : [];
+    if (queue.length > 0) {
+      const chunk = queue.slice(0, CHUNK_SIZE);
+      const blob = new Blob([JSON.stringify({ data: chunk, isBeacon: true })], { type: 'application/json' });
+      navigator.sendBeacon('/api/history/bulk', blob);
+    }
   }
 };

@@ -19,6 +19,7 @@
     "lucide-react": "^1.14.0",
     "papaparse": "^5.5.3",
     "react": "^19.2.5",
+    "zustand": "^4.5.2",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.0"
   },

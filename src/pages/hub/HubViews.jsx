@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../utils/db.js';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 export const FLASHCARD_CATEGORIES = [
   { name: 'SCIENCE, HEALTH & NATURE', color: '#4bdd31', diamonds: <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
   { name: 'BUSINESS & TECHNOLOGIES', color: '#0070fb', diamonds: <div className="absolute inset-0 flex items-center justify-between px-16 pointer-events-none select-none text-black z-0"><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg><svg className="w-28 h-56" viewBox="0 0 100 200"><polygon points="50,10 90,100 50,190 10,100" fill="currentColor" stroke="currentColor" strokeWidth="12" strokeLinejoin="round" /></svg></div> },
@@ -52,37 +53,52 @@ export function HubFlashcards() {
   const [dueCount, setDueCount] = React.useState(0);
   const [recentDecks, setRecentDecks] = React.useState([]);
 
+  const queryClient = useQueryClient();
+
+  useQuery({
+    queryKey: ['srsData', themeVals?.currentUser?.id],
+    queryFn: async () => {
+      if (!themeVals?.currentUser?.id) return null;
+      const res = await fetch(`/api/vocab/srs-sync?userId=${themeVals.currentUser.id}`);
+      if (!res.ok) throw new Error('Network response was not ok');
+      const json = await res.json();
+      
+      if (json.status === 'success' && json.data) {
+        const srsData = json.data.map(item => ({
+          eng: item.eng,
+          repetition: item.interval > 1 ? 2 : 1,
+          interval: item.interval,
+          ease_factor: item.ease_factor,
+          next_review: new Date(item.next_review_date).getTime()
+        }));
+        await db.vocab_srs.bulkPut(srsData);
+      }
+      
+      // อัปเดต Due Count ทันทีหลัง Sync เสร็จ
+      const now = Date.now();
+      const localSrs = await db.vocab_srs.toArray();
+      setDueCount(localSrs.filter(s => s.next_review <= now).length);
+      
+      return json.data;
+    },
+    enabled: !!themeVals?.currentUser?.id,
+  });
+
   React.useEffect(() => {
-    async function loadStats() {
+    async function loadLocalStats() {
       try {
         const recents = JSON.parse(localStorage.getItem('recent_decks') || '[]');
         setRecentDecks(recents.slice(0, 3));
-        if (themeVals?.currentUser?.id) {
-          try {
-            const res = await fetch(`/api/vocab/srs-sync?userId=${themeVals.currentUser.id}`);
-            const json = await res.json();
-            if (json.status === 'success' && json.data) {
-              const srsData = json.data.map(item => ({
-                eng: item.eng,
-                repetition: item.interval > 1 ? 2 : 1,
-                interval: item.interval,
-                ease_factor: item.ease_factor,
-                next_review: new Date(item.next_review_date).getTime()
-              }));
-              await db.vocab_srs.bulkPut(srsData);
-            }
-          } catch(e) { console.error('Sync GET error', e); }
-        }
-
+        
+        // โหลดจาก Local ระหว่างรอ Query
         const now = Date.now();
         const localSrs = await db.vocab_srs.toArray();
-        const count = localSrs.filter(s => s.next_review <= now).length;
-        setDueCount(count);
+        setDueCount(localSrs.filter(s => s.next_review <= now).length);
       } catch (err) {
         console.error(err);
       }
     }
-    loadStats();
+    loadLocalStats();
   }, []);
 
   const goToAllDecks = () => navigate('/vocab/decks');
@@ -144,16 +160,26 @@ export function HubFlashcardDecks() {
   const [favCount, setFavCount] = React.useState(null);
   const [activeCategory, setActiveCategory] = React.useState(null);
 
-  React.useEffect(() => {
-    async function loadDecks() {
-       try {
-         const res = await fetch('/api/vocab/decks');
-         const json = await res.json();
-         if(json.status === 'success') {
-            setDecksData(json.data);
-         }
-       } catch(e) { console.error(e); }
+  const { data: decksData } = useQuery({
+    queryKey: ['decksData'],
+    queryFn: async () => {
+      const res = await fetch('/api/vocab/decks');
+      if (!res.ok) throw new Error('Network error');
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        // อัปเดตฐานข้อมูล IndexedDB ในเครื่องผู้ใช้ทันที
+        const allWords = Object.values(json.data).filter(c => c.levels).flatMap(c => c.levels.flat());
+        if (allWords.length > 0) {
+          await db.flashcards.clear();
+          await db.flashcards.bulkPut(allWords);
+        }
+        return json.data;
+      }
+      return null;
     }
+  });
+
+  React.useEffect(() => {
     async function loadFavs() {
        try {
          const count = await db.flashcards.where('isStarred').equals(1).count();
@@ -161,7 +187,6 @@ export function HubFlashcardDecks() {
        } catch(e) { console.error(e); }
     }
     loadFavs();
-    loadDecks();
   }, []);
 
   const handleStartLevel = (catName, color, levelIdx) => {

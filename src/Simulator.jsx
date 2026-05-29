@@ -11,6 +11,7 @@ import { AVATARS, MODES, RECOMMENDED_SEQUENCE, EXAM_PARTS, FLAT_EXAM_SUBS, TECHN
 import { calculateScores, calculateWinner, rgbToHex, getTipColor, getDifficultyColor, buildExamTimeline, calculateProgressState, generateReflectionPoints } from './utils/helpers';
 import { db } from './utils/db';
 import { syncManager } from './utils/syncManager';
+import { useAppStore } from './store/appStore';
 import TimerDashboard from './components/widgets/TimerDashboard';
 import RightPanelWidget from './components/widgets/RightPanelWidget';
 import GameBoyWidget from './components/widgets/GameBoyWidget';
@@ -71,17 +72,13 @@ export default function App() {
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false);
 
   useEffect(() => {
-    db.app_state.get('reflectionHistory').then(record => {
-      if (record && record.value) {
-        setReflectionHistory(record.value);
-      } else if (savedState.reflectionHistory?.length > 0) {
-        setReflectionHistory(savedState.reflectionHistory);
-      }
-      setIsHistoryLoaded(true);
-    }).catch(err => {
-      console.error("Failed to load history from DB", err);
-      setIsHistoryLoaded(true);
-    });
+    const storedHistory = useAppStore.getState().reflectionHistory;
+    if (storedHistory && storedHistory.length > 0) {
+      setReflectionHistory(storedHistory);
+    } else if (savedState.reflectionHistory?.length > 0) {
+      setReflectionHistory(savedState.reflectionHistory);
+    }
+    setIsHistoryLoaded(true);
   }, [savedState.reflectionHistory]);
   const [activeSessionId, setActiveSessionId] = useState(null);
   
@@ -89,23 +86,21 @@ export default function App() {
 
   const [countdown, setCountdown] = useState(null);
   useEffect(() => {
-    db.app_state.get('draftSession').then(record => {
-      if (record && record.value) {
-        const draft = record.value;
-        const ONE_DAY = 24 * 60 * 60 * 1000;
-        if (Date.now() - (draft.savedAt || 0) < ONE_DAY) {
-          setDraftSession(draft);
-          setCurrentView('reflection_draft');
-        } else {
-          db.app_state.delete('draftSession').catch(() => {});
-        }
+    const draft = useAppStore.getState().draftSession;
+    if (draft) {
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      if (Date.now() - (draft.savedAt || 0) < ONE_DAY) {
+        setDraftSession(draft);
+        setCurrentView('reflection_draft');
+      } else {
+        useAppStore.getState().setAppState('draftSession', null);
       }
-    }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
     if (draftSession) {
-      db.app_state.put({ key: 'draftSession', value: draftSession }).catch(() => {});
+      useAppStore.getState().setAppState('draftSession', draftSession);
     }
   }, [draftSession]);
   useEffect(() => {
@@ -144,13 +139,11 @@ export default function App() {
   const [editingPresetId, setEditingPresetId] = useState(null);
   const [isSettingOpen, setIsSettingOpen] = useState(false);
   useEffect(() => {
-    db.app_state.get('examSequence').then(record => {
-      if (record && record.value) setExamSequence(record.value);
-    }).catch(() => {});
+    const seq = useAppStore.getState().examSequence;
+    if (seq) setExamSequence(seq);
     
-    db.app_state.get('customPresets').then(record => {
-      if (record && record.value) setCustomPresets(record.value);
-    }).catch(() => {});
+    const pre = useAppStore.getState().customPresets;
+    if (pre) setCustomPresets(pre);
   }, []);
   const [isModeDropdownOpen, setIsModeDropdownOpen] = useState(false);
   const isTimerStarted = isRunning && timeLeft < totalTime.current;
@@ -224,10 +217,8 @@ export default function App() {
           const lightStateToSave = { examCounter, mode, activePresetId, customTags, targetScore, sfxEnabled };
           localStorage.setItem('bwYouExamState', JSON.stringify(lightStateToSave));
           
-          db.app_state.bulkPut([
-            { key: 'examSequence', value: examSequence },
-            { key: 'customPresets', value: customPresets }
-          ]).catch(e => console.warn("IDB Save warning", e));
+          useAppStore.getState().setAppState('examSequence', examSequence);
+      useAppStore.getState().setAppState('customPresets', customPresets);
         } catch (e) {
           console.warn("Storage warning: Failed to save exam settings", e);
         }
@@ -241,8 +232,7 @@ export default function App() {
   // Save History to IndexedDB (หนัก แต่ทำงานเบื้องหลัง)
   useEffect(() => {
     if (!isHistoryLoaded) return;
-    db.app_state.put({ key: 'reflectionHistory', value: reflectionHistory.slice(0, 30) })
-      .catch(e => console.error("IndexedDB warning: Failed to save history", e));
+    useAppStore.getState().setAppState('reflectionHistory', reflectionHistory.slice(0, 30));
   }, [reflectionHistory, isHistoryLoaded]);
 
   const prevTimeRef = useRef(timeLeft);
@@ -418,14 +408,14 @@ export default function App() {
 
       setDraftSession(null);
       setCurrentView('reflection_lobby');
-      db.app_state.delete('draftSession').catch(() => {});
+      useAppStore.getState().setAppState('draftSession', null);
     }
   }, [draftSession, currentUser]);
 
   const handleDiscardDraft = useCallback(() => {
     setDraftSession(null);
     resetTimer(); 
-    db.app_state.delete('draftSession').catch(() => {});
+    useAppStore.getState().setAppState('draftSession', null);
   }, [resetTimer]);
 
   const deleteHistory = useCallback((idToDelete) => {
