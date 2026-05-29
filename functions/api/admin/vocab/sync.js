@@ -25,7 +25,7 @@ export async function onRequestPost(context) {
         IFNULL(vocab_repository.antonyms, '') != IFNULL(excluded.antonyms, '') OR 
         vocab_repository.sort_order != excluded.sort_order OR 
         vocab_repository.is_deleted = 1
-      `).bind(word.eng, word.thai, word.pos, word.category, word.example, word.synonyms, word.antonyms, batchId, word.sort_order);
+      `).bind(word.eng, word.thai ?? null, word.pos ?? null, word.category ?? null, word.example ?? null, word.synonyms ?? null, word.antonyms ?? null, batchId, word.sort_order);
     });
 
     const d1BatchLimit = 100;

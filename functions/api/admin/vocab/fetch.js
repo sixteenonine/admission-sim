@@ -25,13 +25,14 @@ export async function onRequestPost(context) {
       const eng = cols[idx.eng]?.trim();
       if (!eng) continue;
       allWords.push({
-        eng, thai: idx.thai !== -1 ? cols[idx.thai]?.trim() : null,
-        pos: idx.pos !== -1 ? cols[idx.pos]?.trim() : null,
-        category: idx.category !== -1 ? cols[idx.category]?.trim() : null,
-        example: idx.example !== -1 ? cols[idx.example]?.trim() : null,
-        synonyms: idx.syn !== -1 ? cols[idx.syn]?.trim() : null,
-        antonyms: idx.ant !== -1 ? cols[idx.ant]?.trim() : null,
-        sort_order: i
+        eng, 
+      thai: cols[idx.thai] ? cols[idx.thai].trim() : null,
+      pos: cols[idx.pos] ? cols[idx.pos].trim() : null,
+      category: cols[idx.category] ? cols[idx.category].trim() : null,
+      example: cols[idx.example] ? cols[idx.example].trim() : null,
+      synonyms: cols[idx.syn] ? cols[idx.syn].trim() : null,
+      antonyms: cols[idx.ant] ? cols[idx.ant].trim() : null,
+      sort_order: i
       });
     }
 
