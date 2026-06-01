@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Undo2, Star } from 'lucide-react';
 import { db } from '../../utils/db.js';
+import { syncManager } from '../../utils/syncManager.js';
 
 // สร้าง Web Worker แบบ Singleton
 const dbWorker = new Worker(new URL('../../workers/dbWorker.js', import.meta.url), { type: 'module' });
@@ -79,13 +80,6 @@ export default function FlashcardPlayer() {
 
   const touchStartY = useRef(null);
   const touchStartX = useRef(null);
-  const syncTimeoutRef = useRef(null);
-  const pendingSyncRef = useRef(false);
-  const latestStarsRef = useRef(starredWords);
-  const fullFavsRef = useRef({ stories: [], vocab: [] });
-  const actionQueueRef = useRef([]);
-
-  useEffect(() => { latestStarsRef.current = starredWords; }, [starredWords]);
   // บังคับล็อกไม่ให้หน้าจอ Scroll ได้
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -96,54 +90,13 @@ export default function FlashcardPlayer() {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && pendingSyncRef.current && user?.id) {
-        syncToCloud(true);
+      if (document.visibilityState === 'hidden' && user?.id) {
+        syncManager.flushVocabWithBeacon(user.id);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.id]);
-  
-  const syncToCloud = async (isEmergency = false) => {
-    if (!user?.id || actionQueueRef.current.length === 0) return;
-    pendingSyncRef.current = false;
-    
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = null;
-
-    const pendingActions = [...actionQueueRef.current];
-    actionQueueRef.current = [];
-    
-    const srsUpdates = pendingActions.filter(a => a.type === 'srs_update').map(a => a.data);
-    const starUpdates = pendingActions.filter(a => a.type === 'star_vocab');
-
-    if (srsUpdates.length > 0) {
-      const srsPayload = { userId: user.id, updates: srsUpdates };
-      if (isEmergency) {
-        navigator.sendBeacon('/api/vocab/srs-sync', new Blob([JSON.stringify(srsPayload)], { type: 'application/json' }));
-      } else {
-        fetch('/api/vocab/srs-sync', { method: 'POST', body: JSON.stringify(srsPayload), headers: { 'Content-Type': 'application/json' } })
-        .catch(() => {
-           actionQueueRef.current = [...actionQueueRef.current, ...pendingActions.filter(a => a.type === 'srs_update')];
-           pendingSyncRef.current = true;
-        });
-      }
-    }
-
-    if (starUpdates.length > 0) {
-      const starPayload = { userId: user.id, syncActions: starUpdates };
-      if (isEmergency) {
-        navigator.sendBeacon('/api/user/sync', new Blob([JSON.stringify(starPayload)], { type: 'application/json' }));
-      } else {
-        fetch('/api/user/sync', { method: 'POST', body: JSON.stringify(starPayload), headers: { 'Content-Type': 'application/json' } })
-        .catch(() => {
-           actionQueueRef.current = [...actionQueueRef.current, ...starUpdates];
-           pendingSyncRef.current = true;
-        });
-      }
-    }
-  };
-
   useEffect(() => {
     async function loadDeck() {
       try {
@@ -279,8 +232,8 @@ export default function FlashcardPlayer() {
     }));
 
     const eng = currentWord.eng;
-    const currentSrs = await db.vocab_srs.get(eng) || { eng, repetition: 0, interval: 0, ease_factor: 2.5 };
-    let { repetition, interval, ease_factor } = currentSrs;
+    const currentSrs = await db.vocab_srs.get(eng) || { eng, vocab_id: currentWord.id, repetition: 0, interval: 0, ease_factor: 2.5, revision: 0 };
+    let { repetition, interval, ease_factor, revision = 0 } = currentSrs;
 
     let q = isRemembered ? 4 : 1;
     if (q >= 3) {
@@ -296,15 +249,19 @@ export default function FlashcardPlayer() {
     ease_factor = ease_factor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02));
     if (ease_factor < 1.3) ease_factor = 1.3;
     const next_review = Date.now() + (interval * 24 * 60 * 60 * 1000);
+    revision += 1;
 
-    const newSrsData = { eng, repetition, interval, ease_factor, next_review };
+    const newSrsData = { eng, vocab_id: currentWord.id, repetition, interval, ease_factor, next_review, revision };
     await db.vocab_srs.put(newSrsData);
 
-    const syncData = { vocab_id: currentWord.id, status: isRemembered ? 'remembered' : 'forgotten', interval, ease_factor, next_review_date: new Date(next_review).toISOString() };
-    actionQueueRef.current.push({ type: 'srs_update', data: syncData, timestamp: Date.now() });
-    pendingSyncRef.current = true;
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
+    if (user?.id) {
+      await db.sync_outbox.put({
+        user_id: user.id,
+        vocab_id: currentWord.id,
+        timestamp: Date.now()
+      });
+      syncManager.triggerVocabSync(user.id);
+    }
 
     triggerCardAnim(isRemembered ? 'up' : 'down', () => {
       setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
@@ -352,14 +309,7 @@ export default function FlashcardPlayer() {
     const isCurrentlyStarred = starredWords.includes(word);
     const newStarredWords = isCurrentlyStarred ? starredWords.filter(w => w !== word) : [...starredWords, word];
     setStarredWords(newStarredWords); 
-    latestStarsRef.current = newStarredWords; 
-    
     await db.flashcards.where('eng').equals(word).modify({ isStarred: isCurrentlyStarred ? 0 : 1 });
-
-    actionQueueRef.current.push({ type: 'star_vocab', word: word, isStarred: !isCurrentlyStarred, timestamp: Date.now() });
-    pendingSyncRef.current = true;
-    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
-    syncTimeoutRef.current = setTimeout(() => syncToCloud(), 3000);
   };
 
   const isStarred = currentWord && starredWords.includes(currentWord.eng);

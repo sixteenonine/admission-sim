@@ -98,6 +98,7 @@ CREATE TABLE user_vocab_progress (
     interval INTEGER DEFAULT 0,
     ease_factor REAL DEFAULT 2.5,
     next_review_date DATETIME NOT NULL,
+    revision INTEGER DEFAULT 0,
     last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, vocab_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

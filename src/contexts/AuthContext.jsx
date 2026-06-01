@@ -40,6 +40,12 @@ export const AuthProvider = ({ children }) => {
   const handleLogout = async () => {
     setCurrentUser(null);
     try {
+      const { db } = await import('../utils/db.js');
+      await db.sync_outbox.clear();
+    } catch (e) {
+      console.error(e);
+    }
+    try {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {
       console.error("Logout error:", e);

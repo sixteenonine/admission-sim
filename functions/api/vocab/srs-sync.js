@@ -14,15 +14,16 @@ export async function onRequestPost(context) {
     const db = context.env.DB;
     const statements = updates.map(u => 
       db.prepare(`
-        INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT (user_id, vocab_id) DO UPDATE SET
-          status = excluded.status,
-          interval = excluded.interval,
-          ease_factor = excluded.ease_factor,
-          next_review_date = excluded.next_review_date,
+          status = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.status ELSE user_vocab_progress.status END,
+          interval = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.interval ELSE user_vocab_progress.interval END,
+          ease_factor = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.ease_factor ELSE user_vocab_progress.ease_factor END,
+          next_review_date = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.next_review_date ELSE user_vocab_progress.next_review_date END,
+          revision = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.revision ELSE user_vocab_progress.revision END,
           last_updated = CURRENT_TIMESTAMP
-      `).bind(userId, u.vocab_id, u.status, u.interval, u.ease_factor, u.next_review_date)
+      `).bind(userId, u.vocab_id, u.status, u.interval, u.ease_factor, u.next_review_date, u.revision || 0)
     );
 
     if (statements.length > 0) {
@@ -48,11 +49,11 @@ export async function onRequestGet(context) {
 
     const db = context.env.DB;
     const { results } = await db.prepare(`
-      SELECT p.interval, p.ease_factor, p.next_review_date, v.eng 
-      FROM user_vocab_progress p 
-      JOIN vocab_repository v ON p.vocab_id = v.id 
-      WHERE p.user_id = ?
-    `).bind(userId).all();
+      SELECT p.interval, p.ease_factor, p.next_review_date, p.revision, v.eng, p.vocab_id 
+          FROM user_vocab_progress p 
+          JOIN vocab_repository v ON p.vocab_id = v.id 
+          WHERE p.user_id = ?
+        `).bind(userId).all();
     
     return new Response(JSON.stringify({ status: 'success', data: results }), { headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
