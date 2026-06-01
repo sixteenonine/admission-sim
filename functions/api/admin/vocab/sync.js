@@ -34,6 +34,10 @@ export async function onRequestPost(context) {
       await db.batch(chunkStatements.slice(i, i + d1BatchLimit));
       processed += Math.min(d1BatchLimit, chunkStatements.length - i);
     }
+    // บันทึกเวอร์ชัน (Timestamp) ใหม่ลง KV ทันทีที่ Sync สำเร็จ
+    if (context.env.APP_KV) {
+      await context.env.APP_KV.put('vocab_version', Date.now().toString());
+    }
 
     return new Response(JSON.stringify({ status: "success", count: processed }), {
       headers: { "Content-Type": "application/json" }

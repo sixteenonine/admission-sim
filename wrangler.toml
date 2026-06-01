@@ -9,3 +9,7 @@ database_id = "2154b60b-9bf5-4ba1-b0be-8e1c902cd3ab"
 [[queues.producers]]
 binding = "HISTORY_QUEUE"
 queue = "admission-history-queue"
+
+[[kv_namespaces]]
+binding = "APP_KV"
+id = "6dc9c4f6385b4f52a65283808958eb58"

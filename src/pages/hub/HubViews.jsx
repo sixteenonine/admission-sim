@@ -160,23 +160,46 @@ export function HubFlashcardDecks() {
   const [favCount, setFavCount] = React.useState(null);
   const [activeCategory, setActiveCategory] = React.useState(null);
 
+  // 1. เช็คข้อมูล Meta เพื่อดูเลขเวอร์ชันล่าสุดจาก KV
+  const { data: metaData } = useQuery({
+    queryKey: ['vocabMeta'],
+    queryFn: async () => {
+      const res = await fetch('/api/vocab/meta');
+      if (!res.ok) throw new Error('Meta fetch error');
+      return res.json();
+    },
+    refetchOnMount: true,
+    staleTime: 0,
+  });
+
+  // 2. ดึงข้อมูลคำศัพท์ (ยิง API ใหม่ก็ต่อเมื่อ metaData.version เปลี่ยนแปลงเท่านั้น)
   const { data: decksData } = useQuery({
-    queryKey: ['decksData'],
+    queryKey: ['decksData', metaData?.version],
     queryFn: async () => {
       const res = await fetch('/api/vocab/decks');
       if (!res.ok) throw new Error('Network error');
       const json = await res.json();
       if (json.status === 'success' && json.data) {
-        // อัปเดตฐานข้อมูล IndexedDB ในเครื่องผู้ใช้ทันที
         const allWords = Object.values(json.data).filter(c => c.levels).flatMap(c => c.levels.flat());
         if (allWords.length > 0) {
+          // สำรองคำศัพท์ที่เด็กกดดาว (Favorite) ไว้ก่อน เพื่อไม่ให้ข้อมูลหายตอน Sync ทับ
+          const starredWords = await db.flashcards.where('isStarred').equals(1).toArray();
+          const starredEng = new Set(starredWords.map(w => w.eng));
+
+          const wordsToSave = allWords.map(w => ({
+            ...w,
+            isStarred: starredEng.has(w.eng) ? 1 : 0
+          }));
+
           await db.flashcards.clear();
-          await db.flashcards.bulkPut(allWords);
+          await db.flashcards.bulkPut(wordsToSave);
         }
         return json.data;
       }
       return null;
-    }
+    },
+    enabled: !!metaData?.version, // ทำงานเมื่อได้เลขเวอร์ชันมาแล้วเท่านั้น
+    staleTime: Infinity, // เก็บแคชถาวรจนกว่า metaData.version จะเปลี่ยน
   });
 
   React.useEffect(() => {

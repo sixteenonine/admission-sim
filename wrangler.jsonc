@@ -24,6 +24,11 @@
 			"binding": "STORY_CONTENT",
 			"id": "9034108157ba405ca15cb65addc512c8",
 			"remote": true
+		},
+		{
+			"binding": "APP_KV",
+			"id": "6dc9c4f6385b4f52a65283808958eb58",
+			"remote": true
 		}
 	],
 	"queues": {
