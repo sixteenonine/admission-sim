@@ -95,7 +95,8 @@ export const syncManager = {
         interval: srs.interval,
         ease_factor: srs.ease_factor,
         next_review_date: new Date(srs.next_review).toISOString(),
-        revision: srs.revision || 0
+        revision: srs.revision || 0,
+        timestamp: Date.now()
       }));
 
       if (updates.length > 0) {
@@ -145,7 +146,8 @@ export const syncManager = {
         interval: srs.interval,
         ease_factor: srs.ease_factor,
         next_review_date: new Date(srs.next_review).toISOString(),
-        revision: srs.revision || 0
+        revision: srs.revision || 0,
+        timestamp: Date.now()
       }));
 
       if (updates.length > 0) {

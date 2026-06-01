@@ -11,26 +11,11 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'Payload too large (Max 50 items)' }), { status: 413 });
     }
 
-    const db = context.env.DB;
-    const statements = updates.map(u => 
-      db.prepare(`
-        INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT (user_id, vocab_id) DO UPDATE SET
-          status = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.status ELSE status END,
-          interval = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.interval ELSE interval END,
-          ease_factor = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.ease_factor ELSE ease_factor END,
-          next_review_date = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.next_review_date ELSE next_review_date END,
-          revision = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.revision ELSE revision END,
-          last_updated = CURRENT_TIMESTAMP
-      `).bind(userId, String(u.vocab_id), u.status, u.interval, u.ease_factor, u.next_review_date, u.revision || 0)
-    );
-
-    if (statements.length > 0) {
-      await db.batch(statements);
+    if (context.env.VOCAB_SYNC_QUEUE) {
+      await context.env.VOCAB_SYNC_QUEUE.send({ userId, updates });
     }
     
-    return new Response(JSON.stringify({ success: true, synced_count: updates.length }), { 
+    return new Response(JSON.stringify({ success: true, synced_count: updates.length, queued: true }), { 
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
