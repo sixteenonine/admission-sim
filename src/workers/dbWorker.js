@@ -1,11 +1,4 @@
-import Dexie from 'dexie';
-
-const db = new Dexie('AdmissionSimDB');
-db.version(1).stores({
-  flashcards: 'id, eng, thai, pos, category, level, isStarred',
-  srs_logs: '++id, wordId, isCorrect, timestamp',
-  vocab_srs: 'eng, repetition, interval, ease_factor, next_review'
-});
+import { db } from '../utils/db.js';
 
 self.onmessage = async (e) => {
   const { type, payload, id } = e.data;
