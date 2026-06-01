@@ -172,16 +172,16 @@ export function HubFlashcardDecks() {
   });
 
   // 2. ดึงข้อมูลคำศัพท์ (ผูกกับ localStorage ป้องกันการเคลียร์ข้อมูลมั่วซั่วตอนเด็กรีเฟรชหน้าเว็บ)
-  const { data: decksData } = useQuery({
+  const { data: decksData, isFetching: isDecksSyncing } = useQuery({
     queryKey: ['decksData', metaData?.version],
     queryFn: async () => {
       const localVersion = localStorage.getItem('local_vocab_version');
       const count = await db.flashcards.count();
 
       if (localVersion !== metaData.version || count === 0) {
-        // 🔄 ต้องซิงก์ใหม่ (เวอร์ชันเปลี่ยน หรือข้อมูลในเครื่องโบ๋)
-        const res = await fetch('/api/vocab/decks');
-        if (!res.ok) throw new Error('Network error');
+          // 🔄 ต้องซิงก์ใหม่ (เวอร์ชันเปลี่ยน หรือข้อมูลในเครื่องโบ๋)
+          const res = await fetch(`/api/vocab/decks?v=${metaData.version}`);
+          if (!res.ok) throw new Error('Network error');
         const json = await res.json();
         
         if (json.status === 'success' && json.data) {
@@ -207,7 +207,7 @@ export function HubFlashcardDecks() {
           });
 
           localStorage.setItem('local_vocab_version', metaData.version);
-          return json.data;
+          return true;
         }
       } else {
         // ⚡ เวอร์ชันตรงกัน ไม่ต้องทำ Grouping ซ้ำซ้อนให้เปลือง CPU
@@ -230,6 +230,10 @@ export function HubFlashcardDecks() {
   }, []);
 
   const handleStartLevel = (catName, color, levelIdx) => {
+    if (isDecksSyncing) {
+      alert("กำลังอัปเดตฐานข้อมูลคำศัพท์ โปรดรอสักครู่...");
+      return;
+    }
     if (catName === 'MY FAVORITE') {
       navigate('/vocab/play', { state: { deckTitle: catName, level: 1, color: color } });
       return;
@@ -282,7 +286,7 @@ export function HubFlashcardDecks() {
                   <div className="mt-4 px-4 py-0.5 bg-white rounded-full font-medium text-sm transition-colors duration-500" style={{ color: cat.color }}>
                     {isDataLoaded ? `${wordCount} terms` : 'Loading...'}
                   </div>
-                </div>
+                </div> 
 
                 {cat.name !== 'MY FAVORITE' && (
                   <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 flex flex-col items-center justify-center z-20 ${isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
@@ -294,12 +298,12 @@ export function HubFlashcardDecks() {
                           <button
                             key={lvl}
                             onClick={(e) => { e.stopPropagation(); handleStartLevel(cat.name, cat.color, lvl); }}
-                            className="flex-1 py-2 rounded-2xl bg-white hover:-translate-y-1 active:scale-95 transition-transform shadow-xl flex flex-col items-center justify-center"
+                            className={`flex-1 py-2 rounded-2xl bg-white transition-transform shadow-xl flex flex-col items-center justify-center ${isDecksSyncing ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-1 active:scale-95'}`}
                             style={{ color: cat.color }}
                           >
                             <span className="font-black text-xl sm:text-2xl leading-none">{lvl}</span>
                             <span className="text-[10px] sm:text-xs font-bold opacity-80 mt-1">
-                              {isDataLoaded ? `${levelWordCount} terms` : '...'}
+                              {isDecksSyncing ? 'Syncing...' : (isDataLoaded ? `${levelWordCount} terms` : '...')}
                             </span>
                           </button>
                         );
