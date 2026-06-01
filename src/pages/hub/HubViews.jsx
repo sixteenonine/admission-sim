@@ -193,21 +193,29 @@ export function HubFlashcardDecks() {
             starredEng = new Set(starredWords.map(w => w.eng));
           }
 
+          // 🛡️ คลีนข้อมูลป้องกัน iOS Safari บั๊ก (DataError) เมื่อเจอ Index เป็น null
           const wordsToSave = allWords.map(w => ({
             ...w,
-            isStarred: starredEng.has(w.eng) ? 1 : 0
+            category: (w.category || "UNCATEGORIZED").toUpperCase(),
+            eng: w.eng || "Unknown",
+            isStarred: w.eng && starredEng.has(w.eng) ? 1 : 0
           }));
 
-          // ล็อก Transaction ป้องกันเด็กคลิกเปิดการ์ดระหว่างที่กำลังเขียนข้อมูล
-          await db.transaction('rw', db.flashcards, async () => {
-            await db.flashcards.clear();
-            if (wordsToSave.length > 0) {
-              await db.flashcards.bulkPut(wordsToSave);
-            }
-          });
-
-          localStorage.setItem('local_vocab_version', metaData.version);
-          return true;
+          try {
+            // ล็อก Transaction ป้องกันเด็กคลิกเปิดการ์ดระหว่างที่กำลังเขียนข้อมูล
+            await db.transaction('rw', db.flashcards, async () => {
+              await db.flashcards.clear();
+              if (wordsToSave.length > 0) {
+                await db.flashcards.bulkPut(wordsToSave);
+              }
+            });
+            localStorage.setItem('local_vocab_version', metaData.version);
+            return true;
+          } catch (err) {
+            alert("พบปัญหาการอัปเดตฐานข้อมูลบนอุปกรณ์ iOS: " + err.message);
+            console.error("Dexie iOS Error:", err);
+            return false;
+          }
         }
       } else {
         // ⚡ เวอร์ชันตรงกัน ไม่ต้องทำ Grouping ซ้ำซ้อนให้เปลือง CPU
