@@ -75,7 +75,7 @@ CREATE TABLE user_sync_data (
 );
 DROP TABLE IF EXISTS vocab_repository;
 CREATE TABLE vocab_repository (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     eng TEXT NOT NULL UNIQUE,
     thai TEXT NOT NULL,
     pos TEXT,
@@ -93,7 +93,7 @@ CREATE TABLE vocab_repository (
 DROP TABLE IF EXISTS user_vocab_progress;
 CREATE TABLE user_vocab_progress (
     user_id TEXT NOT NULL,
-    vocab_id INTEGER NOT NULL,
+    vocab_id TEXT NOT NULL,
     status TEXT DEFAULT 'learning',
     interval INTEGER DEFAULT 0,
     ease_factor REAL DEFAULT 2.5,

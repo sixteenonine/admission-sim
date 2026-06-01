@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
           next_review_date = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.next_review_date ELSE next_review_date END,
           revision = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.revision ELSE revision END,
           last_updated = CURRENT_TIMESTAMP
-      `).bind(userId, u.vocab_id, u.status, u.interval, u.ease_factor, u.next_review_date, u.revision || 0)
+      `).bind(userId, String(u.vocab_id), u.status, u.interval, u.ease_factor, u.next_review_date, u.revision || 0)
     );
 
     if (statements.length > 0) {

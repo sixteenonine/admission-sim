@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "db:sync": "node scripts/sync-vocab.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "npm run build && wrangler dev",
