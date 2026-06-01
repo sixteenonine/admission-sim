@@ -30,20 +30,20 @@ self.onmessage = async (e) => {
       // 2. ดึงข้อมูล SRS เพื่อกรอง
       const srsData = await db.vocab_srs.toArray();
       const srsMap = {};
-      srsData.forEach(item => srsMap[item.eng] = item);
+      srsData.forEach(item => srsMap[item.vocab_id] = item);
       
       let localDeck = [];
       if (currentCategory === 'MY FAVORITE') {
         localDeck = [...rawDeck];
       } else if (!isSRS) {
         localDeck = rawDeck.filter(card => {
-          const srs = srsMap[card.eng];
+          const srs = srsMap[card.id];
           return !srs || srs.interval === 0;
         });
         if (localDeck.length === 0) localDeck = [...rawDeck];
       } else {
         localDeck = rawDeck.filter(card => {
-          const srs = srsMap[card.eng];
+          const srs = srsMap[card.id];
           return srs && srs.next_review <= now;
         });
       }
