@@ -17,11 +17,11 @@ export async function onRequestPost(context) {
         INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)
         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT (user_id, vocab_id) DO UPDATE SET
-          status = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.status ELSE user_vocab_progress.status END,
-          interval = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.interval ELSE user_vocab_progress.interval END,
-          ease_factor = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.ease_factor ELSE user_vocab_progress.ease_factor END,
-          next_review_date = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.next_review_date ELSE user_vocab_progress.next_review_date END,
-          revision = CASE WHEN excluded.revision > user_vocab_progress.revision OR (excluded.revision = user_vocab_progress.revision AND excluded.interval > user_vocab_progress.interval) THEN excluded.revision ELSE user_vocab_progress.revision END,
+          status = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.status ELSE status END,
+          interval = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.interval ELSE interval END,
+          ease_factor = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.ease_factor ELSE ease_factor END,
+          next_review_date = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.next_review_date ELSE next_review_date END,
+          revision = CASE WHEN excluded.revision > revision OR (excluded.revision = revision AND excluded.interval > interval) THEN excluded.revision ELSE revision END,
           last_updated = CURRENT_TIMESTAMP
       `).bind(userId, u.vocab_id, u.status, u.interval, u.ease_factor, u.next_review_date, u.revision || 0)
     );
