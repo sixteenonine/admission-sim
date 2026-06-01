@@ -159,11 +159,11 @@ export function HubFlashcardDecks() {
   const [favCount, setFavCount] = React.useState(null);
   const [activeCategory, setActiveCategory] = React.useState(null);
 
-  // 1. เช็คข้อมูล Meta เพื่อดูเลขเวอร์ชันล่าสุดจาก KV
+  // 1. เช็คข้อมูล Meta พร้อมแนบเวลาปัจจุบัน (?t=) เพื่อบังคับทะลวง Cache ของเบราว์เซอร์ 100%
   const { data: metaData } = useQuery({
     queryKey: ['vocabMeta'],
     queryFn: async () => {
-      const res = await fetch('/api/vocab/meta');
+      const res = await fetch(`/api/vocab/meta?t=${Date.now()}`);
       if (!res.ok) throw new Error('Meta fetch error');
       return res.json();
     },
@@ -171,34 +171,64 @@ export function HubFlashcardDecks() {
     staleTime: 0,
   });
 
-  // 2. ดึงข้อมูลคำศัพท์ (ยิง API ใหม่ก็ต่อเมื่อ metaData.version เปลี่ยนแปลงเท่านั้น)
+  // 2. ดึงข้อมูลคำศัพท์ (ผูกกับ localStorage ป้องกันการเคลียร์ข้อมูลมั่วซั่วตอนเด็กรีเฟรชหน้าเว็บ)
   const { data: decksData } = useQuery({
     queryKey: ['decksData', metaData?.version],
     queryFn: async () => {
-      const res = await fetch('/api/vocab/decks');
-      if (!res.ok) throw new Error('Network error');
-      const json = await res.json();
-      if (json.status === 'success' && json.data) {
-        const allWords = Object.values(json.data).filter(c => c.levels).flatMap(c => c.levels.flat());
-        if (allWords.length > 0) {
-          // สำรองคำศัพท์ที่เด็กกดดาว (Favorite) ไว้ก่อน เพื่อไม่ให้ข้อมูลหายตอน Sync ทับ
-          const starredWords = await db.flashcards.where('isStarred').equals(1).toArray();
-          const starredEng = new Set(starredWords.map(w => w.eng));
+      const localVersion = localStorage.getItem('local_vocab_version');
+      const count = await db.flashcards.count();
+
+      if (localVersion !== metaData.version || count === 0) {
+        // 🔄 ต้องซิงก์ใหม่ (เวอร์ชันเปลี่ยน หรือข้อมูลในเครื่องโบ๋)
+        const res = await fetch('/api/vocab/decks');
+        if (!res.ok) throw new Error('Network error');
+        const json = await res.json();
+        
+        if (json.status === 'success' && json.data) {
+          const allWords = Object.values(json.data).filter(c => c.levels).flatMap(c => c.levels.flat());
+          
+          let starredEng = new Set();
+          if (count > 0) {
+            const starredWords = await db.flashcards.where('isStarred').equals(1).toArray();
+            starredEng = new Set(starredWords.map(w => w.eng));
+          }
 
           const wordsToSave = allWords.map(w => ({
             ...w,
             isStarred: starredEng.has(w.eng) ? 1 : 0
           }));
 
-          await db.flashcards.clear();
-          await db.flashcards.bulkPut(wordsToSave);
+          // ล็อก Transaction ป้องกันเด็กคลิกเปิดการ์ดระหว่างที่กำลังเขียนข้อมูล
+          await db.transaction('rw', db.flashcards, async () => {
+            await db.flashcards.clear();
+            if (wordsToSave.length > 0) {
+              await db.flashcards.bulkPut(wordsToSave);
+            }
+          });
+
+          localStorage.setItem('local_vocab_version', metaData.version);
+          return json.data;
         }
-        return json.data;
+      } else {
+        // ⚡ ถ้ารีเฟรชเว็บ แต่เวอร์ชันยังเป็นปัจจุบัน ให้เอาจากเครื่องมาแสดงแทนการยิง API ใหม่
+        const allLocal = await db.flashcards.toArray();
+        const grouped = {};
+        allLocal.forEach(row => {
+          if (!grouped[row.category]) {
+            grouped[row.category] = { name: row.category, levels: [[], [], []] };
+          }
+          const lvlIdx = row.level ? row.level - 1 : 0;
+          if (!grouped[row.category].levels[lvlIdx]) {
+            grouped[row.category].levels[lvlIdx] = [];
+          }
+          grouped[row.category].levels[lvlIdx].push(row);
+        });
+        return grouped;
       }
       return null;
     },
-    enabled: !!metaData?.version, // ทำงานเมื่อได้เลขเวอร์ชันมาแล้วเท่านั้น
-    staleTime: Infinity, // เก็บแคชถาวรจนกว่า metaData.version จะเปลี่ยน
+    enabled: !!metaData?.version,
+    staleTime: Infinity,
   });
 
   React.useEffect(() => {

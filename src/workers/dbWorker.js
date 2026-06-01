@@ -21,7 +21,7 @@ self.onmessage = async (e) => {
       } else if (currentCategory === 'MY FAVORITE') {
         rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
       } else {
-        rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
+        rawDeck = await db.flashcards.where('category').equals(currentCategory).toArray();
       }
       
       // เรียงตาม sort_order
