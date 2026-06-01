@@ -8,6 +8,12 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react(), cloudflare()],
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+      "Cross-Origin-Embedder-Policy": "unsafe-none",
+    },
+  },
   build: {
     rollupOptions: {
       input: {

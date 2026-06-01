@@ -53,7 +53,8 @@ export async function onRequest(context) {
     '/api/register',
     '/api/payment/webhook',
     '/api/stories/list',     
-    '/api/vocab/list'
+    '/api/vocab/list',
+    '/api/vocab/meta'
   ];
 
   // ถ้าเป็น Public Route ให้ปล่อยผ่านไปทำงานต่อได้เลย
