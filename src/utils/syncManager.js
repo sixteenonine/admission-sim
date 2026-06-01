@@ -52,10 +52,10 @@ export const syncManager = {
           setTimeout(() => this.triggerSync(), 2000);
         }
       } else {
-        setTimeout(() => { isSyncing = false; this.triggerSync(); }, 10000);
+        isSyncing = false;
       }
     } catch (err) {
-      console.warn("Sync failed, will retry:", err);
+      console.warn("Sync suspended:", err.message);
     } finally {
       isSyncing = false;
     }
@@ -113,14 +113,14 @@ export const syncManager = {
             setTimeout(() => this.triggerVocabSync(userId), 2000);
           }
         } else {
-          setTimeout(() => { isVocabSyncing = false; this.triggerVocabSync(userId); }, 10000);
+          isVocabSyncing = false;
         }
       } else {
         const itemsToDelete = outboxItems.filter(item => chunkVocabIds.includes(item.vocab_id)).map(item => item.id);
         await db.sync_outbox.bulkDelete(itemsToDelete);
       }
     } catch (err) {
-      console.warn("Vocab sync failed, retrying:", err);
+      console.warn("Vocab sync suspended:", err.message);
     } finally {
       isVocabSyncing = false;
     }
@@ -157,3 +157,17 @@ export const syncManager = {
     }
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', async () => {
+    try {
+      syncManager.triggerSync();
+      const uniqueUsers = await db.sync_outbox.orderBy('user_id').uniqueKeys();
+      for (const uid of uniqueUsers) {
+        syncManager.triggerVocabSync(uid);
+      }
+    } catch (e) {
+      console.warn("Online event sync failed:", e);
+    }
+  });
+}
