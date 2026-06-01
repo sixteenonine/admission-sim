@@ -210,20 +210,8 @@ export function HubFlashcardDecks() {
           return json.data;
         }
       } else {
-        // ⚡ ถ้ารีเฟรชเว็บ แต่เวอร์ชันยังเป็นปัจจุบัน ให้เอาจากเครื่องมาแสดงแทนการยิง API ใหม่
-        const allLocal = await db.flashcards.toArray();
-        const grouped = {};
-        allLocal.forEach(row => {
-          if (!grouped[row.category]) {
-            grouped[row.category] = { name: row.category, levels: [[], [], []] };
-          }
-          const lvlIdx = row.level ? row.level - 1 : 0;
-          if (!grouped[row.category].levels[lvlIdx]) {
-            grouped[row.category].levels[lvlIdx] = [];
-          }
-          grouped[row.category].levels[lvlIdx].push(row);
-        });
-        return grouped;
+        // ⚡ เวอร์ชันตรงกัน ไม่ต้องทำ Grouping ซ้ำซ้อนให้เปลือง CPU
+        return true;
       }
       return null;
     },
@@ -272,12 +260,8 @@ export function HubFlashcardDecks() {
             wordCount = favCount !== null ? favCount : 0;
             isDataLoaded = favCount !== null;
           } else {
-            isDataLoaded = decksData !== null;
-            if (decksData && decksData[cat.name] && Array.isArray(decksData[cat.name].levels)) {
-              wordCount = decksData[cat.name].levels.flat().length;
-            } else {
-              wordCount = 0;
-            }
+            isDataLoaded = !!metaData?.counts;
+            wordCount = metaData?.counts?.[cat.name]?.total || 0;
           }
 
           const isActive = activeCategory === cat.name;
@@ -305,10 +289,7 @@ export function HubFlashcardDecks() {
                     <span className="text-white font-bold mb-2 tracking-widest text-sm drop-shadow-md">SELECT LEVEL</span>
                     <div className="flex w-full h-20 px-6 sm:px-8 gap-4 sm:gap-4">
                       {[1, 2, 3].map(lvl => {
-                        let levelWordCount = 0;
-                        if (decksData && decksData[cat.name] && Array.isArray(decksData[cat.name].levels) && decksData[cat.name].levels[lvl - 1]) {
-                          levelWordCount = decksData[cat.name].levels[lvl - 1].length;
-                        }
+                        const levelWordCount = metaData?.counts?.[cat.name]?.levels?.[lvl - 1] || 0;
                         return (
                           <button
                             key={lvl}
