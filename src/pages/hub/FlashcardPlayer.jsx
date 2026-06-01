@@ -3,6 +3,24 @@ import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Undo2, Star } from 'lucide-react';
 import { db } from '../../utils/db.js';
 
+// สร้าง Web Worker แบบ Singleton
+const dbWorker = new Worker(new URL('../../workers/dbWorker.js', import.meta.url), { type: 'module' });
+
+function fetchDeckFromWorker(payload) {
+  return new Promise((resolve, reject) => {
+    const messageId = Math.random().toString(36).substring(7);
+    const handler = (e) => {
+      if (e.data.id === messageId) {
+        dbWorker.removeEventListener('message', handler);
+        if (e.data.status === 'success') resolve(e.data.data);
+        else reject(new Error(e.data.error));
+      }
+    };
+    dbWorker.addEventListener('message', handler);
+    dbWorker.postMessage({ type: 'LOAD_DECK', id: messageId, payload });
+  });
+}
+
 export default function FlashcardPlayer() {
   const contextVals = useOutletContext();
   const { currentUser: user, ...themeVals } = contextVals;
@@ -127,124 +145,37 @@ export default function FlashcardPlayer() {
   };
 
   useEffect(() => {
-    async function initLocalDB() {
+    async function loadDeck() {
       try {
-        const localCount = await db.flashcards.count();
-        try {
-          const lastSync = localStorage.getItem('vocabLastSync') || '';
-          let res = await fetch(`/api/vocab/list?t=${Date.now()}${lastSync ? `&lastSync=${encodeURIComponent(lastSync)}` : ''}`);
-          let cloudVocab = await res.json();
-          if (cloudVocab.status === 'success') {
-            let data = cloudVocab.data || [];
-            if (!lastSync || localCount === 0) {
-              const activeData = data.filter(v => v.is_deleted !== 1);
-              const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
-              const starSet = new Set(currentStars.map(w => w.eng));
-              const newData = activeData.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
-              await db.flashcards.clear();
-              await db.flashcards.bulkAdd(newData);
-            } else {
-              if (data.length > 0) {
-                const toDelete = data.filter(v => v.is_deleted === 1).map(v => v.eng);
-                const toUpsert = data.filter(v => v.is_deleted !== 1);
-                const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
-                const starSet = new Set(currentStars.map(w => w.eng));
-                const upsertData = toUpsert.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
-                if (toDelete.length > 0) await db.flashcards.where('eng').anyOf(toDelete).delete();
-                if (upsertData.length > 0) await db.flashcards.bulkPut(upsertData);
-              }
-              const newLocalCount = await db.flashcards.count();
-              if (cloudVocab.total !== undefined && newLocalCount !== cloudVocab.total) {
-                const fullRes = await fetch(`/api/vocab/list?t=${Date.now()}`);
-                const fullCloudVocab = await fullRes.json();
-                if (fullCloudVocab.status === 'success' && fullCloudVocab.data) {
-                  const currentStars = await db.flashcards.where('isStarred').equals(1).toArray();
-                  const starSet = new Set(currentStars.map(w => w.eng));
-                  const finalData = fullCloudVocab.data.map(v => ({ ...v, isStarred: starSet.has(v.eng) ? 1 : 0 }));
-                  await db.flashcards.clear();
-                  await db.flashcards.bulkAdd(finalData);
-                  if (fullCloudVocab.serverTime) localStorage.setItem('vocabLastSync', fullCloudVocab.serverTime);
-                }
-                return;
-              }
-            }
-            if (cloudVocab.serverTime) localStorage.setItem('vocabLastSync', cloudVocab.serverTime);
-          }
-        } catch (e) { console.warn('Offline mode: using local database'); }
+        const sessionKey = `session_${currentCategory}_${currentLevel}`;
+        const savedSession = localStorage.getItem(sessionKey);
         
-        if (user?.id) {
-          try {
-            const res = await fetch(`/api/user/sync?userId=${user.id}`);
-            const cloudData = await res.json();
-            if (cloudData.status === 'success' && cloudData.data?.favorites) {
-              const favData = JSON.parse(cloudData.data.favorites);
-              fullFavsRef.current = favData;
-              const cloudVocabFavs = favData.vocab || [];
-              await db.flashcards.toCollection().modify({ isStarred: 0 });
-              if (cloudVocabFavs.length > 0) {
-                await db.flashcards.where('eng').anyOf(cloudVocabFavs).modify({ isStarred: 1 });
-              }
-            }
-          } catch(e) { console.error('Cloud sync error', e); }
-        }
-        
-        let rawDeck = [];
-        if (isSRS) {
-          rawDeck = await db.flashcards.toArray();
-        } else if (currentCategory === 'MY FAVORITE') {
-          rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
-        } else {
-          rawDeck = await db.flashcards.filter(word => word.category === currentCategory).toArray();
-        }
-        rawDeck.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        // ให้ Worker ไปประมวลผลหาคำศัพท์มาจากเบื้องหลัง
+        const result = await fetchDeckFromWorker({
+          isSRS,
+          currentCategory,
+          currentLevel,
+          now: Date.now()
+        });
 
-        if (!isSRS && currentCategory !== 'MY FAVORITE' && rawDeck.length > 0) {
-          const chunkSize = Math.ceil(rawDeck.length / 3);
-          const idx = currentLevel - 1;
-          rawDeck = rawDeck.slice(idx * chunkSize, (idx + 1) * chunkSize);
+        let finalDeck = result.deck;
+        
+        // ถ้ามีเซสชันที่เล่นค้างไว้ ให้โหลดข้อมูลนั้นแทน
+        if (savedSession && !isSRS && currentCategory !== 'MY FAVORITE') {
+           finalDeck = JSON.parse(savedSession);
         }
 
-        const srsData = await db.vocab_srs.toArray();
-        const srsMap = {};
-        srsData.forEach(item => srsMap[item.eng] = item);
-        
-        const now = Date.now();
-        let localDeck = [];
-        
-        if (currentCategory === 'MY FAVORITE') {
-          localDeck = [...rawDeck];
-        } else if (!isSRS) {
-          const sessionKey = `session_${currentCategory}_${currentLevel}`;
-          const savedSession = localStorage.getItem(sessionKey);
-          if (savedSession) {
-            localDeck = JSON.parse(savedSession);
-          } else {
-            localDeck = rawDeck.filter(card => {
-              const srs = srsMap[card.eng];
-              return !srs || srs.interval === 0;
-            });
-            if (localDeck.length === 0) localDeck = [...rawDeck];
-          }
-        } else {
-          localDeck = rawDeck.filter(card => {
-            const srs = srsMap[card.eng];
-            return srs && srs.next_review <= now;
-          });
-        }
-
-        setDeck(localDeck);
-        setInitialDeckSize(localDeck.length);
-
-        const starred = await db.flashcards.filter(word => word.isStarred === 1).toArray();
-        setStarredWords(starred.map(w => w.eng));
-      setIsReady(true);
-      } catch (error) { 
-        console.error('LocalDB Error:', error); 
+        setDeck(finalDeck);
+        setInitialDeckSize(finalDeck.length);
+        setStarredWords(result.starredWords);
+        setIsReady(true);
+      } catch (error) {
+        console.error('Worker Error:', error);
         setIsReady(true);
       }
     }
-    initLocalDB();
-  }, [currentCategory, user?.id]);
+    loadDeck();
+  }, [currentCategory, currentLevel, isSRS]);
 
   const currentWord = deck[currentIndex];
   // คำนวณสีและลายแบบไดนามิกตามหมวดหมู่จริงของคำศัพท์คำนั้น ๆ (สลับสีส้มออกเมื่อเป็นหมวดหมู่ย่อย)
