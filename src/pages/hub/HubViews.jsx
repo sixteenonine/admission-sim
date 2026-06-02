@@ -187,7 +187,15 @@ export function HubFlashcardDecks() {
         const json = await res.json();
         
         if (json.status === 'success' && json.data) {
-          const allWords = Object.values(json.data).filter(c => c.levels).flatMap(c => c.levels.flat());
+          // 🛡️ เปลี่ยนไปใช้ Native Loop แทน .flat() เพื่อป้องกันปัญหาบน iOS รุ่นเก่า
+          let allWords = [];
+          Object.values(json.data).forEach(catObj => {
+            if (catObj && Array.isArray(catObj.levels)) {
+              catObj.levels.forEach(lvlArr => {
+                if (Array.isArray(lvlArr)) allWords = allWords.concat(lvlArr);
+              });
+            }
+          });
           
           let starredEng = new Set();
           if (count > 0) {
@@ -195,11 +203,12 @@ export function HubFlashcardDecks() {
             starredEng = new Set(starredWords.map(w => w.eng));
           }
 
-          // 🛡️ คลีนข้อมูลป้องกัน iOS Safari บั๊ก (DataError) เมื่อเจอ Index เป็น null
+          // 🛡️ ป้องกัน DataError บน iOS อย่างเด็ดขาด (บังคับ Type ทุกฟิลด์ให้ตรง Schema)
           const wordsToSave = allWords.map(w => ({
             ...w,
-            category: (w.category || "UNCATEGORIZED").toUpperCase(),
-            eng: w.eng || "Unknown",
+            id: String(w.id || crypto.randomUUID()),
+            category: String(w.category || "UNCATEGORIZED").toUpperCase(),
+            eng: String(w.eng || "Unknown"),
             isStarred: w.eng && starredEng.has(w.eng) ? 1 : 0,
             sort_order: w.sort_order != null ? Number(w.sort_order) : 0
           }));

@@ -7,14 +7,17 @@ self.onmessage = async (e) => {
     try {
       const { isSRS, currentCategory, currentLevel, now } = payload;
       
-      // 1. ดึงคำศัพท์ตามหมวดหมู่
+      
+      // 1. ดึงคำศัพท์ทั้งหมดมาก่อนเพื่อหลีกเลี่ยงบั๊ก Index บน iOS Safari ใน Web Worker
+      const allCards = await db.flashcards.toArray();
+      
       let rawDeck = [];
       if (isSRS) {
-        rawDeck = await db.flashcards.toArray();
+        rawDeck = allCards;
       } else if (currentCategory === 'MY FAVORITE') {
-        rawDeck = await db.flashcards.where('isStarred').equals(1).toArray();
+        rawDeck = allCards.filter(c => c.isStarred === 1);
       } else {
-        rawDeck = await db.flashcards.where('category').equals(currentCategory).toArray();
+        rawDeck = allCards.filter(c => c.category === currentCategory);
       }
       
       // เรียงตาม sort_order
