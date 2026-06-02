@@ -5,7 +5,10 @@ import './index.css'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
+import { registerSW } from 'virtual:pwa-register'
 
+// ลงทะเบียน Service Worker ให้ทำงานทันทีเมื่อเปิดเว็บ
+registerSW({ immediate: true })
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

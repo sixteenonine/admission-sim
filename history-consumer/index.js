@@ -15,6 +15,10 @@ export default {
     }
 
     // มัดรวม Insert ทีเดียว (Bulk Write) ช่วยเซฟ Cost ของ D1
-    await env.DB.batch(statements);
+    const chunkSize = 100;
+    for (let i = 0; i < statements.length; i += chunkSize) {
+      const chunk = statements.slice(i, i + chunkSize);
+      await env.DB.batch(chunk);
+    }
   }
 };

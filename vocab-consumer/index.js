@@ -41,7 +41,11 @@ export default {
     }
 
     if (statements.length > 0) {
-      await db.batch(statements);
+      const chunkSize = 100;
+      for (let i = 0; i < statements.length; i += chunkSize) {
+        const chunk = statements.slice(i, i + chunkSize);
+        await db.batch(chunk);
+      }
     }
   }
 };
