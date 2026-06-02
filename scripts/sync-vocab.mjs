@@ -40,7 +40,14 @@ async function sync() {
 
   try {
     execSync('npx wrangler d1 execute admission-sim-db --remote --file=temp-sync.sql', { stdio: 'inherit' });
-    console.log('🎉 Sync completed successfully!');
+    console.log("🔄 Triggering KV Cache update...");
+    const kvRes = await fetch("https://admission-sim.sixteenonine99.workers.dev/api/vocab/sync-to-kv");
+    
+    if (kvRes.ok) {
+      console.log("🎉 Database and KV Sync completed! Frontend is 100% up to date.");
+    } else {
+      console.log("⚠️ DB synced, but KV update failed.");
+    }
   } catch (err) {
     console.error('❌ Sync failed:', err.message);
   } finally {
