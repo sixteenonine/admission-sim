@@ -34,8 +34,8 @@
 	"queues": {
 		"producers": [
 			{
-				"binding": "HISTORY_QUEUE",
-				"queue": "admission-history-queue"
+				"binding": "VOCAB_SYNC_QUEUE",
+				"queue": "vocab-sync-queue"
 			}
 		]
 	}
