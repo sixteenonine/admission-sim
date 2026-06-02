@@ -61,6 +61,7 @@ export default function App() {
   const totalTime = useRef(initialTime);
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const timeLeftRef = useRef(initialTime);
+  const expectedEndTimeRef = useRef(null);
 
   const [isRunning, setIsRunning] = useState(false);
   const [ambientOn, setAmbientOn] = useState(false);
@@ -249,6 +250,30 @@ export default function App() {
 
   const isRunningRef = useRef(isRunning);
   useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
+  // ระบบนับเวลาอิงตาม Date.now() เพื่อแก้ปัญหา Background Tab Throttling
+  useEffect(() => {
+    if (!isRunning || countdown !== null) return;
+    
+    // ตั้งเป้าหมายเวลาจบตามเวลาจริงของระบบ
+    expectedEndTimeRef.current = Date.now() + (timeLeftRef.current * 1000) / speed;
+
+    const timerId = setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.round((expectedEndTimeRef.current - now) / 1000 * speed));
+      
+      if (remaining !== timeLeftRef.current) {
+        timeLeftRef.current = remaining;
+        setTimeLeft(remaining);
+      }
+
+      if (remaining <= 0) {
+        clearInterval(timerId);
+        setIsRunning(false);
+      }
+    }, 500); // 500ms รันถี่ขึ้นเพื่อป้องกันการข้ามวินาทีตอนสลับแท็บ
+
+    return () => clearInterval(timerId);
+  }, [isRunning, countdown, speed]);
 
   useEffect(() => {
     if (countdown === null) return;
@@ -318,7 +343,10 @@ export default function App() {
     const newTime = Math.max(0, timeLeftRef.current - 300);
     timeLeftRef.current = newTime;
     setTimeLeft(newTime);
-  }, []);
+    if (expectedEndTimeRef.current) {
+      expectedEndTimeRef.current -= (300 * 1000) / speed;
+    }
+  }, [speed]);
   
   const addMark = useCallback(() => {
     if (!isRunningRef.current) return;

@@ -15,55 +15,15 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
   const [isClockMode, setIsClockMode] = useState(false);
   const { bg, theme, raisedGradient, indentedGradient, shadowOuter, shadowCap, shadowPlateau, shadowTrench, shadowDimple } = themeVals;
 
-  const minRef = useRef(null);
-  const secRef = useRef(null);
-
-  // Timer Optimization Loop (Zero-Render)
+  // ให้ Simulator.jsx เป็นคนควบคุมเวลาทั้งหมดแบบ 100%
+  // หน้าปัดมีหน้าที่แค่เช็คว่าถ้าเวลาชน 0 ให้แจ้งเตือนหมดเวลา
+  const prevTime = useRef(timeLeft);
   useEffect(() => {
-    let animationFrame;
-    let lastRealTime = Date.now();
-    let lastDisplayTime = Math.max(0, Math.ceil(timeLeftRef.current));
-
-    const updateTimer = () => {
-      const now = Date.now();
-      const elapsedRealMs = now - lastRealTime;
-      
-      if (elapsedRealMs > 0) {
-        timeLeftRef.current -= (elapsedRealMs * speed) / 1000;
-        lastRealTime = now;
-
-        const currentDisplayTime = Math.max(0, Math.ceil(timeLeftRef.current));
-        
-        if (currentDisplayTime !== lastDisplayTime) {
-          lastDisplayTime = currentDisplayTime;
-          
-          if (minRef.current && secRef.current) {
-            minRef.current.textContent = Math.floor(currentDisplayTime / 60).toString().padStart(2, '0');
-            secRef.current.textContent = (currentDisplayTime % 60).toString().padStart(2, '0');
-          }
-
-          if (setTimeLeft) setTimeLeft(currentDisplayTime);
-
-          if (currentDisplayTime <= 0) {
-            cancelAnimationFrame(animationFrame);
-            if (onTimeUp) onTimeUp();
-            return;
-          }
-        }
-      }
-      
-      if (isRunning) {
-        animationFrame = requestAnimationFrame(updateTimer);
-      }
-    };
-
-    if (isRunning) {
-      lastRealTime = Date.now();
-      animationFrame = requestAnimationFrame(updateTimer);
+    if (prevTime.current > 0 && timeLeft <= 0) {
+      if (onTimeUp) onTimeUp();
     }
-
-    return () => cancelAnimationFrame(animationFrame);
-  }, [isRunning, speed, onTimeUp, setTimeLeft, timeLeftRef]);
+    prevTime.current = timeLeft;
+  }, [timeLeft, onTimeUp]);
 
   const isIdle = timeLeft === totalTime && !isRunning && countdown === null;
   
@@ -147,9 +107,9 @@ const TimerDashboard = memo(({ cfg, themeVals, timeLeft, totalTime, isRunning, s
                   </div>
                   <div className="relative z-10 flex flex-col items-center pointer-events-none w-full" style={{ fontFamily: "'Outfit', 'Prompt', sans-serif" }}>
                     <div className="flex justify-center leading-none tracking-tight drop-shadow-[1px_1px_1px_rgba(255,255,255,0.05)]" style={{ color: theme.textHighlight, fontWeight: 200, fontSize: `${cfg.timeFontSize}rem`, transform: `translateY(${cfg.timeY}px)` }}>
-                      <span className="w-[1.2em] text-right" ref={minRef}>{Math.floor(Math.ceil(timeLeft) / 60).toString().padStart(2, '0')}</span>
+                      <span className="w-[1.2em] text-right">{Math.floor(Math.ceil(timeLeft) / 60).toString().padStart(2, '0')}</span>
                       <span className="w-[0.3em] text-center">:</span>
-                      <span className="w-[1.2em] text-left" ref={secRef}>{(Math.ceil(timeLeft) % 60).toString().padStart(2, '0')}</span>
+                      <span className="w-[1.2em] text-left">{(Math.ceil(timeLeft) % 60).toString().padStart(2, '0')}</span>
                     </div>
                     <span className="tracking-[0.15em] uppercase" style={{ color: theme.textSub, fontWeight: 400, fontSize: `${cfg.labelFontSize}px`, transform: `translateY(${cfg.labelY}px)` }}>Minutes</span>
                   </div>
