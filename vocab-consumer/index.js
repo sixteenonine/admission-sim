@@ -41,7 +41,7 @@ export default {
           `).bind(
             userId, 
             String(u.vocab_id), 
-            u.status, 
+            action,
             u.interval, 
             u.ease_factor, 
             u.next_review_date, 
