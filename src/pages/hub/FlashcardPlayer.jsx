@@ -254,9 +254,11 @@ export default function FlashcardPlayer() {
     const newSrsData = { eng, vocab_id: currentWord.id, repetition, interval, ease_factor, next_review, revision };
     await db.vocab_srs.put(newSrsData);
 
+    let eventId = null;
     if (user?.id) {
+      eventId = crypto.randomUUID();
       await db.sync_outbox.put({
-        id: crypto.randomUUID(), // สร้าง ID เฉพาะให้ Event
+        id: eventId,
         user_id: user.id,
         vocab_id: currentWord.id,
         action: isRemembered ? 'remembered' : 'forgotten',
@@ -270,7 +272,7 @@ export default function FlashcardPlayer() {
     }
 
     triggerCardAnim(isRemembered ? 'up' : 'down', () => {
-      setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex }]);
+      setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex, previousSrs: currentSrs, eventId }]);
       const newDeck = [...deck];
       newDeck.splice(currentIndex, 1);
       setDeck(newDeck);
@@ -289,6 +291,9 @@ export default function FlashcardPlayer() {
     triggerCardAnim('undo', () => {
       const historyCopy = [...masteredHistory];
       const lastMastered = historyCopy.pop();
+      if (lastMastered.previousSrs) db.vocab_srs.put(lastMastered.previousSrs);
+      if (lastMastered.eventId) db.sync_outbox.delete(lastMastered.eventId);
+
       const newDeck = [...deck];
       newDeck.splice(lastMastered.originalIndex, 0, lastMastered.word);
       setDeck(newDeck);
