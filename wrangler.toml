@@ -7,8 +7,8 @@ database_name = "admission-sim-db"
 database_id = "2154b60b-9bf5-4ba1-b0be-8e1c902cd3ab"
 
 [[queues.producers]]
-binding = "HISTORY_QUEUE"
-queue = "admission-history-queue"
+binding = "VOCAB_SYNC_QUEUE"
+queue = "vocab-sync-queue"
 [[queues.producers]]
 binding = "VOCAB_SYNC_QUEUE"
 queue = "vocab-sync-queue"
