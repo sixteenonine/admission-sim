@@ -65,11 +65,13 @@ export function HubFlashcards() {
       
       if (json.status === 'success' && json.data) {
         const srsData = json.data.map(item => ({
+          vocab_id: String(item.vocab_id),
           eng: item.eng,
           repetition: item.interval > 1 ? 2 : 1,
           interval: item.interval,
           ease_factor: item.ease_factor,
-          next_review: new Date(item.next_review_date).getTime()
+          next_review: new Date(item.next_review_date).getTime(),
+          revision: item.revision || 0
         }));
         await db.vocab_srs.bulkPut(srsData);
       }
@@ -198,7 +200,8 @@ export function HubFlashcardDecks() {
             ...w,
             category: (w.category || "UNCATEGORIZED").toUpperCase(),
             eng: w.eng || "Unknown",
-            isStarred: w.eng && starredEng.has(w.eng) ? 1 : 0
+            isStarred: w.eng && starredEng.has(w.eng) ? 1 : 0,
+            sort_order: w.sort_order != null ? Number(w.sort_order) : 0
           }));
 
           try {
