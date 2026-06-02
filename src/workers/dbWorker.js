@@ -38,13 +38,16 @@ self.onmessage = async (e) => {
       } else if (!isSRS) {
         localDeck = rawDeck.filter(card => {
           const srs = srsMap[card.id];
-          return !srs || srs.interval === 0;
+          return !srs || Number(srs.interval) === 0;
         });
         if (localDeck.length === 0) localDeck = [...rawDeck];
       } else {
         localDeck = rawDeck.filter(card => {
           const srs = srsMap[card.id];
-          return srs && srs.next_review <= now;
+          if (!srs) return false;
+          // แปลงวันที่ให้รองรับทั้ง Timestamp (Local) และ ISO String (จาก Server)
+          const reviewTime = new Date(srs.next_review || srs.next_review_date || 0).getTime();
+          return reviewTime <= now;
         });
       }
 

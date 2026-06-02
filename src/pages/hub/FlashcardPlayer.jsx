@@ -232,7 +232,7 @@ export default function FlashcardPlayer() {
     }));
 
     const eng = currentWord.eng;
-    const currentSrs = await db.vocab_srs.get(eng) || { eng, vocab_id: currentWord.id, repetition: 0, interval: 0, ease_factor: 2.5, revision: 0 };
+    const currentSrs = await db.vocab_srs.get(currentWord.id) || { eng, vocab_id: currentWord.id, repetition: 0, interval: 0, ease_factor: 2.5, revision: 0 };
     let { repetition, interval, ease_factor, revision = 0 } = currentSrs;
 
     let q = isRemembered ? 4 : 1;
