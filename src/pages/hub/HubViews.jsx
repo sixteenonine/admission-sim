@@ -222,10 +222,21 @@ export function HubFlashcardDecks() {
               }
             });
             localStorage.setItem('local_vocab_version', metaData.version);
+            sessionStorage.removeItem('vocab_sync_retry');
             return true;
           } catch (err) {
-            alert("พบปัญหาการอัปเดตฐานข้อมูลบนอุปกรณ์ iOS: " + err.message);
-            console.error("Dexie iOS Error:", err);
+            console.error("Database Write Error:", err);
+            const retryCount = parseInt(sessionStorage.getItem('vocab_sync_retry') || '0');
+            
+            if (retryCount < 1) {
+              sessionStorage.setItem('vocab_sync_retry', '1');
+              localStorage.removeItem('local_vocab_version');
+              alert("ระบบกำลังปรับปรุงพื้นที่จัดเก็บข้อมูล กรุณารอสักครู่...");
+              window.location.reload();
+            } else {
+              alert("ไม่สามารถบันทึกคำศัพท์ได้ พื้นที่จัดเก็บอาจเต็ม หรือคุณกำลังใช้งานโหมดส่วนตัว (Private Browsing)");
+              sessionStorage.removeItem('vocab_sync_retry');
+            }
             return false;
           }
         }
