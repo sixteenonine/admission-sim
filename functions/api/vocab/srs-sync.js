@@ -11,9 +11,11 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'Payload too large (Max 50 items)' }), { status: 413 });
     }
 
-    if (context.env.VOCAB_SYNC_QUEUE) {
-      await context.env.VOCAB_SYNC_QUEUE.send({ userId, updates });
+    if (!context.env.VOCAB_SYNC_QUEUE) {
+      throw new Error('VOCAB_SYNC_QUEUE binding is missing in Cloudflare Pages');
     }
+
+    await context.env.VOCAB_SYNC_QUEUE.send({ userId, updates });
     
     return new Response(JSON.stringify({ success: true, synced_count: updates.length, queued: true }), { 
       status: 200,

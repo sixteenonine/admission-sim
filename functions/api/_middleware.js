@@ -55,6 +55,7 @@ export async function onRequest(context) {
     '/api/stories/list',     
     '/api/vocab/list',
     '/api/vocab/meta'
+    , '/api/vocab/decks'
   ];
 
   // ถ้าเป็น Public Route ให้ปล่อยผ่านไปทำงานต่อได้เลย
