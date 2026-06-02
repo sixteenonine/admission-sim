@@ -106,3 +106,11 @@ CREATE TABLE user_vocab_progress (
 );
 
 CREATE INDEX idx_user_vocab_review ON user_vocab_progress(user_id, next_review_date);
+DROP TABLE IF EXISTS user_vocab_events;
+CREATE TABLE user_vocab_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    vocab_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    created_at DATETIME NOT NULL
+);

@@ -14,6 +14,19 @@ export default {
       for (const u of updates) {
         const actionTime = u.timestamp ? new Date(u.timestamp).toISOString() : new Date().toISOString();
         
+        const eventId = u.id || crypto.randomUUID();
+        const action = u.action || (u.status === 'remembered' ? 'remembered' : 'forgotten');
+
+        // 1. บันทึก Event ลง Log เพื่อป้องกันข้อมูลทับซ้อนในอนาคต (Event Sourcing)
+        statements.push(
+          db.prepare(`
+            INSERT INTO user_vocab_events (id, user_id, vocab_id, action, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING
+          `).bind(eventId, userId, String(u.vocab_id), action, actionTime)
+        );
+        
+        // 2. อัปเดตผลลัพธ์ลงตาราง State หลัก
         statements.push(
           db.prepare(`
             INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)

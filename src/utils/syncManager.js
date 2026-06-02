@@ -80,45 +80,25 @@ export const syncManager = {
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
       if (outboxItems.length === 0) return;
 
-      const uniqueMap = new Map();
-      for (const item of outboxItems) {
-        uniqueMap.set(item.vocab_id, item.id);
-      }
+      const chunk = outboxItems.slice(0, 50);
 
-      const vocabIds = Array.from(uniqueMap.keys());
-      const chunkVocabIds = vocabIds.slice(0, 50);
-
-      const srsRecords = await db.vocab_srs.where('vocab_id').anyOf(chunkVocabIds).toArray();
-      const updates = srsRecords.map(srs => ({
-        vocab_id: srs.vocab_id,
-        status: srs.interval > 0 ? 'remembered' : 'forgotten',
-        interval: srs.interval,
-        ease_factor: srs.ease_factor,
-        next_review_date: new Date(srs.next_review).toISOString(),
-        revision: srs.revision || 0,
-        timestamp: Date.now()
-      }));
-
-      if (updates.length > 0) {
+      if (chunk.length > 0) {
         const response = await fetch('/api/vocab/srs-sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, updates })
+          body: JSON.stringify({ userId, updates: chunk })
         });
 
         if (response.ok) {
-          const itemsToDelete = outboxItems.filter(item => chunkVocabIds.includes(item.vocab_id)).map(item => item.id);
-          await db.sync_outbox.bulkDelete(itemsToDelete);
+          const itemIds = chunk.map(item => item.id);
+          await db.sync_outbox.bulkDelete(itemIds);
 
-          if (vocabIds.length > 50) {
+          if (outboxItems.length > 50) {
             setTimeout(() => this.triggerVocabSync(userId), 2000);
           }
         } else {
           isVocabSyncing = false;
         }
-      } else {
-        const itemsToDelete = outboxItems.filter(item => chunkVocabIds.includes(item.vocab_id)).map(item => item.id);
-        await db.sync_outbox.bulkDelete(itemsToDelete);
       }
     } catch (err) {
       console.warn("Vocab sync suspended:", err.message);
@@ -133,25 +113,10 @@ export const syncManager = {
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
       if (outboxItems.length === 0) return;
 
-      const uniqueMap = new Map();
-      for (const item of outboxItems) {
-        uniqueMap.set(item.vocab_id, item.id);
-      }
-      const vocabIds = Array.from(uniqueMap.keys()).slice(0, 50);
-      const srsRecords = await db.vocab_srs.where('vocab_id').anyOf(vocabIds).toArray();
-
-      const updates = srsRecords.map(srs => ({
-        vocab_id: srs.vocab_id,
-        status: srs.interval > 0 ? 'remembered' : 'forgotten',
-        interval: srs.interval,
-        ease_factor: srs.ease_factor,
-        next_review_date: new Date(srs.next_review).toISOString(),
-        revision: srs.revision || 0,
-        timestamp: Date.now()
-      }));
-
-      if (updates.length > 0) {
-        const blob = new Blob([JSON.stringify({ userId, updates })], { type: 'application/json' });
+      const chunk = outboxItems.slice(0, 50);
+      
+      if (chunk.length > 0) {
+        const blob = new Blob([JSON.stringify({ userId, updates: chunk })], { type: 'application/json' });
         navigator.sendBeacon('/api/vocab/srs-sync', blob);
       }
     } catch (err) {

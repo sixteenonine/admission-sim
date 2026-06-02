@@ -256,8 +256,14 @@ export default function FlashcardPlayer() {
 
     if (user?.id) {
       await db.sync_outbox.put({
+        id: crypto.randomUUID(), // สร้าง ID เฉพาะให้ Event
         user_id: user.id,
         vocab_id: currentWord.id,
+        action: isRemembered ? 'remembered' : 'forgotten',
+        interval: interval,
+        ease_factor: ease_factor,
+        next_review_date: new Date(next_review).toISOString(),
+        revision: revision,
         timestamp: Date.now()
       });
       syncManager.triggerVocabSync(user.id);
