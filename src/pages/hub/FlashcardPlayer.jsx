@@ -283,15 +283,17 @@ export default function FlashcardPlayer() {
         cardRef.current.style.opacity = '';
       }
       
-      setAnimClass('translate-y-3 scale-[0.95] opacity-100 transition-none');
+      // 🛡️ UI Fix: ปรับให้ไพ่ใบใหม่เริ่มจากจางๆ (opacity-0) และย่อตัวลงมาอีกนิด เพื่อเตรียมระยะ Fade-in
+      setAnimClass('translate-y-4 scale-[0.90] opacity-0 transition-none');
       
       setTimeout(() => {
-        setAnimClass('translate-y-0 scale-100 opacity-100 transition-transform duration-150 ease-out');
+        // 🛡️ UI Fix: เปลี่ยนเป็น transition-all (ให้ opacity ทำงาน) และเพิ่มเวลาเป็น 200ms ให้จังหวะเด้ง+ชัดขึ้นมาดูนุ่มนวล
+        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-200 ease-out');
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
           setIsResettingFlip(false); // เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
-        }, 150);
+        }, 200); // 🛡️ รอให้แอนิเมชันขาเข้าจบพอดีที่ 200ms
       }, 20);
     }, 200);
   };
