@@ -4,7 +4,17 @@ export async function onRequestPost(context) {
     const event = await context.request.json();
 
     if (event.key === "charge.complete") {
-      const charge = event.data;
+      const webhookChargeId = event.data?.id;
+      if (!webhookChargeId) return new Response(JSON.stringify({ status: "ignored" }), { status: 200 });
+
+      // 🛡️ Enterprise Fix 3: ดึงสถานะจริงจาก Omise โดยตรง (Zero-Trust) ป้องกันแฮกเกอร์ยิง Webhook ปลอม
+      const secretKey = context.env.OMISE_SECRET_KEY;
+      const encodedKey = btoa(secretKey + ":");
+      const verifyRes = await fetch(`https://api.omise.co/charges/${webhookChargeId}`, {
+        headers: { "Authorization": `Basic ${encodedKey}` }
+      });
+      const charge = await verifyRes.json();
+
       if (charge.status === "successful") {
         const chargeId = charge.id;
 

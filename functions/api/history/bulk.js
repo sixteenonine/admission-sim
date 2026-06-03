@@ -26,8 +26,11 @@ export async function onRequestPost(context) {
       }
     }));
 
-    // ส่งเข้าคิวทีเดียวทั้งก้อน (ลดภาระ I/O)
-    await context.env.HISTORY_QUEUE.sendBatch(messages);
+    // 🛡️ Enterprise Fix: ป้องกัน Cloudflare Queue Limit (Max 100/batch) หั่นเป็นก้อนย่อยก่อนส่ง
+    for (let i = 0; i < messages.length; i += 100) {
+      const batchChunk = messages.slice(i, i + 100);
+      await context.env.HISTORY_QUEUE.sendBatch(batchChunk);
+    }
 
     // ดึง ID ออกมาส่งกลับให้ Frontend
     const successIds = data.map(item => item.reflectionData?.id).filter(Boolean);

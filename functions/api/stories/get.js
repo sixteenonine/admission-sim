@@ -21,10 +21,14 @@ export async function onRequestPost(context) {
     let vocab_levels = {};
 
     if (kvDataStr) {
-      const kvData = JSON.parse(kvDataStr);
-      content = kvData.content || "";
-      translation = kvData.translation || "";
-      vocab_levels = kvData.vocab_levels || {};
+      try {
+        const kvData = JSON.parse(kvDataStr);
+        content = kvData.content || "";
+        translation = kvData.translation || "";
+        vocab_levels = kvData.vocab_levels || {};
+      } catch (e) {
+        console.error("KV JSON Parse Error for story:", storyId);
+      }
     }
 
     const story = {

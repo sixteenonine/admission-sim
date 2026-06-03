@@ -47,8 +47,6 @@ CREATE TABLE payments (
 CREATE TABLE stories (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
-    content TEXT,
-    translation TEXT,
     image_url TEXT,
     is_premium BOOLEAN DEFAULT FALSE,
     type TEXT DEFAULT 'story',
@@ -110,3 +108,4 @@ CREATE INDEX IF NOT EXISTS idx_users_plan_expire ON users(plan_expire_at);
 CREATE INDEX IF NOT EXISTS idx_exam_history_user ON exam_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_vocab_category_order ON vocab_repository(category, sort_order);
+CREATE INDEX IF NOT EXISTS idx_user_vocab_status ON user_vocab_progress(user_id, status);
