@@ -421,8 +421,9 @@ export default function FlashcardPlayer() {
                 
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: swipeBg || cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
+                  // 🛡️ Enterprise Fix 1: ลบ transition-all และ pointer-events แบบไดนามิกทิ้ง ป้องกันเบราว์เซอร์คำนวณเงาและเลย์เอาต์ใหม่ขณะเริ่มพลิกไพ่
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 ${swipeGlow ? swipeGlow : 'shadow-xl'}`} 
+                  style={{ backgroundColor: swipeBg || cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)', WebkitFontSmoothing: 'antialiased' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
@@ -469,8 +470,9 @@ export default function FlashcardPlayer() {
 
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
-                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: swipeBg || cardColor, transform: 'rotateY(180deg) translate3d(0,0,0)', WebkitTransform: 'rotateY(180deg) translate3d(0,0,0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  // 🛡️ Enterprise Fix 2: เพิ่ม antialiased และดันแกน Z ออกมา 1px (translate3d) ช่วยให้การ์ดจอแช่แข็งตัวหนังสือภาษาไทยเป็นแผ่นภาพเดียว แก้ปัญหากระตุกได้เด็ดขาด
+                  className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 ${swipeGlow ? swipeGlow : 'shadow-xl'}`} 
+                  style={{ backgroundColor: swipeBg || cardColor, transform: 'rotateY(180deg) translate3d(0,0,1px)', WebkitTransform: 'rotateY(180deg) translate3d(0,0,1px)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', WebkitFontSmoothing: 'antialiased', willChange: 'transform' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
