@@ -283,17 +283,20 @@ export default function FlashcardPlayer() {
         cardRef.current.style.opacity = '';
       }
       
-      // 🛡️ UI Fix: ปรับให้ไพ่ใบใหม่เริ่มจากจางๆ (opacity-0) และย่อตัวลงมาอีกนิด เพื่อเตรียมระยะ Fade-in
-      setAnimClass('translate-y-4 scale-[0.90] opacity-0 transition-none');
+      // 🛡️ Enterprise Fix: บังคับให้เบราว์เซอร์รับรู้การล้างค่าทันที (Force Hardware Reflow) ป้องกันอาการภาพตัด
+      if (cardRef.current) void cardRef.current.offsetWidth;
+      
+      // 🛡️ UI Fix: ดันจุดเริ่มต้นให้ต่ำลงอีก (translate-y-8) และเล็กลงอีกนิด เพื่อให้มีระยะทางสไลด์ขึ้นที่เห็นได้ชัดเจน
+      setAnimClass('translate-y-8 scale-[0.85] opacity-0 transition-none');
       
       setTimeout(() => {
-        // 🛡️ UI Fix: เปลี่ยนเป็น transition-all (ให้ opacity ทำงาน) และเพิ่มเวลาเป็น 200ms ให้จังหวะเด้ง+ชัดขึ้นมาดูนุ่มนวล
-        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-200 ease-out');
+        // 🛡️ UI Fix: เพิ่มเวลาเป็น 300ms และใช้ Custom Cubic-Bezier สไตล์ Native iOS (พุ่งเร็ว เบรกนุ่ม)
+        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]');
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
           setIsResettingFlip(false); // เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
-        }, 200); // 🛡️ รอให้แอนิเมชันขาเข้าจบพอดีที่ 200ms
+        }, 300);
       }, 20);
     }, 200);
   };
