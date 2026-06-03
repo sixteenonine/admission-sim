@@ -289,7 +289,7 @@ export default function FlashcardPlayer() {
         if (cardRef.current) void cardRef.current.offsetWidth; // บังคับให้เบราว์เซอร์รีเฟรชเฟรม
 
         if (cardRef.current) {
-          cardRef.current.style.transition = 'opacity 1000ms ease-in-out';
+          cardRef.current.style.transition = 'opacity 500ms ease-in-out';
           cardRef.current.style.opacity = '1'; // สั่งเฟดสว่างขึ้นมา 1 วินาที
         }
 
@@ -301,7 +301,7 @@ export default function FlashcardPlayer() {
           }
           setIsChangingWord(false);
           setIsResettingFlip(false);
-        }, 1000);
+        }, 500);
       }, 50);
     }, 200);
   };
