@@ -4,6 +4,7 @@ const CHUNK_SIZE = 10;
 let isSyncing = false;
 let isVocabSyncing = false;
 let isUserSyncing = false; // 🛡️ เพิ่ม Flag แยกการทำงานป้องกันคิวชนกัน
+let vocabSyncTimer = null; // 🛡️ ตัวแปรเก็บเวลาหน่วงสำหรับ Smart Batching
 
 export const syncManager = {
   async addToQueue(payload) {
@@ -70,17 +71,28 @@ export const syncManager = {
       const blob = new Blob([JSON.stringify({ data: chunk, isBeacon: true })], { type: 'application/json' });
       navigator.sendBeacon('/api/history/bulk', blob);
     }
-  }
-  ,
+  },
 
-  async triggerVocabSync(userId) {
-    if (isVocabSyncing || !navigator.onLine || !userId) return;
-    
+  async triggerVocabSync(userId, force = false) {
+    if (!navigator.onLine || !userId) return;
+
+    // 🛡️ Enterprise Feature: Smart Batching & Debounce (หน่วงเวลายิง API และรองรับ Undo 100%)
+    if (!force) {
+      const count = await db.sync_outbox.where('user_id').equals(userId).count();
+      if (count < 20) { // ถ้าน้อยกว่า 20 คำ ให้รอ 10 วินาทีเผื่อเด็กเปลี่ยนใจกด Undo
+        if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
+        vocabSyncTimer = setTimeout(() => this.triggerVocabSync(userId, true), 10000);
+        return;
+      }
+    }
+
+    if (isVocabSyncing) return;
     try {
       isVocabSyncing = true;
+      if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
+
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
       if (outboxItems.length === 0) return;
-
       const chunk = outboxItems.slice(0, 50);
 
       if (chunk.length > 0) {
@@ -93,9 +105,8 @@ export const syncManager = {
         if (response.ok) {
           const itemIds = chunk.map(item => item.id);
           await db.sync_outbox.bulkDelete(itemIds);
-
           if (outboxItems.length > 50) {
-            setTimeout(() => this.triggerVocabSync(userId), 2000);
+            setTimeout(() => this.triggerVocabSync(userId, true), 2000);
           }
         } else {
           isVocabSyncing = false;
@@ -113,7 +124,6 @@ export const syncManager = {
     try {
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
       if (outboxItems.length === 0) return;
-
       const chunk = outboxItems.slice(0, 50);
       
       if (chunk.length > 0) {
@@ -123,8 +133,8 @@ export const syncManager = {
     } catch (err) {
       console.warn("Beacon flush failed", err);
     }
-  }
-  ,
+  },
+
   // 🛡️ ระบบคิวสำหรับ User Preferences (เช่น การกดดาว) ทนทานต่อสถานะ Offline
   async queueUserAction(actionPayload) {
     const queueStr = localStorage.getItem('bw_userSyncQueue');
@@ -170,6 +180,7 @@ if (typeof window !== 'undefined') {
     try {
       syncManager.triggerSync();
       syncManager.triggerUserSync(); // 🛡️ บังคับระบายคิวกดดาวทันทีเมื่อเน็ตกลับมาเชื่อมต่อ
+      
       // 🛡️ Enterprise Fix: รวมการซิงก์ศัพท์ทั้งหมดเป็นก้อนเดียว ลดภาระ Network 100%
       const allOutbox = await db.sync_outbox.toArray();
       if (allOutbox.length > 0) {
@@ -180,7 +191,7 @@ if (typeof window !== 'undefined') {
         }, {});
 
         for (const [uid, items] of Object.entries(grouped)) {
-          setTimeout(() => syncManager.triggerVocabSync(uid), 500);
+          setTimeout(() => syncManager.triggerVocabSync(uid, true), 500); // 🛡️ บังคับระบายคิว
         }
       }
     } catch (e) {

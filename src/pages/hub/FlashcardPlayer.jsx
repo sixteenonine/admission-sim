@@ -95,7 +95,10 @@ export default function FlashcardPlayer() {
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (user?.id) syncManager.triggerVocabSync(user.id, true); // 🛡️ บังคับยิงข้อมูลทันทีเมื่อกดออกจากหน้านี้
+    };
   }, [user?.id]);
   useEffect(() => {
     async function loadDeck() {
