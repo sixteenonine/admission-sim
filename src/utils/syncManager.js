@@ -170,9 +170,18 @@ if (typeof window !== 'undefined') {
     try {
       syncManager.triggerSync();
       syncManager.triggerUserSync(); // 🛡️ บังคับระบายคิวกดดาวทันทีเมื่อเน็ตกลับมาเชื่อมต่อ
-      const uniqueUsers = await db.sync_outbox.orderBy('user_id').uniqueKeys();
-      for (const uid of uniqueUsers) {
-        syncManager.triggerVocabSync(uid);
+      // 🛡️ Enterprise Fix: รวมการซิงก์ศัพท์ทั้งหมดเป็นก้อนเดียว ลดภาระ Network 100%
+      const allOutbox = await db.sync_outbox.toArray();
+      if (allOutbox.length > 0) {
+        const grouped = allOutbox.reduce((acc, item) => {
+          if (!acc[item.user_id]) acc[item.user_id] = [];
+          acc[item.user_id].push(item);
+          return acc;
+        }, {});
+
+        for (const [uid, items] of Object.entries(grouped)) {
+          setTimeout(() => syncManager.triggerVocabSync(uid), 500);
+        }
       }
     } catch (e) {
       console.warn("Online event sync failed:", e);
