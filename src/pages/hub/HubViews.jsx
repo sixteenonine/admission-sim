@@ -206,7 +206,8 @@ export function HubFlashcardDecks() {
           // 🛡️ ป้องกัน DataError บน iOS อย่างเด็ดขาด (บังคับ Type ทุกฟิลด์ให้ตรง Schema)
           const wordsToSave = allWords.map(w => ({
             ...w,
-            id: String(w.id || crypto.randomUUID()),
+            // 🛡️ Enterprise Fix: ป้องกันประวัติ SRS หาย หากไฟล์ TSV ไม่มี ID จะใช้คำศัพท์ภาษาอังกฤษมาทำเป็น ID ถาวรแทนการสุ่มมั่ว
+            id: String(w.id || `tsvid_${w.eng.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}`),
             category: String(w.category || "UNCATEGORIZED").toUpperCase(),
             eng: String(w.eng || "Unknown"),
             isStarred: w.eng && starredEng.has(w.eng) ? 1 : 0,
