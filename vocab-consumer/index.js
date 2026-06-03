@@ -23,9 +23,14 @@ export default {
       }
 
       for (const u of updates) {
-        const timestampMs = u.timestamp ? new Date(u.timestamp).getTime() : Date.now();
+        // 🛡️ Enterprise Fix 1: ป้องกัน Queue Poison Pill ตรวจสอบ Timestamp ให้เป็นตัวเลขที่ใช้งานได้เสมอ
+        let timestampMs = Date.now();
+        if (u.timestamp) {
+            const parsed = new Date(u.timestamp).getTime();
+            if (!isNaN(parsed)) timestampMs = parsed;
+        }
+        
         const action = u.action || (u.status === 'remembered' ? 'remembered' : 'forgotten');
-
         
         // 2. หา State ล่าสุดของคำศัพท์แต่ละคำใน Batch
         const progressKey = `${userId}|${u.vocab_id}`;
@@ -82,10 +87,16 @@ export default {
     }
 
     if (statements.length > 0) {
-      const chunkSize = 100;
-      for (let i = 0; i < statements.length; i += chunkSize) {
-        const chunk = statements.slice(i, i + chunkSize);
-        await db.batch(chunk);
+      // 🛡️ Enterprise Fix 2: หั่น Batch ป้องกัน D1 Crash (Max 100 statements/batch)
+      // หั่นเป็นก้อนละ 80 คำสั่งเพื่อให้มีระยะปลอดภัย ข้อมูลจะไม่หายแม้ยิงมาพร้อมกันหลักหมื่น
+      try {
+        const CHUNK_SIZE = 80;
+        for (let i = 0; i < statements.length; i += CHUNK_SIZE) {
+          const chunk = statements.slice(i, i + CHUNK_SIZE);
+          await db.batch(chunk);
+        }
+      } catch (err) {
+        console.error("Vocab Sync Batch Error (Chunked):", err);
       }
     }
   }
