@@ -321,6 +321,16 @@ export default function FlashcardPlayer() {
     const newStarredWords = isCurrentlyStarred ? starredWords.filter(w => w !== word) : [...starredWords, word];
     setStarredWords(newStarredWords); 
     await db.flashcards.where('eng').equals(word).modify({ isStarred: isCurrentlyStarred ? 0 : 1 });
+    // 🛡️ Enterprise Fix: ส่งคำสั่งเข้าคิว Offline-first เพื่อซิงก์ข้อมูลข้ามอุปกรณ์
+    if (user?.id) {
+      syncManager.queueUserAction({
+        userId: user.id, // 🛡️ แนบ ID เจ้าของข้อมูลกำกับไว้ในคิว
+        type: 'star_vocab',
+        word: word,
+        isStarred: !isCurrentlyStarred,
+        timestamp: Date.now()
+      });
+    }
   };
 
   const isStarred = currentWord && starredWords.includes(currentWord.eng);

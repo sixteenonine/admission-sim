@@ -3,6 +3,7 @@ import { db } from './db.js';
 const CHUNK_SIZE = 10;
 let isSyncing = false;
 let isVocabSyncing = false;
+let isUserSyncing = false; // 🛡️ เพิ่ม Flag แยกการทำงานป้องกันคิวชนกัน
 
 export const syncManager = {
   async addToQueue(payload) {
@@ -123,12 +124,52 @@ export const syncManager = {
       console.warn("Beacon flush failed", err);
     }
   }
+  ,
+  // 🛡️ ระบบคิวสำหรับ User Preferences (เช่น การกดดาว) ทนทานต่อสถานะ Offline
+  async queueUserAction(actionPayload) {
+    const queueStr = localStorage.getItem('bw_userSyncQueue');
+    const queue = queueStr ? JSON.parse(queueStr) : [];
+    queue.push(actionPayload);
+    localStorage.setItem('bw_userSyncQueue', JSON.stringify(queue));
+    this.triggerUserSync();
+  },
+
+  async triggerUserSync() {
+    if (isUserSyncing || !navigator.onLine) return;
+    try {
+      isUserSyncing = true;
+      const queueStr = localStorage.getItem('bw_userSyncQueue');
+      let queue = queueStr ? JSON.parse(queueStr) : [];
+      if (queue.length === 0) return;
+
+      const response = await fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ syncActions: queue })
+      });
+
+      if (response.ok) {
+        // เคลียร์เฉพาะข้อมูลชุดที่ส่งสำเร็จ (Slice) ป้องกันเหตุการณ์ผู้ใช้กดดาวเพิ่มจังหวะกำลังส่ง
+        const freshQueueStr = localStorage.getItem('bw_userSyncQueue');
+        const freshQueue = freshQueueStr ? JSON.parse(freshQueueStr) : [];
+        const remainingQueue = freshQueue.slice(queue.length); 
+        localStorage.setItem('bw_userSyncQueue', JSON.stringify(remainingQueue));
+        
+        if (remainingQueue.length > 0) setTimeout(() => this.triggerUserSync(), 2000);
+      }
+    } catch (err) {
+      console.warn("User sync suspended:", err.message);
+    } finally {
+      isUserSyncing = false;
+    }
+  }
 };
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', async () => {
     try {
       syncManager.triggerSync();
+      syncManager.triggerUserSync(); // 🛡️ บังคับระบายคิวกดดาวทันทีเมื่อเน็ตกลับมาเชื่อมต่อ
       const uniqueUsers = await db.sync_outbox.orderBy('user_id').uniqueKeys();
       for (const uid of uniqueUsers) {
         syncManager.triggerVocabSync(uid);
