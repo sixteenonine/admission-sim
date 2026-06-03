@@ -23,14 +23,31 @@ export async function onRequestPost(context) {
     if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
+    // 🛡️ Enterprise Feature: Optimistic Concurrency Control (OCC) ป้องกัน Data Overwrite ข้ามอุปกรณ์
+    const currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+    
+    // เช็ค Conflict: ถ้าเวลา Server ใหม่กว่า Client (มีคนใช้อีกอุปกรณ์) จะเตะ HTTP 409 แจ้งให้ดึงข้อมูลก่อน
+    if (payload.last_synced_at && currentServerData && currentServerData.updated_at) {
+      const serverTime = new Date(currentServerData.updated_at).getTime();
+      const clientTime = new Date(payload.last_synced_at).getTime();
+      
+      if (serverTime - clientTime > 2000) { // เผื่อ Network Delay 2 วินาที
+        return new Response(JSON.stringify({ 
+          status: "conflict", 
+          message: "ตรวจพบการอัปเดตจากอุปกรณ์อื่น กรุณารีเฟรชเพื่อดึงข้อมูลล่าสุด",
+          server_data: currentServerData 
+        }), { status: 409, headers: { "Content-Type": "application/json" } });
+      }
+    }
+
     let finalFavoritesJson = null;
 
     if (syncActions && Array.isArray(syncActions)) {
-      const existingData = await db.prepare("SELECT favorites FROM user_sync_data WHERE user_id = ?").bind(userId).first();
       let currentFavs = { stories: [], vocab: [] };
       
-      if (existingData && existingData.favorites) {
-        try { currentFavs = JSON.parse(existingData.favorites); } catch (e) {}
+      // ดึงของเดิมจาก Server มาทำ Delta Merge แทนการ Query ใหม่เพื่อประหยัด Read Operation
+      if (currentServerData && currentServerData.favorites) {
+        try { currentFavs = JSON.parse(currentServerData.favorites); } catch (e) {}
       }
       currentFavs.vocab = currentFavs.vocab || [];
       currentFavs.stories = currentFavs.stories || [];
@@ -56,22 +73,25 @@ export async function onRequestPost(context) {
       finalFavoritesJson = JSON.stringify(favorites);
     }
 
+    const nowIso = new Date().toISOString();
+    
     await db.prepare(`
-      INSERT INTO user_sync_data (user_id, favorites, custom_decks, custom_speedreads)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO user_sync_data (user_id, favorites, custom_decks, custom_speedreads, updated_at)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
       favorites = COALESCE(excluded.favorites, user_sync_data.favorites),
       custom_decks = COALESCE(excluded.custom_decks, user_sync_data.custom_decks),
       custom_speedreads = COALESCE(excluded.custom_speedreads, user_sync_data.custom_speedreads),
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = excluded.updated_at
     `).bind(
       userId,
       finalFavoritesJson,
       custom_decks ? JSON.stringify(custom_decks) : null,
-      custom_speedreads ? JSON.stringify(custom_speedreads) : null
+      custom_speedreads ? JSON.stringify(custom_speedreads) : null,
+      nowIso
     ).run();
 
-    return new Response(JSON.stringify({ status: "success" }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ status: "success", synced_at: nowIso }), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { status: 500 });
   }
