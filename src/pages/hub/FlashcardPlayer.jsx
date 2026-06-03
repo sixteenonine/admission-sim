@@ -156,7 +156,10 @@ export default function FlashcardPlayer() {
     touchStartX.current = e.clientX || (e.touches && e.touches[0].clientX);
     
     // 🛡️ ปิด Transition เพื่อให้การ์ดเกาะติดนิ้วทันที (0ms latency)
-    if (cardRef.current) cardRef.current.style.transition = 'none';
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'none';
+      cardRef.current.querySelectorAll('.card-face').forEach(face => face.style.transition = 'none');
+    }
   };
 
   const handlePointerMove = (e) => {
@@ -171,6 +174,31 @@ export default function FlashcardPlayer() {
     if (cardRef.current) {
       const rotateDeg = deltaX * 0.04; 
       cardRef.current.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotateZ(${rotateDeg}deg)`;
+
+      // 🛡️ Enterprise Fix: ผสมสี (Color Interpolation) และแสงเงาแบบเรียลไทม์ 60FPS
+      const faces = cardRef.current.querySelectorAll('.card-face');
+      let targetColor = '';
+      let targetShadow = '';
+
+      if (deltaY < -10) { // ลากขึ้น (สีเขียว)
+        const intensity = Math.min(Math.abs(deltaY) / 120, 1); // ค่อยๆ เข้มสุดที่ 120px
+        targetColor = `color-mix(in srgb, #34C759 ${intensity * 100}%, ${cardColor})`;
+        targetShadow = `0 0 ${intensity * 100}px rgba(52,199,89,${intensity * 0.8})`;
+      } else if (deltaY > 10) { // ลากลง (สีแดง)
+        const intensity = Math.min(Math.abs(deltaY) / 120, 1);
+        targetColor = `color-mix(in srgb, #FF3B30 ${intensity * 100}%, ${cardColor})`;
+        targetShadow = `0 0 ${intensity * 100}px rgba(255,59,48,${intensity * 0.8})`;
+      }
+
+      faces.forEach(face => {
+        if (targetColor) {
+          face.style.backgroundColor = targetColor;
+          face.style.boxShadow = targetShadow;
+        } else {
+          face.style.backgroundColor = '';
+          face.style.boxShadow = '';
+        }
+      });
     }
   };
 
@@ -179,12 +207,29 @@ export default function FlashcardPlayer() {
     if (cardRef.current) {
       cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
+      
+      // 🛡️ คืนค่าสีเดิมอย่างนุ่มนวลถ้าผู้ใช้ลากไม่ถึงเกณฑ์
+      cardRef.current.querySelectorAll('.card-face').forEach(face => {
+        face.style.transition = 'background-color 0.4s ease, box-shadow 0.4s ease';
+        face.style.backgroundColor = '';
+        face.style.boxShadow = '';
+      });
     }
   };
 
   const handlePointerUp = (e) => {
     if (!isDragging.current || isChangingWord) return;
     isDragging.current = false;
+
+    // 🛡️ ล้างสไตล์สี Inline ทิ้งทันทีเมื่อปล่อยนิ้ว เพื่อส่งไม้ต่อให้ React ควบคุมแอนิเมชันปลิวออก
+    if (cardRef.current) {
+      cardRef.current.querySelectorAll('.card-face').forEach(face => {
+        face.style.transition = '';
+        face.style.backgroundColor = '';
+        face.style.boxShadow = '';
+      });
+    }
+
     if (!touchStartY.current) return;
     
     const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : null);
