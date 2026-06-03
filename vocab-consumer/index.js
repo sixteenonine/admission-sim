@@ -26,18 +26,7 @@ export default {
         const timestampMs = u.timestamp ? new Date(u.timestamp).getTime() : Date.now();
         const action = u.action || (u.status === 'remembered' ? 'remembered' : 'forgotten');
 
-        // 1. ยุบรวมสถิติรายวัน
-        const studyDate = getThaiDate(u.timestamp);
-        const statsKey = `${userId}|${studyDate}`;
         
-        if (!dailyStats.has(statsKey)) {
-          dailyStats.set(statsKey, { user_id: userId, study_date: studyDate, cards: 0, remembered: 0, forgotten: 0 });
-        }
-        const stat = dailyStats.get(statsKey);
-        stat.cards += 1;
-        if (action === 'remembered') stat.remembered += 1;
-        else stat.forgotten += 1;
-
         // 2. หา State ล่าสุดของคำศัพท์แต่ละคำใน Batch
         const progressKey = `${userId}|${u.vocab_id}`;
         if (!latestProgress.has(progressKey) || latestProgress.get(progressKey).timestamp < timestampMs) {
@@ -54,6 +43,16 @@ export default {
     // 3. แปลง State ล่าสุดเป็นคำสั่ง UPSERT (ลดจำนวน Operations ลง D1 อย่างมหาศาล)
     for (const data of latestProgress.values()) {
         const actionTimeISO = new Date(data.timestamp).toISOString();
+        // 🛡️ Enterprise Fix: นับสถิติ "หลัง" จาก Deduplicate แล้ว (1 คำ = นับแค่ 1 ครั้งต่อ 1 ชุดข้อมูล)
+        const studyDate = getThaiDate(data.timestamp);
+        const statsKey = `${data.userId}|${studyDate}`;
+        if (!dailyStats.has(statsKey)) {
+            dailyStats.set(statsKey, { user_id: data.userId, study_date: studyDate, cards: 0, remembered: 0, forgotten: 0 });
+        }
+        const stat = dailyStats.get(statsKey);
+        stat.cards += 1;
+        if (data.action === 'remembered') stat.remembered += 1;
+        else stat.forgotten += 1;
         statements.push(
             db.prepare(`
                 INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)

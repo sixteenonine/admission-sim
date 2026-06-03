@@ -127,8 +127,18 @@ export const syncManager = {
       const chunk = outboxItems.slice(0, 50);
       
       if (chunk.length > 0) {
-        const blob = new Blob([JSON.stringify({ userId, updates: chunk })], { type: 'application/json' });
-        navigator.sendBeacon('/api/vocab/srs-sync', blob);
+        // 🛡️ Enterprise Fix: เปลี่ยนจาก sendBeacon เป็น fetch + keepalive เพื่อให้รอรับผลลัพธ์และลบขยะทิ้งได้ทันก่อนปิดแท็บ
+        const response = await fetch('/api/vocab/srs-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, updates: chunk }),
+          keepalive: true 
+        });
+        
+        if (response.ok) {
+          const itemIds = chunk.map(item => item.id);
+          await db.sync_outbox.bulkDelete(itemIds);
+        }
       }
     } catch (err) {
       console.warn("Beacon flush failed", err);

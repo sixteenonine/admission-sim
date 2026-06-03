@@ -541,6 +541,9 @@ export default function FlashcardPlayer() {
           <button onClick={() => navigate(-1)} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
             BACK TO MENU
           </button>
+          <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="w-full max-w-[320px] mt-4 py-[14px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-transparent border-2 border-black/10 dark:border-white/20" style={{ color: themeVals.textMain }}>
+            <Undo2 size={18} strokeWidth={2.5} className="mr-2" /> UNDO LAST CARD
+          </button>
         </div>
       )}
     </div>
