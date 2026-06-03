@@ -167,7 +167,7 @@ export default function FlashcardPlayer() {
       if (distanceY > 50) handleAnswer(true); // ปัดขึ้น (จำได้)
       else handleAnswer(false); // ปัดลง (จำไม่ได้)
     } else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
-      setIsFlipped(!isFlipped); // แตะธรรมดาเพื่อพลิกการ์ด
+      setIsFlipped(prev => !prev); // 🛡️ Enterprise Fix: ป้องกัน State รวนเมื่อผู้ใช้แตะพลิกไพ่รัวๆ (Double Tap Spam)
     }
     
     touchStartY.current = null;
@@ -279,7 +279,8 @@ export default function FlashcardPlayer() {
       console.warn("DB Save Skipped (Storage Error):", err);
     }
     triggerCardAnim(isRemembered ? 'up' : 'down', () => {
-      setMasteredHistory(prev => [...prev, { word: currentWord, previousSrs: currentSrs, eventId }]);
+      // 🛡️ Enterprise Fix: บันทึกสถานะ isRemembered ติดไปกับ History ด้วย เพื่อใช้หักลบคะแนนให้ถูกต้องเวลาผู้ใช้กด Undo
+      setMasteredHistory(prev => [...prev, { word: currentWord, previousSrs: currentSrs, eventId, isRemembered }]);
       const newDeck = [...deck];
       newDeck.shift(); // 🗑️ Cleanup: ดึงไพ่ใบบนสุดออกโดยตรง (เร็วกว่าและประหยัด Resource)
       setDeck(newDeck);
@@ -294,13 +295,21 @@ export default function FlashcardPlayer() {
 
   const handleUndo = () => {
     if (masteredHistory.length === 0) return;
-    triggerCardAnim('undo', () => {
+    
+    // 🛡️ Enterprise Fix: เปลี่ยน Callback เป็น async function เพื่อให้ใช้ await กับฐานข้อมูลได้อย่างปลอดภัย
+    triggerCardAnim('undo', async () => {
       const historyCopy = [...masteredHistory];
       const lastMastered = historyCopy.pop();
-      if (lastMastered.previousSrs) db.vocab_srs.put(lastMastered.previousSrs);
-      if (lastMastered.eventId) db.sync_outbox.delete(lastMastered.eventId);
+      
+      // 🛡️ Enterprise Fix: ครอบ Try-Catch ป้องกันแอปค้างหาก Storage ในเครื่องผู้ใช้เต็มหรือ Error
+      try {
+        if (lastMastered.previousSrs) await db.vocab_srs.put(lastMastered.previousSrs);
+        if (lastMastered.eventId) await db.sync_outbox.delete(lastMastered.eventId);
+      } catch (e) {
+        console.warn("Undo DB Error (Ignored for UI continuity):", e);
+      }
 
-      const newDeck = [lastMastered.word, ...deck]; // 🗑️ Cleanup: แทรกไพ่กลับขึ้นไปอยู่บนสุดทันที
+      const newDeck = [lastMastered.word, ...deck]; 
       setDeck(newDeck);
       setMasteredHistory(historyCopy);
       
@@ -308,7 +317,11 @@ export default function FlashcardPlayer() {
         localStorage.setItem(`session_${currentCategory}_${currentLevel}`, JSON.stringify(newDeck));
       }
       
-      setSessionStats(prev => ({ remembered: Math.max(0, prev.remembered - 1), forgotten: prev.forgotten }));
+      // 🛡️ Enterprise Fix: หักลบสถิติให้ตรงกับปุ่มที่ผู้ใช้ปัดไปก่อนหน้าเป๊ะๆ (ลบฝั่ง Remembered หรือ Forgotten ตามความจริง)
+      setSessionStats(prev => ({ 
+        remembered: Math.max(0, prev.remembered - (lastMastered.isRemembered ? 1 : 0)), 
+        forgotten: Math.max(0, prev.forgotten - (!lastMastered.isRemembered ? 1 : 0)) 
+      }));
     });
   };
 
@@ -389,7 +402,7 @@ export default function FlashcardPlayer() {
 
             {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
             <div 
-              className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none ${animClass}`}
+              className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none select-none ${animClass}`}
               style={{ perspective: '1200px' }}
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUp}
@@ -540,7 +553,7 @@ export default function FlashcardPlayer() {
           <button onClick={handleRestart} disabled={isChangingWord} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-black text-[1.1rem] mb-4 shadow-md text-white" style={{ backgroundColor: currentStyle.color }}>
             REVIEW AGAIN
           </button>
-          <button onClick={() => navigate(-1)} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-black/5 dark:bg-white/10" style={{ color: themeVals.textMain }}>
+          <button onClick={() => navigate(-1)} disabled={isChangingWord} className="w-full max-w-[320px] py-[16px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-black/5 dark:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed" style={{ color: themeVals.textMain }}>
             BACK TO MENU
           </button>
           <button onClick={handleUndo} disabled={masteredHistory.length === 0 || isChangingWord} className="w-full max-w-[320px] mt-4 py-[14px] flex justify-center items-center rounded-full transition-transform active:scale-95 font-bold text-[1rem] bg-transparent border-2 border-black/10 dark:border-white/20" style={{ color: themeVals.textMain }}>

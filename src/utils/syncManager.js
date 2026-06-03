@@ -28,7 +28,9 @@ export const syncManager = {
     try {
       isSyncing = true;
       const queueStr = localStorage.getItem('bw_syncQueue');
-      let queue = queueStr ? JSON.parse(queueStr) : [];
+      let queue = [];
+      // 🛡️ Enterprise Fix: ป้องกันเบราว์เซอร์โยน Fatal Error ถาวรกรณีที่ข้อมูล LocalStorage พัง (Corrupted)
+      try { queue = queueStr ? JSON.parse(queueStr) : []; } catch(e) { localStorage.removeItem('bw_syncQueue'); }
       
       if (queue.length === 0) return;
 
@@ -159,7 +161,9 @@ export const syncManager = {
     try {
       isUserSyncing = true;
       const queueStr = localStorage.getItem('bw_userSyncQueue');
-      let queue = queueStr ? JSON.parse(queueStr) : [];
+      let queue = [];
+      // 🛡️ Enterprise Fix: ป้องกันคิวกดดาวติดค้างถาวรจาก Parse Exception
+      try { queue = queueStr ? JSON.parse(queueStr) : []; } catch(e) { localStorage.removeItem('bw_userSyncQueue'); }
       if (queue.length === 0) return;
 
       const response = await fetch('/api/user/sync', {
