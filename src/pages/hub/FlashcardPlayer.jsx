@@ -410,18 +410,19 @@ export default function FlashcardPlayer() {
             >
               {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
               <div 
-                className="relative w-full h-full text-center transition-transform duration-500 cursor-pointer" 
+                className="relative w-full h-full text-center cursor-pointer" 
                 style={{ 
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', 
                   transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', 
-                  transformStyle: 'preserve-3d' 
+                  transformStyle: 'preserve-3d',
+                  willChange: 'transform' /* 🛡️ UI Fix: บังคับเบราว์เซอร์เตรียม GPU ล่วงหน้า แก้กระตุก */
                 }}
               >
                 
                 {/* ---------------- FRONT (หน้าการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: swipeBg || cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' }}
+                  style={{ backgroundColor: swipeBg || cardColor, backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'translate3d(0,0,0)', WebkitTransform: 'translate3d(0,0,0)' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
@@ -469,7 +470,7 @@ export default function FlashcardPlayer() {
                 {/* ---------------- BACK (หลังการ์ด) ---------------- */}
                 <div 
                   className={`absolute w-full h-full rounded-[2.5rem] flex flex-col items-center justify-center text-white p-8 md:p-12 transition-all duration-150 ${swipeGlow || 'shadow-xl'} ${!isFlipped ? 'pointer-events-none' : 'pointer-events-auto'}`} 
-                  style={{ backgroundColor: swipeBg || cardColor, transform: 'rotateY(180deg) translateZ(0)', WebkitTransform: 'rotateY(180deg) translateZ(0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
+                  style={{ backgroundColor: swipeBg || cardColor, transform: 'rotateY(180deg) translate3d(0,0,0)', WebkitTransform: 'rotateY(180deg) translate3d(0,0,0)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   
                   {/* ปุ่ม Star ซ้ายบน */}
