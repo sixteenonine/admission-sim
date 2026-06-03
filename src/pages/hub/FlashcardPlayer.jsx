@@ -269,35 +269,38 @@ export default function FlashcardPlayer() {
 
     // ปล่อยให้แอนิเมชันปลิวออกทำงาน 200ms ก่อนเริ่มเปลี่ยนการ์ด
     setTimeout(() => {
-      setIsResettingFlip(true); // ปิดแอนิเมชันหมุนไพ่ชั่วคราว
-      
+      setIsResettingFlip(true);
       actionFn();
       setIsFlipped(false);
       setSwipeGlow('');
       setSwipeBg(null);
-      
-      // 🛡️ เมื่อไพ่ล่องหนแล้ว ให้ล้างพิกัด Inline Style ทิ้ง เพื่อส่งไม้ต่อให้ Tailwind จัดการแอนิเมชันขาเข้า
+
+      // 🛡️ Enterprise Fix: ป้องกันภาพผี (Ghost Flash) กลางจอ 1 เฟรม
+      // จับการ์ดที่เพิ่งปลิวออกไป วาร์ปมาซ้อนทับการ์ดใบหลังทันทีด้วย Inline Style (ไม่รอ React Render)
       if (cardRef.current) {
         cardRef.current.style.transition = 'none';
-        cardRef.current.style.transform = '';
-        cardRef.current.style.opacity = '';
+        cardRef.current.style.transform = 'translate3d(0, 16px, 0) scale(0.95)';
+        cardRef.current.style.opacity = '1';
       }
-      
-      // 🛡️ Enterprise Fix: บังคับให้เบราว์เซอร์ประมวลผลทันที
-      if (cardRef.current) void cardRef.current.offsetWidth;
-      
-      // 🛡️ UI Fix: ลบ opacity-0 ทิ้ง! ให้ไพ่ใหม่วาร์ปไปทับ "ไพ่ใบจำลอง" (Layer 0) พอดีเป๊ะที่พิกัด 16px (translate-y-4) และ scale 0.95 แบบทึบแสง 100%
+
+      // ซิงก์ State ของ React ให้ตรงกับตำแหน่ง Inline Style
       setAnimClass('translate-y-4 scale-[0.95] opacity-100 transition-none');
-      
+
+      // รอ 30ms ให้ React อัปเดตข้อมูลคำศัพท์ใหม่ลง DOM ให้เสร็จสมบูรณ์
       setTimeout(() => {
-        // 🛡️ UI Fix: สไลด์ขึ้นมาตรงกลางและขยายขนาด ให้ภาพลวงตาเหมือนไพ่ใบหลังเด้งขึ้นมาเป็นใบหน้า (Tinder Effect)
+        // ล้าง Inline Style ทิ้ง เพื่อส่งไม้ต่อให้ Tailwind ขับเคลื่อนแอนิเมชันสไลด์ขึ้น
+        if (cardRef.current) cardRef.current.style.transform = '';
+        if (cardRef.current) void cardRef.current.offsetWidth; // Force Hardware Reflow
+
+        // เด้งการ์ดขึ้นมาเป็นใบหน้าสุด (Tinder Effect)
         setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-300 ease-out');
+
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
-          setIsResettingFlip(false); // เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
+          setIsResettingFlip(false);
         }, 300);
-      }, 20);
+      }, 30);
     }, 200);
   };
   const handleAnswer = async (isRemembered) => {
