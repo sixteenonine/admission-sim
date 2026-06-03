@@ -283,15 +283,15 @@ export default function FlashcardPlayer() {
         cardRef.current.style.opacity = '';
       }
       
-      // 🛡️ Enterprise Fix: บังคับให้เบราว์เซอร์รับรู้การล้างค่าทันที (Force Hardware Reflow) ป้องกันอาการภาพตัด
+      // 🛡️ Enterprise Fix: บังคับให้เบราว์เซอร์ประมวลผลทันที
       if (cardRef.current) void cardRef.current.offsetWidth;
       
-      // 🛡️ UI Fix: ดันจุดเริ่มต้นให้ต่ำลงอีก (translate-y-8) และเล็กลงอีกนิด เพื่อให้มีระยะทางสไลด์ขึ้นที่เห็นได้ชัดเจน
-      setAnimClass('translate-y-8 scale-[0.85] opacity-0 transition-none');
+      // 🛡️ UI Fix: ลบ opacity-0 ทิ้ง! ให้ไพ่ใหม่วาร์ปไปทับ "ไพ่ใบจำลอง" (Layer 0) พอดีเป๊ะที่พิกัด 16px (translate-y-4) และ scale 0.95 แบบทึบแสง 100%
+      setAnimClass('translate-y-4 scale-[0.95] opacity-100 transition-none');
       
       setTimeout(() => {
-        // 🛡️ UI Fix: เพิ่มเวลาเป็น 300ms และใช้ Custom Cubic-Bezier สไตล์ Native iOS (พุ่งเร็ว เบรกนุ่ม)
-        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]');
+        // 🛡️ UI Fix: สไลด์ขึ้นมาตรงกลางและขยายขนาด ให้ภาพลวงตาเหมือนไพ่ใบหลังเด้งขึ้นมาเป็นใบหน้า (Tinder Effect)
+        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-300 ease-out');
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
