@@ -77,6 +77,7 @@ export default function FlashcardPlayer() {
   const [starredWords, setStarredWords] = useState([]);
   const [sessionStats, setSessionStats] = useState({ remembered: 0, forgotten: 0 });
   const [isResettingFlip, setIsResettingFlip] = useState(false); // 🛡️ UI Fix: State ควบคุมการปิดแอนิเมชันพลิกไพ่ชั่วคราว
+  const [isLayerZeroAnimating, setIsLayerZeroAnimating] = useState(false); // 🛡️ UI Fix: แอนิเมชันดันไพ่ใบล่างขึ้นมา
 
   const touchStartY = useRef(null);
   const touchStartX = useRef(null);
@@ -286,6 +287,10 @@ export default function FlashcardPlayer() {
     setIsChangingWord(true);
     setShowExampleFront(false);
     setShowSynAnt(false);
+    // 🛡️ UI Fix: สั่งให้ไพ่ใบล่างสุด (Layer 0) ขยายตัวและดันขึ้นมาสวมรอย
+    if (deck.length > 1 && (direction === 'up' || direction === 'down')) {
+      setIsLayerZeroAnimating(true);
+    }
     // 🛡️ Enterprise Fix: สานต่อ Inline Style จากพิกัดนิ้วผู้ใช้ เพื่อให้ไพ่ปลิวออกไปตามแรงเฉื่อยโดยไม่กระตุกกลับตรงกลาง
     if (cardRef.current) {
       const currentTransform = cardRef.current.style.transform;
@@ -351,6 +356,7 @@ export default function FlashcardPlayer() {
           } 
           setIsChangingWord(false);
           setIsResettingFlip(false);
+          setIsLayerZeroAnimating(false);
         }, 100);
       }, 50);
     }, 200);
@@ -521,8 +527,16 @@ export default function FlashcardPlayer() {
           <div className="relative w-full max-w-5xl flex-1 min-h-[300px] mx-auto transition-all duration-300">
             
             {/* Layer 0: การ์ดจำลองสำหรับสร้างมิติให้ดูเป็นปึกการ์ด */}
-            {deck.length > 1 && (
-              <div className="absolute inset-0 rounded-[2.5rem] shadow-xl pointer-events-none" style={{ backgroundColor: cardColor, transform: 'translateY(16px) scale(0.95)', zIndex: 0 }}>
+            {(deck.length > 1 || isLayerZeroAnimating) && (
+              <div 
+                className="absolute inset-0 rounded-[2.5rem] shadow-xl pointer-events-none" 
+                style={{ 
+                  backgroundColor: cardColor, 
+                  transform: isLayerZeroAnimating ? 'translateY(0px) scale(1)' : 'translateY(16px) scale(0.95)', 
+                  transition: isLayerZeroAnimating ? 'transform 0.25s ease-out' : 'none',
+                  zIndex: 0 
+                }}
+              >
                 <div className="opacity-[0.05] w-full h-full rounded-[2.5rem] overflow-hidden relative">
                   {cardDiamonds}
                 </div>
