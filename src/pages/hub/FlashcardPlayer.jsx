@@ -285,8 +285,11 @@ export default function FlashcardPlayer() {
       setAnimClass('opacity-0 transition-none');
 
       setTimeout(() => {
-        if (cardRef.current) cardRef.current.style.transform = '';
-        if (cardRef.current) void cardRef.current.offsetWidth; 
+        if (cardRef.current) {
+          cardRef.current.style.transform = '';
+          cardRef.current.style.opacity = ''; // 🛡️ Enterprise Fix: ล้างค่าความโปร่งใสแบบ Inline ออก เพื่อส่งไม้ต่อให้ Tailwind ทำแอนิเมชันเฟดเข้า
+        }
+        if (cardRef.current) void cardRef.current.offsetWidth;
 
         // 🛡️ เฟดจางๆ 1 วินาที (1000ms)
         setAnimClass('opacity-100 transition-opacity duration-1000 ease-in-out');
