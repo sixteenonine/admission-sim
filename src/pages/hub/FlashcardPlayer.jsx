@@ -236,49 +236,64 @@ export default function FlashcardPlayer() {
     setIsChangingWord(true);
     setShowExampleFront(false);
     setShowSynAnt(false);
-    // 🛡️ Enterprise Fix: ล้าง Inline Style ของการลากนิ้วทิ้ง เพื่อส่งไม้ต่อให้ Tailwind CSS ทำแอนิเมชันปลิวออกแบบสมูท
+    // 🛡️ Enterprise Fix: สานต่อ Inline Style จากพิกัดนิ้วผู้ใช้ เพื่อให้ไพ่ปลิวออกไปตามแรงเฉื่อยโดยไม่กระตุกกลับตรงกลาง
     if (cardRef.current) {
-      cardRef.current.style.transform = '';
-      cardRef.current.style.transition = '';
-    }
-
-    // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (เปลี่ยนสีทั้งใบและเรืองแสง)
-    if (direction === 'up') {
-      setAnimClass('-translate-y-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
-      setSwipeGlow('shadow-[0_0_120px_rgba(52,199,89,1)] scale-105');
-      setSwipeBg('#34C759');
-    } else if (direction === 'down') {
-      setAnimClass('translate-y-[150%] -rotate-6 opacity-0 transition-all duration-250 ease-in');
-      setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
-      setSwipeBg('#FF3B30');
-    } else if (direction === 'undo') {
-      setAnimClass('translate-x-[150%] rotate-6 opacity-0 transition-all duration-250 ease-in');
-      setSwipeGlow('');
-      setSwipeBg(null);
-    }
-
-    setTimeout(() => {
-      setIsResettingFlip(true); // 🛡️ UI Fix: ปิดแอนิเมชันหมุนไพ่ 0.6s ชั่วคราว ให้ไพ่สแนปกลับหน้าแรกทันทีตอนล่องหน
+      const currentTransform = cardRef.current.style.transform;
+      let currentX = '0px';
       
-      // ขั้นที่ 2: เปลี่ยนคำศัพท์และล้างสถานะการพลิกตอนที่มองไม่เห็นแล้ว
+      // ดึงค่าแกน X ล่าสุดตอนที่นิ้วปล่อย เพื่อให้ไพ่ปลิวเฉียงสมจริง
+      if (currentTransform && currentTransform.includes('translate3d')) {
+        const xMatch = currentTransform.match(/translate3d\(([^,]+),/);
+        if (xMatch) currentX = xMatch[1];
+      }
+
+      cardRef.current.style.transition = 'transform 0.25s ease-in, opacity 0.2s ease-in';
+      
+      if (direction === 'up') {
+        cardRef.current.style.transform = `translate3d(${currentX}, -150vh, 0) rotateZ(15deg)`;
+        cardRef.current.style.opacity = '0';
+        setSwipeGlow('shadow-[0_0_120px_rgba(52,199,89,1)] scale-105');
+        setSwipeBg('#34C759');
+      } else if (direction === 'down') {
+        cardRef.current.style.transform = `translate3d(${currentX}, 150vh, 0) rotateZ(-15deg)`;
+        cardRef.current.style.opacity = '0';
+        setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
+        setSwipeBg('#FF3B30');
+      } else if (direction === 'undo') {
+        cardRef.current.style.transform = `translate3d(150vw, 0px, 0) rotateZ(10deg)`;
+        cardRef.current.style.opacity = '0';
+        setSwipeGlow('');
+        setSwipeBg(null);
+      }
+    }
+
+    // ปล่อยให้แอนิเมชันปลิวออกทำงาน 200ms ก่อนเริ่มเปลี่ยนการ์ด
+    setTimeout(() => {
+      setIsResettingFlip(true); // ปิดแอนิเมชันหมุนไพ่ชั่วคราว
+      
       actionFn();
       setIsFlipped(false);
       setSwipeGlow('');
       setSwipeBg(null);
       
-      // ขั้นที่ 3: ดึงการ์ดให้มาย่อหลบอยู่ในตำแหน่ง "เตรียมเด้งขึ้น"
+      // 🛡️ เมื่อไพ่ล่องหนแล้ว ให้ล้างพิกัด Inline Style ทิ้ง เพื่อส่งไม้ต่อให้ Tailwind จัดการแอนิเมชันขาเข้า
+      if (cardRef.current) {
+        cardRef.current.style.transition = 'none';
+        cardRef.current.style.transform = '';
+        cardRef.current.style.opacity = '';
+      }
+      
       setAnimClass('translate-y-3 scale-[0.95] opacity-100 transition-none');
       
-      // ขั้นที่ 4: สั่งขยายและสไลด์การ์ดขึ้นมาแบบเด้งๆ ให้ความรู้สึกเป็นใบใหม่
       setTimeout(() => {
         setAnimClass('translate-y-0 scale-100 opacity-100 transition-transform duration-150 ease-out');
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
-          setIsResettingFlip(false); // 🛡️ UI Fix: เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
+          setIsResettingFlip(false); // เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
         }, 150);
       }, 20);
-    }, 150);
+    }, 200);
   };
   const handleAnswer = async (isRemembered) => {
     if (!currentWord || isChangingWord) return;
