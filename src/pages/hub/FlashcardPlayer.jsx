@@ -76,9 +76,12 @@ export default function FlashcardPlayer() {
   const [showSynAnt, setShowSynAnt] = useState(false);
   const [starredWords, setStarredWords] = useState([]);
   const [sessionStats, setSessionStats] = useState({ remembered: 0, forgotten: 0 });
+  const [isResettingFlip, setIsResettingFlip] = useState(false); // 🛡️ UI Fix: State ควบคุมการปิดแอนิเมชันพลิกไพ่ชั่วคราว
 
   const touchStartY = useRef(null);
   const touchStartX = useRef(null);
+  const cardRef = useRef(null); // 🛡️ Enterprise Fix: Ref ควบคุมการ์ดโดยตรง ไม่ผ่าน React Render Cycle (60FPS)
+  const isDragging = useRef(false); // 🛡️ กันการลากซ้อน
   // บังคับล็อกไม่ให้หน้าจอ Scroll ได้
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -145,33 +148,76 @@ export default function FlashcardPlayer() {
   // Progress Bar Calculation
   const progressPercent = initialDeckSize > 0 ? (((initialDeckSize - deck.length) / initialDeckSize) * 100) : 100;
 
-  // Pointer & Swipe Events (แยกระหว่างลาก กับ คลิกพลิกการ์ด)
+  // Pointer & Drag Events (อัปเกรดระบบลากการ์ดติดนิ้ว)
   const handlePointerDown = (e) => {
     if (isChangingWord) return;
+    isDragging.current = true;
     touchStartY.current = e.clientY || (e.touches && e.touches[0].clientY);
     touchStartX.current = e.clientX || (e.touches && e.touches[0].clientX);
+    
+    // 🛡️ ปิด Transition เพื่อให้การ์ดเกาะติดนิ้วทันที (0ms latency)
+    if (cardRef.current) cardRef.current.style.transition = 'none';
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging.current || !touchStartY.current || isChangingWord) return;
+    
+    const currentY = e.clientY || (e.touches && e.touches[0].clientY);
+    const currentX = e.clientX || (e.touches && e.touches[0].clientX);
+    const deltaY = currentY - touchStartY.current;
+    const deltaX = currentX - touchStartX.current;
+
+    // 🛡️ Direct DOM Manipulation: ขยับการ์ดและหมุนเอียงตามแรงเหวี่ยงซ้ายขวาทันที
+    if (cardRef.current) {
+      const rotateDeg = deltaX * 0.04; 
+      cardRef.current.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotateZ(${rotateDeg}deg)`;
+    }
+  };
+
+  const resetCardPosition = () => {
+    // 🛡️ ดีดการ์ดกลับตรงกลางแบบมีสปริง (Spring Physics)
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
+    }
   };
 
   const handlePointerUp = (e) => {
-    if (!touchStartY.current || isChangingWord) return;
+    if (!isDragging.current || isChangingWord) return;
+    isDragging.current = false;
+    if (!touchStartY.current) return;
     
     const endY = e.clientY || (e.changedTouches ? e.changedTouches[0].clientY : null);
     const endX = e.clientX || (e.changedTouches ? e.changedTouches[0].clientX : null);
     
-    if (endY === null || endX === null) return;
+    if (endY === null || endX === null) {
+      resetCardPosition();
+      return;
+    }
     
     const distanceY = touchStartY.current - endY;
     const distanceX = touchStartX.current - endX;
     
-    if (Math.abs(distanceY) > Math.abs(distanceX) && Math.abs(distanceY) > 50) {
-      if (distanceY > 50) handleAnswer(true); // ปัดขึ้น (จำได้)
-      else handleAnswer(false); // ปัดลง (จำไม่ได้)
-    } else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
-      setIsFlipped(prev => !prev); // 🛡️ Enterprise Fix: ป้องกัน State รวนเมื่อผู้ใช้แตะพลิกไพ่รัวๆ (Double Tap Spam)
-    }
-    
     touchStartY.current = null;
     touchStartX.current = null;
+    
+    // 🛡️ ตั้งระยะ Threshold ลากเกิน 80px ถึงจะถือว่าตั้งใจปัด
+    if (Math.abs(distanceY) > 80) {
+      if (distanceY > 80) handleAnswer(true); // ปัดขึ้น
+      else handleAnswer(false); // ปัดลง
+    } else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
+      resetCardPosition();
+      setIsFlipped(prev => !prev); // แตะอยู่กับที่ = พลิกการ์ด
+    } else {
+      resetCardPosition(); // ลากไม่ถึงเกณฑ์ = ดีดการ์ดกลับไปตรงกลาง
+    }
+  };
+
+  const handlePointerCancel = () => {
+    isDragging.current = false;
+    touchStartY.current = null;
+    touchStartX.current = null;
+    resetCardPosition();
   };
 
   useEffect(() => {
@@ -190,6 +236,11 @@ export default function FlashcardPlayer() {
     setIsChangingWord(true);
     setShowExampleFront(false);
     setShowSynAnt(false);
+    // 🛡️ Enterprise Fix: ล้าง Inline Style ของการลากนิ้วทิ้ง เพื่อส่งไม้ต่อให้ Tailwind CSS ทำแอนิเมชันปลิวออกแบบสมูท
+    if (cardRef.current) {
+      cardRef.current.style.transform = '';
+      cardRef.current.style.transition = '';
+    }
 
     // ขั้นที่ 1: สั่งให้การ์ดใบบนปลิวออกตามทิศทาง (เปลี่ยนสีทั้งใบและเรืองแสง)
     if (direction === 'up') {
@@ -207,6 +258,8 @@ export default function FlashcardPlayer() {
     }
 
     setTimeout(() => {
+      setIsResettingFlip(true); // 🛡️ UI Fix: ปิดแอนิเมชันหมุนไพ่ 0.6s ชั่วคราว ให้ไพ่สแนปกลับหน้าแรกทันทีตอนล่องหน
+      
       // ขั้นที่ 2: เปลี่ยนคำศัพท์และล้างสถานะการพลิกตอนที่มองไม่เห็นแล้ว
       actionFn();
       setIsFlipped(false);
@@ -222,6 +275,7 @@ export default function FlashcardPlayer() {
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
+          setIsResettingFlip(false); // 🛡️ UI Fix: เปิดแอนิเมชันหมุนไพ่กลับมาทำงานปกติ
         }, 150);
       }, 20);
     }, 150);
@@ -402,18 +456,20 @@ export default function FlashcardPlayer() {
 
             {/* Layer 1: การ์ดจริงๆ ที่โต้ตอบได้และปลิวออกได้ */}
             <div 
+              ref={cardRef} // 🛡️ ผูก Ref เข้ากับการ์ดหลัก
               className={`absolute inset-0 z-10 w-full h-full cursor-pointer touch-none select-none ${animClass}`}
               style={{ perspective: '1200px' }}
               onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove} // 🛡️ ดักจับการลากนิ้ว
               onPointerUp={handlePointerUp}
-              onPointerCancel={() => { touchStartY.current = null; touchStartX.current = null; }}
+              onPointerCancel={handlePointerCancel} // 🛡️ ดักจับกรณีนิ้วหลุดจอ หรือมีแจ้งเตือนแทรก
             >
               {/* แกนหมุน 3D พลิกการ์ด (หน้า-หลัง) */}
               <div 
                 className="relative w-full h-full text-center cursor-pointer" 
                 style={{ 
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)', 
-                  transition: 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', 
+                  transition: isResettingFlip ? 'none' : 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)', // 🛡️ UI Fix: ใช้ dynamic transition ป้องกันการ์ดหมุนตีลังกาตอนเปลี่ยนใบ
                   transformStyle: 'preserve-3d',
                   willChange: 'transform' /* 🛡️ UI Fix: บังคับเบราว์เซอร์เตรียม GPU ล่วงหน้า แก้กระตุก */
                 }}
