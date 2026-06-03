@@ -158,7 +158,10 @@ export default function FlashcardPlayer() {
     // 🛡️ ปิด Transition เพื่อให้การ์ดเกาะติดนิ้วทันที (0ms latency)
     if (cardRef.current) {
       cardRef.current.style.transition = 'none';
-      cardRef.current.querySelectorAll('.card-face').forEach(face => face.style.transition = 'none');
+      const flipContainer = cardRef.current.children[0];
+      if (flipContainer && flipContainer.children) {
+        Array.from(flipContainer.children).forEach(face => face.style.transition = 'none');
+      }
     }
   };
 
@@ -175,30 +178,28 @@ export default function FlashcardPlayer() {
       const rotateDeg = deltaX * 0.04; 
       cardRef.current.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotateZ(${rotateDeg}deg)`;
 
-      // 🛡️ Enterprise Fix: ผสมสี (Color Interpolation) และแสงเงาแบบเรียลไทม์ 60FPS
-      const faces = cardRef.current.querySelectorAll('.card-face');
-      let targetColor = '';
+      // 🛡️ Enterprise Fix: เทคนิค Inset Shadow ผสมสีทับแบบ 100% Compatibility (ไม่ต้องพึ่ง color-mix)
       let targetShadow = '';
 
       if (deltaY < -10) { // ลากขึ้น (สีเขียว)
-        const intensity = Math.min(Math.abs(deltaY) / 120, 1); // ค่อยๆ เข้มสุดที่ 120px
-        targetColor = `color-mix(in srgb, #34C759 ${intensity * 100}%, ${cardColor})`;
-        targetShadow = `0 0 ${intensity * 100}px rgba(52,199,89,${intensity * 0.8})`;
+        const intensity = Math.min(Math.abs(deltaY) / 120, 1); 
+        targetShadow = `inset 0 0 0 1000px rgba(52,199,89,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(52,199,89,${intensity * 0.8})`;
       } else if (deltaY > 10) { // ลากลง (สีแดง)
         const intensity = Math.min(Math.abs(deltaY) / 120, 1);
-        targetColor = `color-mix(in srgb, #FF3B30 ${intensity * 100}%, ${cardColor})`;
-        targetShadow = `0 0 ${intensity * 100}px rgba(255,59,48,${intensity * 0.8})`;
+        targetShadow = `inset 0 0 0 1000px rgba(255,59,48,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(255,59,48,${intensity * 0.8})`;
       }
 
-      faces.forEach(face => {
-        if (targetColor) {
-          face.style.backgroundColor = targetColor;
-          face.style.boxShadow = targetShadow;
-        } else {
-          face.style.backgroundColor = '';
-          face.style.boxShadow = '';
-        }
-      });
+      // ดึงหน้าการ์ด (Front/Back) แบบอัตโนมัติจากโครงสร้าง DOM โดยตรง
+      const flipContainer = cardRef.current.children[0];
+      if (flipContainer && flipContainer.children) {
+        Array.from(flipContainer.children).forEach(face => {
+          if (targetShadow) {
+            face.style.boxShadow = targetShadow;
+          } else {
+            face.style.boxShadow = ''; // คืนค่ากลับไปใช้ shadow-xl ของ Tailwind
+          }
+        });
+      }
     }
   };
 
@@ -209,11 +210,13 @@ export default function FlashcardPlayer() {
       cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
       
       // 🛡️ คืนค่าสีเดิมอย่างนุ่มนวลถ้าผู้ใช้ลากไม่ถึงเกณฑ์
-      cardRef.current.querySelectorAll('.card-face').forEach(face => {
-        face.style.transition = 'background-color 0.4s ease, box-shadow 0.4s ease';
-        face.style.backgroundColor = '';
-        face.style.boxShadow = '';
-      });
+      const flipContainer = cardRef.current.children[0];
+      if (flipContainer && flipContainer.children) {
+        Array.from(flipContainer.children).forEach(face => {
+          face.style.transition = 'box-shadow 0.4s ease';
+          face.style.boxShadow = '';
+        });
+      }
     }
   };
 
@@ -221,13 +224,15 @@ export default function FlashcardPlayer() {
     if (!isDragging.current || isChangingWord) return;
     isDragging.current = false;
 
-    // 🛡️ ล้างสไตล์สี Inline ทิ้งทันทีเมื่อปล่อยนิ้ว เพื่อส่งไม้ต่อให้ React ควบคุมแอนิเมชันปลิวออก
+    // 🛡️ ล้างสไตล์สี Inline ทิ้งทันทีเมื่อปล่อยนิ้ว เพื่อส่งไม้ต่อให้ React ควบคุม
     if (cardRef.current) {
-      cardRef.current.querySelectorAll('.card-face').forEach(face => {
-        face.style.transition = '';
-        face.style.backgroundColor = '';
-        face.style.boxShadow = '';
-      });
+      const flipContainer = cardRef.current.children[0];
+      if (flipContainer && flipContainer.children) {
+        Array.from(flipContainer.children).forEach(face => {
+          face.style.transition = '';
+          face.style.boxShadow = '';
+        });
+      }
     }
 
     if (!touchStartY.current) return;
