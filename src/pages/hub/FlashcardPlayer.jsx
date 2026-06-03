@@ -275,31 +275,27 @@ export default function FlashcardPlayer() {
       setSwipeGlow('');
       setSwipeBg(null);
 
-      // 🛡️ Enterprise Fix: ป้องกันภาพผี (Ghost Flash) กลางจอ 1 เฟรม
-      // จับการ์ดที่เพิ่งปลิวออกไป วาร์ปมาซ้อนทับการ์ดใบหลังทันทีด้วย Inline Style (ไม่รอ React Render)
+      // 🛡️ ปรับให้การ์ดใหม่มาอยู่ตรงกลางแบบโปร่งใส (ไม่มีสเกลหรือสไลด์)
       if (cardRef.current) {
         cardRef.current.style.transition = 'none';
-        cardRef.current.style.transform = 'translate3d(0, 16px, 0) scale(0.95)';
-        cardRef.current.style.opacity = '1';
+        cardRef.current.style.transform = 'translate3d(0, 0px, 0) scale(1)';
+        cardRef.current.style.opacity = '0';
       }
 
-      // ซิงก์ State ของ React ให้ตรงกับตำแหน่ง Inline Style
-      setAnimClass('translate-y-4 scale-[0.95] opacity-100 transition-none');
+      setAnimClass('opacity-0 transition-none');
 
-      // รอ 30ms ให้ React อัปเดตข้อมูลคำศัพท์ใหม่ลง DOM ให้เสร็จสมบูรณ์
       setTimeout(() => {
-        // ล้าง Inline Style ทิ้ง เพื่อส่งไม้ต่อให้ Tailwind ขับเคลื่อนแอนิเมชันสไลด์ขึ้น
         if (cardRef.current) cardRef.current.style.transform = '';
-        if (cardRef.current) void cardRef.current.offsetWidth; // Force Hardware Reflow
+        if (cardRef.current) void cardRef.current.offsetWidth; 
 
-        // เด้งการ์ดขึ้นมาเป็นใบหน้าสุด (Tinder Effect)
-        setAnimClass('translate-y-0 scale-100 opacity-100 transition-all duration-300 ease-out');
+        // 🛡️ เฟดจางๆ 1 วินาที (1000ms)
+        setAnimClass('opacity-100 transition-opacity duration-1000 ease-in-out');
 
         setTimeout(() => {
           setAnimClass('');
           setIsChangingWord(false);
           setIsResettingFlip(false);
-        }, 300);
+        }, 1000);
       }, 30);
     }, 200);
   };
