@@ -298,7 +298,7 @@ export default function FlashcardPlayer() {
           if (cardRef.current) {
             cardRef.current.style.transition = '';
             cardRef.current.style.opacity = '';
-          }
+          } 
           setIsChangingWord(false);
           setIsResettingFlip(false);
         }, 500);
