@@ -79,9 +79,9 @@ export const syncManager = {
     // 🛡️ Enterprise Feature: Smart Batching & Debounce (หน่วงเวลายิง API และรองรับ Undo 100%)
     if (!force) {
       const count = await db.sync_outbox.where('user_id').equals(userId).count();
-      if (count < 20) { // ถ้าน้อยกว่า 20 คำ ให้รอ 10 วินาทีเผื่อเด็กเปลี่ยนใจกด Undo
+      if (count < 50) { // 🛡️ ขยาย Batch เป็น 50 คำ ลดภาระ Network
         if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
-        vocabSyncTimer = setTimeout(() => this.triggerVocabSync(userId, true), 10000);
+        vocabSyncTimer = setTimeout(() => this.triggerVocabSync(userId, true), 30000); // 🛡️ หน่วงเวลาเป็น 30 วินาที
         return;
       }
     }

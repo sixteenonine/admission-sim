@@ -36,6 +36,7 @@ CREATE TABLE exam_history (
 CREATE TABLE payments (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
+    transaction_id TEXT,
     amount INTEGER NOT NULL,
     plan_tier TEXT NOT NULL,
     status TEXT DEFAULT 'pending',
@@ -105,3 +106,7 @@ CREATE TABLE user_study_stats (
     PRIMARY KEY (user_id, study_date),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_users_plan_expire ON users(plan_expire_at);
+CREATE INDEX IF NOT EXISTS idx_exam_history_user ON exam_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_vocab_category_order ON vocab_repository(category, sort_order);

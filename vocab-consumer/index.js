@@ -12,6 +12,8 @@ export default {
       return thaiDt.toISOString().split('T')[0];
     };
 
+    const latestProgress = new Map(); // 🛡️ In-Memory Deduplication ยุบรวมสถานะซ้ำซ้อน
+
     for (const message of batch.messages) {
       const { userId, updates } = message.body;
 
@@ -21,49 +23,50 @@ export default {
       }
 
       for (const u of updates) {
-        const actionTime = u.timestamp ? new Date(u.timestamp).toISOString() : new Date().toISOString();
-        
-        const eventId = u.id || crypto.randomUUID();
+        const timestampMs = u.timestamp ? new Date(u.timestamp).getTime() : Date.now();
         const action = u.action || (u.status === 'remembered' ? 'remembered' : 'forgotten');
 
-        // 1. ยุบรวมสถิติรายวัน (Daily Aggregation) แทนการเขียน Log รายคำ
+        // 1. ยุบรวมสถิติรายวัน
         const studyDate = getThaiDate(u.timestamp);
         const statsKey = `${userId}|${studyDate}`;
         
         if (!dailyStats.has(statsKey)) {
           dailyStats.set(statsKey, { user_id: userId, study_date: studyDate, cards: 0, remembered: 0, forgotten: 0 });
         }
-        
         const stat = dailyStats.get(statsKey);
         stat.cards += 1;
         if (action === 'remembered') stat.remembered += 1;
         else stat.forgotten += 1;
-        
-        // 2. อัปเดตผลลัพธ์ลงตาราง State หลัก
-        statements.push(
-          db.prepare(`
-            INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT (user_id, vocab_id) DO UPDATE SET
-              status = CASE WHEN excluded.last_updated > last_updated THEN excluded.status ELSE status END,
-              interval = CASE WHEN excluded.last_updated > last_updated THEN excluded.interval ELSE interval END,
-              ease_factor = CASE WHEN excluded.last_updated > last_updated THEN excluded.ease_factor ELSE ease_factor END,
-              next_review_date = CASE WHEN excluded.last_updated > last_updated THEN excluded.next_review_date ELSE next_review_date END,
-              revision = CASE WHEN excluded.last_updated > last_updated THEN excluded.revision ELSE revision END,
-              last_updated = CASE WHEN excluded.last_updated > last_updated THEN excluded.last_updated ELSE last_updated END
-          `).bind(
-            userId, 
-            String(u.vocab_id), 
-            action,
-            u.interval, 
-            u.ease_factor, 
-            u.next_review_date, 
-            u.revision || 0,
-            actionTime
-          )
-        );
+
+        // 2. หา State ล่าสุดของคำศัพท์แต่ละคำใน Batch
+        const progressKey = `${userId}|${u.vocab_id}`;
+        if (!latestProgress.has(progressKey) || latestProgress.get(progressKey).timestamp < timestampMs) {
+            latestProgress.set(progressKey, { 
+                userId, vocab_id: u.vocab_id, action, interval: u.interval, 
+                ease_factor: u.ease_factor, next_review_date: u.next_review_date, 
+                revision: u.revision, timestamp: timestampMs 
+            });
+        }
       }
       message.ack();
+    }
+
+    // 3. แปลง State ล่าสุดเป็นคำสั่ง UPSERT (ลดจำนวน Operations ลง D1 อย่างมหาศาล)
+    for (const data of latestProgress.values()) {
+        const actionTimeISO = new Date(data.timestamp).toISOString();
+        statements.push(
+            db.prepare(`
+                INSERT INTO user_vocab_progress (user_id, vocab_id, status, interval, ease_factor, next_review_date, revision, last_updated)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (user_id, vocab_id) DO UPDATE SET
+                  status = CASE WHEN excluded.last_updated > last_updated THEN excluded.status ELSE status END,
+                  interval = CASE WHEN excluded.last_updated > last_updated THEN excluded.interval ELSE interval END,
+                  ease_factor = CASE WHEN excluded.last_updated > last_updated THEN excluded.ease_factor ELSE ease_factor END,
+                  next_review_date = CASE WHEN excluded.last_updated > last_updated THEN excluded.next_review_date ELSE next_review_date END,
+                  revision = CASE WHEN excluded.last_updated > last_updated THEN excluded.revision ELSE revision END,
+                  last_updated = CASE WHEN excluded.last_updated > last_updated THEN excluded.last_updated ELSE last_updated END
+            `).bind(data.userId, String(data.vocab_id), data.action, data.interval, data.ease_factor, data.next_review_date, data.revision || 0, actionTimeISO)
+        );
     }
     // 3. แปลงสถิติรายวันจาก Memory เป็นคำสั่ง UPSERT ส่งเข้าฐานข้อมูลรวดเดียว
     for (const stat of dailyStats.values()) {
