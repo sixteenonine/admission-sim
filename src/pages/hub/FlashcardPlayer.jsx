@@ -275,31 +275,34 @@ export default function FlashcardPlayer() {
       setSwipeGlow('');
       setSwipeBg(null);
 
-      // 🛡️ ปรับให้การ์ดใหม่มาอยู่ตรงกลางแบบโปร่งใส (ไม่มีสเกลหรือสไลด์)
+      // 🛡️ Enterprise Fix: ตัด Tailwind ออก คุมแอนิเมชันเฟดด้วย DOM โดยตรงป้องกัน React State Delay
+      setAnimClass(''); 
+
       if (cardRef.current) {
         cardRef.current.style.transition = 'none';
-        cardRef.current.style.transform = 'translate3d(0, 0px, 0) scale(1)';
-        cardRef.current.style.opacity = '0';
+        cardRef.current.style.transform = 'translate3d(0, 0, 0)';
+        cardRef.current.style.opacity = '0'; // ล่องหนเตรียมรอไว้
       }
 
-      setAnimClass('opacity-0 transition-none');
-
+      // รอ 50ms ให้ React อัปเดตข้อมูลคำศัพท์ใหม่ลงจอให้เสร็จชัวร์ๆ ก่อนค่อยเริ่มเฟด
       setTimeout(() => {
+        if (cardRef.current) void cardRef.current.offsetWidth; // บังคับให้เบราว์เซอร์รีเฟรชเฟรม
+
         if (cardRef.current) {
-          cardRef.current.style.transform = '';
-          cardRef.current.style.opacity = ''; // 🛡️ Enterprise Fix: ล้างค่าความโปร่งใสแบบ Inline ออก เพื่อส่งไม้ต่อให้ Tailwind ทำแอนิเมชันเฟดเข้า
+          cardRef.current.style.transition = 'opacity 1000ms ease-in-out';
+          cardRef.current.style.opacity = '1'; // สั่งเฟดสว่างขึ้นมา 1 วินาที
         }
-        if (cardRef.current) void cardRef.current.offsetWidth;
 
-        // 🛡️ เฟดจางๆ 1 วินาที (1000ms)
-        setAnimClass('opacity-100 transition-opacity duration-1000 ease-in-out');
-
+        // เมื่อเฟดครบ 1 วินาที ล้างค่าทิ้งเพื่อคืนการควบคุมให้แอป
         setTimeout(() => {
-          setAnimClass('');
+          if (cardRef.current) {
+            cardRef.current.style.transition = '';
+            cardRef.current.style.opacity = '';
+          }
           setIsChangingWord(false);
           setIsResettingFlip(false);
         }, 1000);
-      }, 30);
+      }, 50);
     }, 200);
   };
   const handleAnswer = async (isRemembered) => {
