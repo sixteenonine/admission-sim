@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Undo2, Star } from 'lucide-react';
+import { Undo2, Star } from 'lucide-react';
 import { db } from '../../utils/db.js';
 import { syncManager } from '../../utils/syncManager.js';
 
@@ -64,7 +64,6 @@ export default function FlashcardPlayer() {
 
   const [deck, setDeck] = useState([]);
   const [initialDeckSize, setInitialDeckSize] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [masteredHistory, setMasteredHistory] = useState([]);
   const [isReady, setIsReady] = useState(false);
@@ -133,7 +132,7 @@ export default function FlashcardPlayer() {
     loadDeck();
   }, [currentCategory, currentLevel, isSRS]);
 
-  const currentWord = deck[currentIndex];
+  const currentWord = deck[0]; // 🗑️ Cleanup: ใช้คำศัพท์ใบบนสุดเสมอ ไม่ต้องพึ่งพา Index
   // คำนวณสีและลายแบบไดนามิกตามหมวดหมู่จริงของคำศัพท์คำนั้น ๆ (สลับสีส้มออกเมื่อเป็นหมวดหมู่ย่อย)
   const cardColor = (currentCategory === 'MY FAVORITE' && currentWord)
     ? (CATEGORY_STYLES[currentWord.category]?.color || currentStyle.color)
@@ -183,7 +182,7 @@ export default function FlashcardPlayer() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isChangingWord, currentIndex, deck]);
+  }, [isChangingWord, deck]);
 
   // ระบบ Animation โครงสร้างใหม่ การ์ดสไลด์ออกแล้วโผล่ขึ้นมาทันที (Stacking Wait Effect)
   const triggerCardAnim = (direction, actionFn) => {
@@ -254,32 +253,36 @@ export default function FlashcardPlayer() {
     const next_review = Date.now() + (interval * 24 * 60 * 60 * 1000);
     revision += 1;
 
-    const newSrsData = { eng, vocab_id: currentWord.id, repetition, interval, ease_factor, next_review, revision };
-    await db.vocab_srs.put(newSrsData);
-
     let eventId = null;
-    if (user?.id) {
-      eventId = crypto.randomUUID();
-      await db.sync_outbox.put({
-        id: eventId,
-        user_id: user.id,
-        vocab_id: currentWord.id,
-        action: isRemembered ? 'remembered' : 'forgotten',
-        interval: interval,
-        ease_factor: ease_factor,
-        next_review_date: new Date(next_review).toISOString(),
-        revision: revision,
-        timestamp: Date.now()
-      });
-      syncManager.triggerVocabSync(user.id);
-    }
+    
+    // 🛡️ Enterprise Fix: ป้องกันแอปค้างเมื่อ Storage เต็ม หรือเล่นบน Private Mode
+    try {
+      const newSrsData = { eng, vocab_id: currentWord.id, repetition, interval, ease_factor, next_review, revision };
+      await db.vocab_srs.put(newSrsData);
 
+      if (user?.id) {
+        eventId = crypto.randomUUID();
+        await db.sync_outbox.put({
+          id: eventId,
+          user_id: user.id,
+          vocab_id: currentWord.id,
+          action: isRemembered ? 'remembered' : 'forgotten',
+          interval: interval,
+          ease_factor: ease_factor,
+          next_review_date: new Date(next_review).toISOString(),
+          revision: revision,
+          timestamp: Date.now()
+        });
+        syncManager.triggerVocabSync(user.id);
+      }
+    } catch (err) {
+      console.warn("DB Save Skipped (Storage Error):", err);
+    }
     triggerCardAnim(isRemembered ? 'up' : 'down', () => {
-      setMasteredHistory(prev => [...prev, { word: currentWord, originalIndex: currentIndex, previousSrs: currentSrs, eventId }]);
+      setMasteredHistory(prev => [...prev, { word: currentWord, previousSrs: currentSrs, eventId }]);
       const newDeck = [...deck];
-      newDeck.splice(currentIndex, 1);
+      newDeck.shift(); // 🗑️ Cleanup: ดึงไพ่ใบบนสุดออกโดยตรง (เร็วกว่าและประหยัด Resource)
       setDeck(newDeck);
-      if (currentIndex >= newDeck.length && currentIndex > 0) setCurrentIndex(newDeck.length - 1);
       
       if (!isSRS && currentCategory !== 'MY FAVORITE') {
         const sessionKey = `session_${currentCategory}_${currentLevel}`;
@@ -297,11 +300,9 @@ export default function FlashcardPlayer() {
       if (lastMastered.previousSrs) db.vocab_srs.put(lastMastered.previousSrs);
       if (lastMastered.eventId) db.sync_outbox.delete(lastMastered.eventId);
 
-      const newDeck = [...deck];
-      newDeck.splice(lastMastered.originalIndex, 0, lastMastered.word);
+      const newDeck = [lastMastered.word, ...deck]; // 🗑️ Cleanup: แทรกไพ่กลับขึ้นไปอยู่บนสุดทันที
       setDeck(newDeck);
       setMasteredHistory(historyCopy);
-      setCurrentIndex(lastMastered.originalIndex);
       
       if (!isSRS && currentCategory !== 'MY FAVORITE') {
         localStorage.setItem(`session_${currentCategory}_${currentLevel}`, JSON.stringify(newDeck));
@@ -330,6 +331,7 @@ export default function FlashcardPlayer() {
         userId: user.id, // 🛡️ แนบ ID เจ้าของข้อมูลกำกับไว้ในคิว
         type: 'star_vocab',
         word: word,
+        vocabId: currentWord.id, // 🛡️ Enterprise Fix: ส่ง Primary Key แนบไปเสมอเพื่อความแม่นยำร้อยเปอร์เซ็นต์
         isStarred: !isCurrentlyStarred,
         timestamp: Date.now()
       });
