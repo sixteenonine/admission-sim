@@ -1,21 +1,12 @@
-DROP TABLE IF EXISTS payments;
-DROP TABLE IF EXISTS exam_history;
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
-    id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    display_name TEXT NOT NULL,
-    avatar_id INTEGER DEFAULT 1,
-    avatar_url TEXT,
-    plan_tier TEXT DEFAULT 'common',
-    plan_expire_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
 PRAGMA defer_foreign_keys = TRUE;
+
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS exam_history;
 DROP TABLE IF EXISTS user_sync_data;
+DROP TABLE IF EXISTS user_vocab_progress;
+DROP TABLE IF EXISTS user_study_stats;
+DROP TABLE IF EXISTS vocab_repository;
+DROP TABLE IF EXISTS stories;
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
@@ -51,7 +42,7 @@ CREATE TABLE payments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-DROP TABLE IF EXISTS stories;
+
 CREATE TABLE stories (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -63,7 +54,6 @@ CREATE TABLE stories (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS user_sync_data;
 CREATE TABLE user_sync_data (
     user_id TEXT PRIMARY KEY,
     favorites TEXT DEFAULT '{"stories":[], "vocab":[]}',
@@ -73,7 +63,7 @@ CREATE TABLE user_sync_data (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-DROP TABLE IF EXISTS vocab_repository;
+
 CREATE TABLE vocab_repository (
     id TEXT PRIMARY KEY,
     eng TEXT NOT NULL UNIQUE,
@@ -90,7 +80,6 @@ CREATE TABLE vocab_repository (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-DROP TABLE IF EXISTS user_vocab_progress;
 CREATE TABLE user_vocab_progress (
     user_id TEXT NOT NULL,
     vocab_id TEXT NOT NULL,
@@ -106,11 +95,13 @@ CREATE TABLE user_vocab_progress (
 );
 
 CREATE INDEX idx_user_vocab_review ON user_vocab_progress(user_id, next_review_date);
-DROP TABLE IF EXISTS user_vocab_events;
-CREATE TABLE user_vocab_events (
-    id TEXT PRIMARY KEY,
+
+CREATE TABLE user_study_stats (
     user_id TEXT NOT NULL,
-    vocab_id TEXT NOT NULL,
-    action TEXT NOT NULL,
-    created_at DATETIME NOT NULL
+    study_date DATE NOT NULL,
+    cards_reviewed INTEGER DEFAULT 0,
+    remembered_count INTEGER DEFAULT 0,
+    forgotten_count INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, study_date),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

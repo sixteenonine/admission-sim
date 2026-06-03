@@ -2,6 +2,15 @@ export default {
   async queue(batch, env) {
     const db = env.DB;
     const statements = [];
+    // 1. สร้าง Map สำหรับยุบรวมสถิติรายวันไว้ใน Memory
+    const dailyStats = new Map();
+
+    // ฟังก์ชันแปลงเวลาเป็นเขตเวลาไทย (UTC+7) และดึงแค่วันที่ (YYYY-MM-DD)
+    const getThaiDate = (timestampStr) => {
+      const dt = timestampStr ? new Date(timestampStr) : new Date();
+      const thaiDt = new Date(dt.getTime() + (7 * 60 * 60 * 1000));
+      return thaiDt.toISOString().split('T')[0];
+    };
 
     for (const message of batch.messages) {
       const { userId, updates } = message.body;
@@ -17,14 +26,18 @@ export default {
         const eventId = u.id || crypto.randomUUID();
         const action = u.action || (u.status === 'remembered' ? 'remembered' : 'forgotten');
 
-        // 1. บันทึก Event ลง Log เพื่อป้องกันข้อมูลทับซ้อนในอนาคต (Event Sourcing)
-        statements.push(
-          db.prepare(`
-            INSERT INTO user_vocab_events (id, user_id, vocab_id, action, created_at)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT (id) DO NOTHING
-          `).bind(eventId, userId, String(u.vocab_id), action, actionTime)
-        );
+        // 1. ยุบรวมสถิติรายวัน (Daily Aggregation) แทนการเขียน Log รายคำ
+        const studyDate = getThaiDate(u.timestamp);
+        const statsKey = `${userId}|${studyDate}`;
+        
+        if (!dailyStats.has(statsKey)) {
+          dailyStats.set(statsKey, { user_id: userId, study_date: studyDate, cards: 0, remembered: 0, forgotten: 0 });
+        }
+        
+        const stat = dailyStats.get(statsKey);
+        stat.cards += 1;
+        if (action === 'remembered') stat.remembered += 1;
+        else stat.forgotten += 1;
         
         // 2. อัปเดตผลลัพธ์ลงตาราง State หลัก
         statements.push(
@@ -51,6 +64,19 @@ export default {
         );
       }
       message.ack();
+    }
+    // 3. แปลงสถิติรายวันจาก Memory เป็นคำสั่ง UPSERT ส่งเข้าฐานข้อมูลรวดเดียว
+    for (const stat of dailyStats.values()) {
+      statements.push(
+        db.prepare(`
+          INSERT INTO user_study_stats (user_id, study_date, cards_reviewed, remembered_count, forgotten_count)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT (user_id, study_date) DO UPDATE SET
+            cards_reviewed = cards_reviewed + excluded.cards_reviewed,
+            remembered_count = remembered_count + excluded.remembered_count,
+            forgotten_count = forgotten_count + excluded.forgotten_count
+        `).bind(stat.user_id, stat.study_date, stat.cards, stat.remembered, stat.forgotten)
+      );
     }
 
     if (statements.length > 0) {
