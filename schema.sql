@@ -50,6 +50,10 @@ CREATE TABLE stories (
     image_url TEXT,
     is_premium BOOLEAN DEFAULT FALSE,
     type TEXT DEFAULT 'story',
+    content TEXT NOT NULL,
+    translation TEXT,
+    vocab_levels TEXT,
+    status TEXT DEFAULT 'published',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

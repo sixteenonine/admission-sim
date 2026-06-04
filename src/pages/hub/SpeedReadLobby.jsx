@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate, Link } from 'react-router-dom';
 import { Plus, Edit3, Trash2, X, BookOpen, User, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function SpeedReadLobby() {
   const themeVals = useOutletContext();
@@ -11,46 +12,36 @@ export default function SpeedReadLobby() {
   const isDark = textMain === '#ffffff' || textMain === '#FFFFFF';
   
   const [activeTab, setActiveTab] = useState('SYSTEM');
-  const [systemArticles, setSystemArticles] = useState([]);
-  const [customArticles, setCustomArticles] = useState([]);
+  const queryClient = useQueryClient();
+
+  const { data: systemArticles = [] } = useQuery({
+    queryKey: ['speedreadSystemList'],
+    queryFn: async () => {
+      const res = await fetch('/api/stories/list');
+      const data = await res.json();
+      return data.status === 'success' ? data.stories.filter(s => s.type === 'speedread') : [];
+    }
+  });
+
+  const { data: customArticles = [] } = useQuery({
+    queryKey: ['speedreadCustomList', currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return [];
+      const res = await fetch(`/api/user/sync?userId=${currentUser.id}`);
+      const data = await res.json();
+      if (data.status === 'success' && data.data?.custom_speedreads) {
+        return JSON.parse(data.data.custom_speedreads);
+      }
+      return [];
+    },
+    enabled: !!currentUser?.id
+  });
   
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ title: '', content: '' });
   const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    fetchSystemArticles();
-    if (currentUser) {
-      fetchCustomArticles();
-    }
-  }, [currentUser]);
-
-  const fetchSystemArticles = async () => {
-    try {
-      const res = await fetch('/api/stories/list');
-      const data = await res.json();
-      if (data.status === 'success') {
-        // กรองเอาเฉพาะหมวด speedread
-        setSystemArticles(data.stories.filter(s => s.type === 'speedread'));
-      }
-    } catch (err) {
-      console.error("โหลดบทความระบบล้มเหลว");
-    }
-  };
-
-  const fetchCustomArticles = async () => {
-    try {
-      const res = await fetch('/api/user/sync');
-      const data = await res.json();
-      if (data.status === 'success' && data.data?.custom_speedreads) {
-        setCustomArticles(JSON.parse(data.data.custom_speedreads));
-      }
-    } catch (err) {
-      console.error("โหลดบทความส่วนตัวล้มเหลว");
-    }
-  };
 
   const handleSaveCustom = async () => {
     if (!formData.title.trim() || !formData.content.trim()) return alert("กรุณากรอกชื่อและเนื้อหาให้ครบ");
@@ -78,7 +69,7 @@ export default function SpeedReadLobby() {
       });
       const data = await res.json();
       if (data.status === 'success') {
-        setCustomArticles(newCustoms);
+        queryClient.setQueryData(['speedreadCustomList', currentUser?.id], newCustoms);
         closeModal();
       }
     } catch (err) {
@@ -93,7 +84,7 @@ export default function SpeedReadLobby() {
     if (!confirm("ลบบทความนี้ใช่หรือไม่?")) return;
     
     const newCustoms = customArticles.filter(a => a.id !== id);
-    setCustomArticles(newCustoms); // อัปเดต UI ทันทีเพื่อความลื่นไหล
+    queryClient.setQueryData(['speedreadCustomList', currentUser?.id], newCustoms); // อัปเดต UI ทันทีเพื่อความลื่นไหล
     
     try {
       await fetch('/api/user/sync', {
@@ -120,14 +111,7 @@ export default function SpeedReadLobby() {
   };
 
   const handlePlay = (article, isSystem = true) => {
-    navigate('/speedread/play', { 
-      state: { 
-        id: article.id, 
-        title: article.title, 
-        content: article.content || null, 
-        isSystem 
-      } 
-    });
+    navigate(`/speedread/play?id=${article.id}&source=${isSystem ? 'system' : 'custom'}`);
   };
 
   return (

@@ -1,42 +1,31 @@
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
-    const kv = context.env.STORY_CONTENT;
     const { storyId } = await context.request.json();
 
     if (!storyId) {
-      return new Response(JSON.stringify({ status: "error", message: "กรุณาระบุรหัสเรื่องสั้น" }), { status: 400 });
+      return new Response(JSON.stringify({ status: "error", message: "กรุณาระบุรหัสบทความ" }), { status: 400 });
     }
 
-    // ดึงเฉพาะ Metadata ความปลอดภัยจาก D1
-    const storyMeta = await db.prepare("SELECT id, title, type, image_url, is_premium FROM stories WHERE id = ?").bind(storyId).first();
-    if (!storyMeta) {
-      return new Response(JSON.stringify({ status: "error", message: "ไม่พบเรื่องสั้นที่ต้องการ" }), { status: 404 });
+    // ดึงข้อมูลทั้งหมดในครั้งเดียวจาก D1
+    const story = await db.prepare(`
+      SELECT id, title, type, image_url, is_premium, content, translation, vocab_levels, status 
+      FROM stories WHERE id = ?
+    `).bind(storyId).first();
+    
+    if (!story) {
+      return new Response(JSON.stringify({ status: "error", message: "ไม่พบข้อมูลในระบบ (หรือถูกลบไปแล้ว)" }), { status: 404 });
     }
 
-    // ดึงเนื้อหาอ่านและคลังคำศัพท์จาก KV ความเร็วสูง
-    const kvDataStr = await kv.get(storyId);
-    let content = "";
-    let translation = "";
-    let vocab_levels = {};
-
-    if (kvDataStr) {
-      try {
-        const kvData = JSON.parse(kvDataStr);
-        content = kvData.content || "";
-        translation = kvData.translation || "";
-        vocab_levels = kvData.vocab_levels || {};
-      } catch (e) {
-        console.error("KV JSON Parse Error for story:", storyId);
-      }
+    // แปลง vocab_levels ที่เป็น String (JSON) กลับเป็น Object 
+    let parsedVocab = {};
+    try {
+      if (story.vocab_levels) parsedVocab = JSON.parse(story.vocab_levels);
+    } catch (e) {
+      console.error("JSON Parse Error for story vocab:", storyId);
     }
-
-    const story = {
-      ...storyMeta,
-      content,
-      translation,
-      vocab_levels
-    };
+    
+    story.vocab_levels = parsedVocab;
 
     return new Response(JSON.stringify({ status: "success", story }), {
       headers: { "Content-Type": "application/json" }

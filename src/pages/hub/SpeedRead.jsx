@@ -1,18 +1,47 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useOutletContext, useLocation } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { Play, Pause, RotateCcw, SkipBack, SkipForward, Loader2, Settings, X, AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, Gauge, ListMinus } from 'lucide-react';
-
+import { useQuery } from '@tanstack/react-query';
 export default function SpeedRead() {
+
   const themeVals = useOutletContext();
-  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isDark = themeVals.textMain === '#ffffff' || themeVals.textMain === '#FFFFFF';
-  const { id, content: initialContent, isSystem } = location.state || {};
+  
+  const id = searchParams.get('id');
+  const source = searchParams.get('source');
+
+  const { data: articleData, isLoading: loading } = useQuery({
+    queryKey: ['speedreadArticle', id, source],
+    queryFn: async () => {
+      if (!id) return { title: '', content: '' };
+      if (source === 'system') {
+        const res = await fetch('/api/stories/get', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storyId: id })
+        });
+        const data = await res.json();
+        if (data.status !== 'success') throw new Error('ไม่สามารถโหลดบทความได้');
+        return { title: data.story.title, content: data.story.content || "" };
+      } else {
+        const res = await fetch('/api/user/sync');
+        const data = await res.json();
+        if (data.status === 'success' && data.data?.custom_speedreads) {
+           const customs = JSON.parse(data.data.custom_speedreads);
+           const found = customs.find(c => c.id === id);
+           if (found) return { title: found.title, content: found.content || "" };
+        }
+        throw new Error('ไม่พบบทความส่วนตัว');
+      }
+    },
+    enabled: !!id
+  });
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [wpm, setWpm] = useState(300);
   const [globalWordIndex, setGlobalWordIndex] = useState(0);
-  const [text, setText] = useState(initialContent || "");
-  const [loading, setLoading] = useState(isSystem && !initialContent);
+  
   const timerRef = useRef(null);
   const teleprompterRef = useRef(null);
   const requestRef = useRef();
@@ -29,22 +58,7 @@ export default function SpeedRead() {
   const [fontColor, setFontColor] = useState('');
   const [adaptiveWpm, setAdaptiveWpm] = useState(false);
 
-  useEffect(() => {
-    if (isSystem && !initialContent && id) {
-      setLoading(true);
-      fetch('/api/stories/get', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId: id })
-      })
-        .then(res => res.json())
-        .then(data => { if (data.status === 'success' && data.story) setText(data.story.content || ""); })
-        .catch(err => console.error(err))
-        .finally(() => setLoading(false));
-    }
-  }, [id, isSystem, initialContent]);
-
-  const words = useMemo(() => text ? text.split(/\s+/) : [], [text]);
+  const words = useMemo(() => articleData?.content ? articleData.content.split(/\s+/) : [], [articleData?.content]);
 
   const currentDelay = useMemo(() => {
     if (words.length === 0) return 300;
@@ -228,7 +242,7 @@ export default function SpeedRead() {
               textAlign: alignment 
             }}
           >
-            {text}
+            {articleData?.content || ""}
           </div>
         </div>
       );
@@ -242,7 +256,7 @@ export default function SpeedRead() {
       
       {/* Header */}
       <div className={`absolute top-8 left-0 w-full flex items-center justify-center pt-12 pb-6 z-10 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <span className="font-bold text-sm tracking-[0.2em] uppercase opacity-40" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>{location.state?.title || "SPEED READING"}</span>
+        <span className="font-bold text-sm tracking-[0.2em] uppercase opacity-40" style={{ color: themeVals.textMain, fontFamily: 'Inter, sans-serif' }}>{articleData?.title || "SPEED READING"}</span>
       </div>
 
       {/* Reader Area */}
