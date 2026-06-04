@@ -56,6 +56,7 @@ export async function onRequest(context) {
     '/api/vocab/list',
     '/api/vocab/meta'
     , '/api/vocab/decks'
+    , '/api/vocab/sync-to-kv'
   ];
 
   // ถ้าเป็น Public Route ให้ปล่อยผ่านไปทำงานต่อได้เลย
