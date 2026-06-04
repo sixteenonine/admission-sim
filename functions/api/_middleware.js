@@ -77,12 +77,16 @@ export async function onRequest(context) {
     }
 
     // 3. ตรวจสอบและถอดรหัส JWT
-    const secretKey = context.env.JWT_SECRET || "bearwithyou-local-secret-key-2026";
+    const secretKey = context.env.JWT_SECRET;
+    if (!secretKey) {
+      return new Response(JSON.stringify({ status: "error", message: "Server Error: JWT config missing" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
     const payload = await verifyJWT(token, secretKey);
-    // 4. ป้องกันการแฮ็ก API หลังบ้าน (เปลี่ยนเป็นอีเมลของคุณเอง)
+
+    // 4. ป้องกันการแฮ็ก API หลังบ้าน
+    const adminEmail = context.env.ADMIN_EMAIL || 'sixteenonine99@gmail.com'; 
     if (url.pathname.startsWith('/api/admin')) {
-      const ADMIN_EMAIL = 'sixteenonine99@gmail.com'; 
-      if (payload.email !== ADMIN_EMAIL) {
+      if (payload.email !== adminEmail) {
         return new Response(JSON.stringify({ status: "error", message: "Forbidden: เฉพาะผู้ดูแลระบบเท่านั้น" }), { status: 403, headers: { "Content-Type": "application/json" } });
       }
     }

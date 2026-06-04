@@ -24,7 +24,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <div key={location.pathname} className="animate-fade-in w-full h-full">
+        <div className="w-full h-full">
         <Suspense fallback={
             <div className="flex items-center justify-center w-full h-screen bg-gray-50">
               <div className="flex flex-col items-center opacity-50">
