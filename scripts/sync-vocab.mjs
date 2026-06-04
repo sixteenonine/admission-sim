@@ -6,7 +6,8 @@ const SHEET_TSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRizeLURc
 
 async function sync() {
   console.log('⏳ Fetching data from Google Sheet...');
-  const res = await fetch(SHEET_TSV_URL);
+  // 🛡️ แนบเวลาปัจจุบันเพื่อพยายามเจาะ Cache ของ Google Sheet ให้ได้ไฟล์ใหม่ล่าสุดเสมอ
+  const res = await fetch(`${SHEET_TSV_URL}&cb=${Date.now()}`, { cache: 'no-store' });
   const data = await res.text();
 
   const rows = data.split(/\r?\n/).filter(r => r.trim() !== '');

@@ -165,32 +165,7 @@ export function HubFlashcardDecks() {
   const [searchResults, setSearchResults] = React.useState([]);
   const [isSearching, setIsSearching] = React.useState(false);
 
-  React.useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.trim().length > 1) {
-        setIsSearching(true);
-        try {
-          const query = searchQuery.toLowerCase();
-          const results = await db.flashcards
-            .filter(card => 
-              card.eng.toLowerCase().includes(query) || 
-              (card.thai && card.thai.includes(query))
-            )
-            .limit(20) // จำกัดผลลัพธ์ 20 คำเพื่อความลื่นไหล
-            .toArray();
-          setSearchResults(results);
-        } catch (error) {
-          console.error("Search error:", error);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSearchResults([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+  // (ย้าย useEffect ของการค้นหาไปไว้ด้านล่าง เพื่อให้ดึงสถานะ isDecksSyncing มาใช้ได้)
 
   // 1. เช็คข้อมูล Meta พร้อมแนบเวลาปัจจุบัน (?t=) เพื่อบังคับทะลวง Cache ของเบราว์เซอร์ 100%
   const { data: metaData } = useQuery({
@@ -281,6 +256,34 @@ export function HubFlashcardDecks() {
     enabled: !!metaData?.version,
     staleTime: Infinity,
   });
+  // 🛡️ Enterprise Fix: ระบบค้นหาที่ทำงานร่วมกับ Background Sync
+  // อัปเดตผลการค้นหาอัตโนมัติทันทีที่ฐานข้อมูลโหลดลงเครื่องเสร็จ (ป้องกันปัญหาคำศัพท์ค้างหน้าจอ)
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length > 1) {
+        setIsSearching(true);
+        try {
+          const query = searchQuery.toLowerCase();
+          const results = await db.flashcards
+            .filter(card => 
+              card.eng.toLowerCase().includes(query) || 
+              (card.thai && card.thai.includes(query))
+            )
+            .limit(20)
+            .toArray();
+          setSearchResults(results);
+        } catch (error) {
+          console.error("Search error:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, isDecksSyncing]);
 
   React.useEffect(() => {
     async function loadFavs() {
