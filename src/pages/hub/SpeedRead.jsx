@@ -108,17 +108,24 @@ export default function SpeedRead() {
       if (previousTimeRef.current != undefined) {
         const deltaTime = time - previousTimeRef.current;
         if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
-          // คำนวณความเร็ว (ปรับสเกลตามขนาดฟอนต์เพื่อให้รู้สึกถึงความเร็วที่สม่ำเสมอ)
-          const speedFactor = (wpm / 120) * (fontSize / 24); 
-          const scrollPixels = speedFactor * (deltaTime / 16.66);
-          
-          teleprompterRef.current.scrollTop += scrollPixels;
-          
-          // หยุดเมื่อเลื่อนสุดขอบล่าง
           const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
-          if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
-            setIsPlaying(false);
-          }
+              
+              // คำนวณเวลาที่ต้องใช้ทั้งหมด (มิลลิวินาที) อิงจากจำนวนคำจริงและ WPM
+              const totalTimeMs = (words.length / wpm) * 60000;
+              
+              // ระยะทางที่ต้องเลื่อนทั้งหมด (ความสูงของเนื้อหาจริง)
+              const totalScrollDistance = scrollHeight - clientHeight;
+              
+              // ความเร็วในการเลื่อน (Pixel ต่อมิลลิวินาที) ที่แม่นยำ 100% ตาม DOM Height
+              const pixelsPerMs = totalTimeMs > 0 ? (totalScrollDistance / totalTimeMs) : 0;
+              const scrollPixels = pixelsPerMs * deltaTime;
+              
+              teleprompterRef.current.scrollTop += scrollPixels;
+              
+              // หยุดเมื่อเลื่อนสุดขอบล่าง
+              if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
+                setIsPlaying(false);
+              }
         }
       }
       previousTimeRef.current = time;
@@ -134,7 +141,7 @@ export default function SpeedRead() {
     }
 
     return () => cancelAnimationFrame(requestRef.current);
-  }, [isPlaying, readMode, wpm, fontSize]);
+  }, [isPlaying, readMode, wpm, fontSize, words.length]);
   useEffect(() => {
     if (readMode === 'highlight') {
       const activeEl = document.getElementById(`highlight-word-${globalWordIndex}`);
