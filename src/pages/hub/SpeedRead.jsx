@@ -110,13 +110,12 @@ export default function SpeedRead() {
     return () => clearTimeout(timerRef.current);
   }, [isPlaying, globalWordIndex, words, readMode, numLines, wordsPerLine, currentDelay]);
 
-  // Teleprompter Smooth Scroll Loop
+  // Teleprompter Smooth Scroll Loop (Zero-DOM Read + High Precision WPM)
   useEffect(() => {
     let cachedDistance = 0;
     let cachedTotalTime = 0;
     let currentScroll = 0;
 
-    // 1. อ่านค่า DOM เพียงแค่ 1 ครั้งก่อนเริ่มลูป เพื่อหลีกเลี่ยงการทำ Layout Thrashing
     if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
       const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
       cachedDistance = scrollHeight - clientHeight;
@@ -128,16 +127,13 @@ export default function SpeedRead() {
       if (previousTimeRef.current != undefined && cachedDistance > 0) {
         const deltaTime = time - previousTimeRef.current;
         
-        // 2. คำนวณความเร็วและระยะทางทั้งหมดภายใน Memory (Zero-DOM Read)
         const pixelsPerMs = cachedTotalTime > 0 ? (cachedDistance / cachedTotalTime) : 0;
         currentScroll += pixelsPerMs * deltaTime;
         
-        // 3. สั่งเขียนค่าลง DOM อย่างเดียว (Write Only) 
         if (teleprompterRef.current) {
           teleprompterRef.current.scrollTop = currentScroll;
         }
         
-        // 4. สั่งหยุดเมื่อเลื่อนครบระยะทางจริง
         if (currentScroll >= cachedDistance) {
           setIsPlaying(false);
         }
@@ -152,10 +148,9 @@ export default function SpeedRead() {
     if (isPlaying && readMode === 'teleprompter' && cachedDistance > 0) {
       requestRef.current = requestAnimationFrame(animateScroll);
     } else if (isPlaying && readMode === 'teleprompter' && cachedDistance <= 0) {
-      // 5. ดักจับ Edge Case: กรณีข้อความสั้นจนไม่มี Scrollbar ให้หยุดการเล่นทันที
       setIsPlaying(false);
     } else {
-      previousTimeRef.current = undefined; // รีเซ็ตเวลาเพื่อป้องกันการกระตุกเมื่อกดเล่นต่อ
+      previousTimeRef.current = undefined;
     }
 
     return () => cancelAnimationFrame(requestRef.current);
@@ -253,23 +248,23 @@ export default function SpeedRead() {
       return (
         <div 
           ref={teleprompterRef}
-          className="relative w-full max-w-6xl mx-auto h-[60vh] overflow-y-auto mask-image-vertical hide-scrollbar will-change-scroll"
+          className="relative w-full max-w-6xl mx-auto h-[60vh] overflow-y-auto mask-image-vertical hide-scrollbar"
           style={{
             scrollBehavior: 'auto',
             paddingTop: '30vh',
             paddingBottom: '30vh',
-            transform: 'translateZ(0)'
+            transform: 'translateZ(0)',
+            willChange: 'scroll-position'
           }}
         >
           <div 
-            className="w-full px-6 md:px-12 lg:px-16 space-y-8" 
+            className="w-full px-6 md:px-12 lg:px-16" 
             style={{ 
+              whiteSpace: 'pre-wrap', 
               textAlign: alignment 
             }}
           >
-            {cleanParagraphs.map((para, i) => (
-              <p key={i} className="leading-relaxed">{para}</p>
-            ))}
+            {articleData?.content || ""}
           </div>
         </div>
       );
