@@ -111,13 +111,25 @@ async function sync() {
       let sql = 'PRAGMA defer_foreign_keys = TRUE;\n';
       
       chunk.forEach(cols => {
-        // cols ตอนนี้มี sort_order ต่อท้ายมาด้วย
         const [id, eng, thai, pos, category, example, synonyms, antonyms, sort_order] = cols;
         sql += `INSERT INTO vocab_repository (id, eng, thai, pos, category, example, synonyms, antonyms, sort_order, is_deleted) VALUES (${escape(id)}, ${escape(eng)}, ${escape(thai)}, ${escape(pos)}, ${escape(category)}, ${escape(example)}, ${escape(synonyms)}, ${escape(antonyms)}, ${sort_order}, 0) ON CONFLICT(id) DO UPDATE SET eng=excluded.eng, thai=excluded.thai, pos=excluded.pos, category=excluded.category, example=excluded.example, synonyms=excluded.synonyms, antonyms=excluded.antonyms, sort_order=excluded.sort_order, is_deleted=0, updated_at=CURRENT_TIMESTAMP;\n`;
       });
       
       fs.writeFileSync('temp-sync.sql', sql);
-      execSync('npx wrangler d1 execute admission-sim-db --remote --file=temp-sync.sql -y', { stdio: 'inherit' });
+      
+      // 🛡️ Enterprise Fix: กลับมาระบบ Retry ป้องกันเน็ตหลุดหรือ Cloudflare Limit
+      let retries = 3; let success = false;
+      while (retries > 0 && !success) {
+        try {
+          execSync('npx wrangler d1 execute admission-sim-db --remote --file=temp-sync.sql -y', { stdio: 'inherit' });
+          success = true;
+        } catch (err) {
+          retries--;
+          if (retries === 0) throw new Error("❌ Upsert failed continuously.");
+          console.log(`⚠️ API timeout. Retrying in 5 seconds... (${retries} attempts left)`);
+          await new Promise(r => setTimeout(r, 5000));
+        }
+      }
     }
 
     // 2. ส่งคำสั่ง Soft Delete (ลบ)
@@ -127,7 +139,20 @@ async function sync() {
         const inClause = chunk.map(id => `'${id}'`).join(',');
         const deleteSql = `UPDATE vocab_repository SET is_deleted = 1, updated_at=CURRENT_TIMESTAMP WHERE id IN (${inClause});`;
         fs.writeFileSync('temp-sync.sql', deleteSql);
-        execSync('npx wrangler d1 execute admission-sim-db --remote --file=temp-sync.sql -y', { stdio: 'inherit' });
+        
+        // 🛡️ Enterprise Fix: ระบบ Retry สำหรับการลบ
+        let retries = 3; let success = false;
+        while (retries > 0 && !success) {
+          try {
+            execSync('npx wrangler d1 execute admission-sim-db --remote --file=temp-sync.sql -y', { stdio: 'inherit' });
+            success = true;
+          } catch (err) {
+            retries--;
+            if (retries === 0) throw new Error("❌ Delete failed continuously.");
+            console.log(`⚠️ API timeout. Retrying in 5 seconds... (${retries} attempts left)`);
+            await new Promise(r => setTimeout(r, 5000));
+          }
+        }
       }
     }
 
@@ -140,7 +165,8 @@ async function sync() {
     });
     
     if (kvRes.ok) {
-      console.log("🎉 Database and KV Sync completed! Frontend is 100% up to date.");
+      const resultData = await kvRes.json();
+      console.log(`🎉 ${resultData.message}`);
     } else {
       const errorText = await kvRes.text();
       console.log(`⚠️ DB synced, but KV update failed. HTTP Status: ${kvRes.status}`);

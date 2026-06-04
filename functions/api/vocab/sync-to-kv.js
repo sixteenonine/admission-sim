@@ -23,6 +23,8 @@ export async function onRequestPost(context) {
 
     const counts = {};
 
+    const missingCategories = [];
+
     for (const cat in grouped) {
       if (decksTemplate[cat]) {
         const words = grouped[cat];
@@ -36,6 +38,8 @@ export async function onRequestPost(context) {
           decksTemplate[cat].levels[i] = leveledSlice;
           counts[cat].levels[i] = leveledSlice.length;
         }
+      } else if (cat !== "UNCATEGORIZED") {
+        missingCategories.push(cat); // 🛡️ ดักจับหมวดหมู่ขยะหรือพิมพ์ผิด
       }
     }
 
@@ -47,7 +51,12 @@ export async function onRequestPost(context) {
       kv.put('vocab_version', version)
     ]);
 
-    return new Response(JSON.stringify({ status: 'success', version, message: 'Synced D1 to KV successfully' }), {
+    let message = 'Synced D1 to KV successfully';
+    if (missingCategories.length > 0) {
+      message += ` | ⚠️ WARNING: Ignored unknown categories: [${missingCategories.join(', ')}] Please check spelling in Google Sheet!`;
+    }
+
+    return new Response(JSON.stringify({ status: 'success', version, message }), {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (err) {
