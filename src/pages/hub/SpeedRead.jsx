@@ -59,14 +59,6 @@ export default function SpeedRead() {
   const [adaptiveWpm, setAdaptiveWpm] = useState(false);
 
   const words = useMemo(() => articleData?.content ? articleData.content.split(/\s+/) : [], [articleData?.content]);
-  // ตัวกรองข้อความ: ตัดบรรทัดซ้ำซ้อนและเชื่อมประโยคให้ติดกันเป็นย่อหน้าเดียว ลดภาระ DOM (แก้อาการกระตุก)
-  const cleanParagraphs = useMemo(() => {
-    if (!articleData?.content) return [];
-    return articleData.content
-      .split(/\n\s*\n/) // แยกย่อหน้าเมื่อมีการเคาะ Enter 2 ครั้ง
-      .map(p => p.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()) // ลบ Enter เดี่ยวๆ ทิ้งแล้วแทนที่ด้วยช่องว่าง
-      .filter(p => p.length > 0);
-  }, [articleData?.content]);
 
   const currentDelay = useMemo(() => {
     if (words.length === 0) return 300;
@@ -110,51 +102,39 @@ export default function SpeedRead() {
     return () => clearTimeout(timerRef.current);
   }, [isPlaying, globalWordIndex, words, readMode, numLines, wordsPerLine, currentDelay]);
 
-  // Teleprompter Smooth Scroll Loop (Zero-DOM Read + High Precision WPM)
+  // Teleprompter Smooth Scroll Loop
   useEffect(() => {
-    let cachedDistance = 0;
-    let cachedTotalTime = 0;
-    let currentScroll = 0;
-
-    if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
-      const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
-      cachedDistance = scrollHeight - clientHeight;
-      cachedTotalTime = (words.length / wpm) * 60000;
-      currentScroll = scrollTop;
-    }
-
     const animateScroll = time => {
-      if (previousTimeRef.current != undefined && cachedDistance > 0) {
+      if (previousTimeRef.current != undefined) {
         const deltaTime = time - previousTimeRef.current;
-        
-        const pixelsPerMs = cachedTotalTime > 0 ? (cachedDistance / cachedTotalTime) : 0;
-        currentScroll += pixelsPerMs * deltaTime;
-        
-        if (teleprompterRef.current) {
-          teleprompterRef.current.scrollTop = currentScroll;
-        }
-        
-        if (currentScroll >= cachedDistance) {
-          setIsPlaying(false);
+        if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
+          // คำนวณความเร็ว (ปรับสเกลตามขนาดฟอนต์เพื่อให้รู้สึกถึงความเร็วที่สม่ำเสมอ)
+          const speedFactor = (wpm / 120) * (fontSize / 24); 
+          const scrollPixels = speedFactor * (deltaTime / 16.66);
+          
+          teleprompterRef.current.scrollTop += scrollPixels;
+          
+          // หยุดเมื่อเลื่อนสุดขอบล่าง
+          const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
+          if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
+            setIsPlaying(false);
+          }
         }
       }
       previousTimeRef.current = time;
-      
       if (isPlaying && readMode === 'teleprompter') {
         requestRef.current = requestAnimationFrame(animateScroll);
       }
     };
 
-    if (isPlaying && readMode === 'teleprompter' && cachedDistance > 0) {
+    if (isPlaying && readMode === 'teleprompter') {
       requestRef.current = requestAnimationFrame(animateScroll);
-    } else if (isPlaying && readMode === 'teleprompter' && cachedDistance <= 0) {
-      setIsPlaying(false);
     } else {
-      previousTimeRef.current = undefined;
+      previousTimeRef.current = undefined; // รีเซ็ตเวลาเพื่อป้องกันการกระตุกเมื่อกดเล่นต่อ
     }
 
     return () => cancelAnimationFrame(requestRef.current);
-  }, [isPlaying, readMode, wpm, fontSize, words.length]);
+  }, [isPlaying, readMode, wpm, fontSize]);
   useEffect(() => {
     if (readMode === 'highlight') {
       const activeEl = document.getElementById(`highlight-word-${globalWordIndex}`);
@@ -253,8 +233,6 @@ export default function SpeedRead() {
             scrollBehavior: 'auto',
             paddingTop: '30vh',
             paddingBottom: '30vh',
-            transform: 'translateZ(0)',
-            willChange: 'scroll-position'
           }}
         >
           <div 
