@@ -59,6 +59,14 @@ export default function SpeedRead() {
   const [adaptiveWpm, setAdaptiveWpm] = useState(false);
 
   const words = useMemo(() => articleData?.content ? articleData.content.split(/\s+/) : [], [articleData?.content]);
+  // ตัวกรองข้อความ: ตัดบรรทัดซ้ำซ้อนและเชื่อมประโยคให้ติดกันเป็นย่อหน้าเดียว ลดภาระ DOM (แก้อาการกระตุก)
+  const cleanParagraphs = useMemo(() => {
+    if (!articleData?.content) return [];
+    return articleData.content
+      .split(/\n\s*\n/) // แยกย่อหน้าเมื่อมีการเคาะ Enter 2 ครั้ง
+      .map(p => p.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()) // ลบ Enter เดี่ยวๆ ทิ้งแล้วแทนที่ด้วยช่องว่าง
+      .filter(p => p.length > 0);
+  }, [articleData?.content]);
 
   const currentDelay = useMemo(() => {
     if (words.length === 0) return 300;
@@ -245,21 +253,22 @@ export default function SpeedRead() {
       return (
         <div 
           ref={teleprompterRef}
-          className="relative w-full max-w-6xl mx-auto h-[60vh] overflow-y-auto mask-image-vertical hide-scrollbar"
+          className="relative w-full max-w-6xl mx-auto h-[60vh] overflow-y-auto mask-image-vertical hide-scrollbar will-change-scroll"
           style={{
             scrollBehavior: 'auto',
             paddingTop: '30vh',
             paddingBottom: '30vh',
+            transform: 'translateZ(0)'
           }}
         >
           <div 
-            className="w-full px-6 md:px-12 lg:px-16" 
+            className="w-full px-6 md:px-12 lg:px-16 space-y-8" 
             style={{ 
               textAlign: alignment 
             }}
           >
-            {words.map((word, i) => (
-              <span key={i}>{word}{' '}</span>
+            {cleanParagraphs.map((para, i) => (
+              <p key={i} className="leading-relaxed">{para}</p>
             ))}
           </div>
         </div>
