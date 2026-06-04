@@ -119,14 +119,16 @@ async function sync() {
     }
 
     console.log("🔄 Triggering KV Cache update...");
-    const kvRes = await fetch("https://admission-sim.sixteenonine99.workers.dev/api/vocab/sync-to-kv", {
+    const kvRes = await fetch("https://admission-sim.pages.dev/api/vocab/sync-to-kv", {
       method: "POST"
     });
     
     if (kvRes.ok) {
       console.log("🎉 Database and KV Sync completed! Frontend is 100% up to date.");
     } else {
-      console.log("⚠️ DB synced, but KV update failed.");
+      const errorText = await kvRes.text();
+      console.log(`⚠️ DB synced, but KV update failed. HTTP Status: ${kvRes.status}`);
+      console.log(`🔍 Error Details: ${errorText}`);
     }
   } catch (err) {
     console.error('❌ Sync failed during batch execution:', err.message);
