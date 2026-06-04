@@ -83,11 +83,13 @@ export default function FlashcardPlayer() {
   const touchStartX = useRef(null);
   const cardRef = useRef(null); // 🛡️ Enterprise Fix: Ref ควบคุมการ์ดโดยตรง ไม่ผ่าน React Render Cycle (60FPS)
   const isDragging = useRef(false); // 🛡️ กันการลากซ้อน
+  const animTimers = useRef([]); // 🛡️ Enterprise Fix: เก็บ Timers ทั้งหมดเพื่อทำลายทิ้งตอนสลับหน้า
   // บังคับล็อกไม่ให้หน้าจอ Scroll ได้
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
+      animTimers.current.forEach(clearTimeout); // 🛡️ ล้าง Timeline ทิ้ง ป้องกันแอป Crash
     };
   }, []);
 
@@ -149,19 +151,19 @@ export default function FlashcardPlayer() {
   // Progress Bar Calculation
   const progressPercent = initialDeckSize > 0 ? (((initialDeckSize - deck.length) / initialDeckSize) * 100) : 100;
 
-  // Pointer & Drag Events (อัปเกรดระบบลากการ์ดติดนิ้ว)
   const handlePointerDown = (e) => {
     if (isChangingWord) return;
     isDragging.current = true;
     touchStartY.current = e.clientY || (e.touches && e.touches[0].clientY);
     touchStartX.current = e.clientX || (e.touches && e.touches[0].clientX);
     
-    // 🛡️ ปิด Transition เพื่อให้การ์ดเกาะติดนิ้วทันที (0ms latency)
     if (cardRef.current) {
       cardRef.current.style.transition = 'none';
       const flipContainer = cardRef.current.children[0];
-      if (flipContainer && flipContainer.children) {
-        Array.from(flipContainer.children).forEach(face => face.style.transition = 'none');
+      // 🛡️ Enterprise Fix: เลิกใช้ Array.from() เพื่อลดภาระ Garbage Collector ทำให้ปัดไพ่ได้ลื่น 60FPS นิ่งๆ
+      if (flipContainer && flipContainer.children.length >= 2) {
+        flipContainer.children[0].style.transition = 'none';
+        flipContainer.children[1].style.transition = 'none';
       }
     }
   };
@@ -174,49 +176,43 @@ export default function FlashcardPlayer() {
     const deltaY = currentY - touchStartY.current;
     const deltaX = currentX - touchStartX.current;
 
-    // 🛡️ Direct DOM Manipulation: ขยับการ์ดและหมุนเอียงตามแรงเหวี่ยงซ้ายขวาทันที
     if (cardRef.current) {
       const rotateDeg = deltaX * 0.04; 
       cardRef.current.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotateZ(${rotateDeg}deg)`;
 
-      // 🛡️ Enterprise Fix: เทคนิค Inset Shadow ผสมสีทับแบบ 100% Compatibility (ไม่ต้องพึ่ง color-mix)
       let targetShadow = '';
-
-      if (deltaY < -10) { // ลากขึ้น (สีเขียว)
+      if (deltaY < -10) { 
         const intensity = Math.min(Math.abs(deltaY) / 120, 1); 
         targetShadow = `inset 0 0 0 1000px rgba(52,199,89,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(52,199,89,${intensity * 0.8})`;
-      } else if (deltaY > 10) { // ลากลง (สีแดง)
+      } else if (deltaY > 10) { 
         const intensity = Math.min(Math.abs(deltaY) / 120, 1);
         targetShadow = `inset 0 0 0 1000px rgba(255,59,48,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(255,59,48,${intensity * 0.8})`;
       }
 
-      // ดึงหน้าการ์ด (Front/Back) แบบอัตโนมัติจากโครงสร้าง DOM โดยตรง
       const flipContainer = cardRef.current.children[0];
-      if (flipContainer && flipContainer.children) {
-        Array.from(flipContainer.children).forEach(face => {
-          if (targetShadow) {
-            face.style.boxShadow = targetShadow;
-          } else {
-            face.style.boxShadow = ''; // คืนค่ากลับไปใช้ shadow-xl ของ Tailwind
-          }
-        });
+      if (flipContainer && flipContainer.children.length >= 2) {
+        if (targetShadow) {
+          flipContainer.children[0].style.boxShadow = targetShadow;
+          flipContainer.children[1].style.boxShadow = targetShadow;
+        } else {
+          flipContainer.children[0].style.boxShadow = '';
+          flipContainer.children[1].style.boxShadow = '';
+        }
       }
     }
   };
 
   const resetCardPosition = () => {
-    // 🛡️ ดีดการ์ดกลับตรงกลางแบบมีสปริง (Spring Physics)
     if (cardRef.current) {
       cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
       cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
       
-      // 🛡️ คืนค่าสีเดิมอย่างนุ่มนวลถ้าผู้ใช้ลากไม่ถึงเกณฑ์
       const flipContainer = cardRef.current.children[0];
-      if (flipContainer && flipContainer.children) {
-        Array.from(flipContainer.children).forEach(face => {
-          face.style.transition = 'box-shadow 0.4s ease';
-          face.style.boxShadow = '';
-        });
+      if (flipContainer && flipContainer.children.length >= 2) {
+        flipContainer.children[0].style.transition = 'box-shadow 0.4s ease';
+        flipContainer.children[0].style.boxShadow = '';
+        flipContainer.children[1].style.transition = 'box-shadow 0.4s ease';
+        flipContainer.children[1].style.boxShadow = '';
       }
     }
   };
@@ -225,14 +221,13 @@ export default function FlashcardPlayer() {
     if (!isDragging.current || isChangingWord) return;
     isDragging.current = false;
 
-    // 🛡️ ล้างสไตล์สี Inline ทิ้งทันทีเมื่อปล่อยนิ้ว เพื่อส่งไม้ต่อให้ React ควบคุม
     if (cardRef.current) {
       const flipContainer = cardRef.current.children[0];
-      if (flipContainer && flipContainer.children) {
-        Array.from(flipContainer.children).forEach(face => {
-          face.style.transition = '';
-          face.style.boxShadow = '';
-        });
+      if (flipContainer && flipContainer.children.length >= 2) {
+        flipContainer.children[0].style.transition = '';
+        flipContainer.children[0].style.boxShadow = '';
+        flipContainer.children[1].style.transition = '';
+        flipContainer.children[1].style.boxShadow = '';
       }
     }
 
@@ -252,15 +247,14 @@ export default function FlashcardPlayer() {
     touchStartY.current = null;
     touchStartX.current = null;
     
-    // 🛡️ ตั้งระยะ Threshold ลากเกิน 80px ถึงจะถือว่าตั้งใจปัด
     if (Math.abs(distanceY) > 80) {
-      if (distanceY > 80) handleAnswer(true); // ปัดขึ้น
-      else handleAnswer(false); // ปัดลง
+      if (distanceY > 80) handleAnswer(true); 
+      else handleAnswer(false); 
     } else if (Math.abs(distanceX) < 10 && Math.abs(distanceY) < 10) {
       resetCardPosition();
-      setIsFlipped(prev => !prev); // แตะอยู่กับที่ = พลิกการ์ด
+      setIsFlipped(prev => !prev); 
     } else {
-      resetCardPosition(); // ลากไม่ถึงเกณฑ์ = ดีดการ์ดกลับไปตรงกลาง
+      resetCardPosition(); 
     }
   };
 
@@ -281,22 +275,51 @@ export default function FlashcardPlayer() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isChangingWord, deck]);
 
-  // ระบบ Animation โครงสร้างใหม่ การ์ดสไลด์ออกแล้วโผล่ขึ้นมาทันที (Stacking Wait Effect)
   const triggerCardAnim = (direction, actionFn) => {
     if (isChangingWord) return;
     setIsChangingWord(true);
     setShowExampleFront(false);
     setShowSynAnt(false);
-    // 🛡️ UI Fix: สั่งให้ไพ่ใบล่างสุด (Layer 0) ขยายตัวและดันขึ้นมาสวมรอย
+    
     if (deck.length > 1 && (direction === 'up' || direction === 'down')) {
       setIsLayerZeroAnimating(true);
     }
-    // 🛡️ Enterprise Fix: สานต่อ Inline Style จากพิกัดนิ้วผู้ใช้ เพื่อให้ไพ่ปลิวออกไปตามแรงเฉื่อยโดยไม่กระตุกกลับตรงกลาง
+
+    // 🛡️ Safe Execute: ปกป้องการทำงานเมื่อ Component ถูก Unmount
+    const safeExec = (fn, ms) => {
+      const t = setTimeout(() => { if (cardRef.current) fn(); }, ms);
+      animTimers.current.push(t);
+    };
+
+    if (direction === 'undo') {
+      setIsResettingFlip(true);
+      actionFn(); 
+      setIsFlipped(false);
+      setAnimClass('');
+      
+      safeExec(() => {
+        // 🛡️ Enterprise Fix: แอนิเมชัน Undo แบบ Time Rewind (การ์ดร่วงลงมาจากฟ้า)
+        cardRef.current.style.transition = 'none';
+        cardRef.current.style.transform = 'translate3d(0, -150vh, 0) rotateZ(-15deg)';
+        cardRef.current.style.opacity = '1';
+        
+        void cardRef.current.offsetWidth; // บังคับให้ Browser เรนเดอร์เฟรมใหม่ทันที
+        
+        cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
+        
+        safeExec(() => {
+          if (cardRef.current) cardRef.current.style.transition = '';
+          setIsChangingWord(false);
+          setIsResettingFlip(false);
+        }, 500);
+      }, 0);
+      return; 
+    }
+
     if (cardRef.current) {
       const currentTransform = cardRef.current.style.transform;
       let currentX = '0px';
-      
-      // ดึงค่าแกน X ล่าสุดตอนที่นิ้วปล่อย เพื่อให้ไพ่ปลิวเฉียงสมจริง
       if (currentTransform && currentTransform.includes('translate3d')) {
         const xMatch = currentTransform.match(/translate3d\(([^,]+),/);
         if (xMatch) currentX = xMatch[1];
@@ -314,42 +337,31 @@ export default function FlashcardPlayer() {
         cardRef.current.style.opacity = '0';
         setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
         setSwipeBg('#FF3B30');
-      } else if (direction === 'undo') {
-        cardRef.current.style.transform = `translate3d(150vw, 0px, 0) rotateZ(10deg)`;
-        cardRef.current.style.opacity = '0';
-        setSwipeGlow('');
-        setSwipeBg(null);
       }
     }
 
-    // ปล่อยให้แอนิเมชันปลิวออกทำงาน 200ms ก่อนเริ่มเปลี่ยนการ์ด
-    setTimeout(() => {
+    safeExec(() => {
       setIsResettingFlip(true);
       actionFn();
       setIsFlipped(false);
       setSwipeGlow('');
       setSwipeBg(null);
-
-      // 🛡️ Enterprise Fix: ตัด Tailwind ออก คุมแอนิเมชันเฟดด้วย DOM โดยตรงป้องกัน React State Delay
       setAnimClass(''); 
 
       if (cardRef.current) {
         cardRef.current.style.transition = 'none';
         cardRef.current.style.transform = 'translate3d(0, 0, 0)';
-        cardRef.current.style.opacity = '0'; // ล่องหนเตรียมรอไว้
+        cardRef.current.style.opacity = '0'; 
       }
 
-      // รอ 50ms ให้ React อัปเดตข้อมูลคำศัพท์ใหม่ลงจอให้เสร็จชัวร์ๆ ก่อนค่อยเริ่มเฟด
-      setTimeout(() => {
-        if (cardRef.current) void cardRef.current.offsetWidth; // บังคับให้เบราว์เซอร์รีเฟรชเฟรม
-
+      safeExec(() => {
+        if (cardRef.current) void cardRef.current.offsetWidth; 
         if (cardRef.current) {
           cardRef.current.style.transition = 'opacity 100ms ease-in-out';
-          cardRef.current.style.opacity = '1'; // สั่งเฟดสว่างขึ้นมา 1 วินาที
+          cardRef.current.style.opacity = '1'; 
         }
 
-        // เมื่อเฟดครบ 1 วินาที ล้างค่าทิ้งเพื่อคืนการควบคุมให้แอป
-        setTimeout(() => {
+        safeExec(() => {
           if (cardRef.current) {
             cardRef.current.style.transition = '';
             cardRef.current.style.opacity = '';
@@ -431,19 +443,11 @@ export default function FlashcardPlayer() {
   const handleUndo = () => {
     if (masteredHistory.length === 0) return;
     
-    // 🛡️ Enterprise Fix: เปลี่ยน Callback เป็น async function เพื่อให้ใช้ await กับฐานข้อมูลได้อย่างปลอดภัย
-    triggerCardAnim('undo', async () => {
+    // 🛡️ Enterprise Fix: สั่งให้ UI กลับมาทำงานทันทีแบบ Synchronous 
+    triggerCardAnim('undo', () => {
       const historyCopy = [...masteredHistory];
       const lastMastered = historyCopy.pop();
       
-      // 🛡️ Enterprise Fix: ครอบ Try-Catch ป้องกันแอปค้างหาก Storage ในเครื่องผู้ใช้เต็มหรือ Error
-      try {
-        if (lastMastered.previousSrs) await db.vocab_srs.put(lastMastered.previousSrs);
-        if (lastMastered.eventId) await db.sync_outbox.delete(lastMastered.eventId);
-      } catch (e) {
-        console.warn("Undo DB Error (Ignored for UI continuity):", e);
-      }
-
       const newDeck = [lastMastered.word, ...deck]; 
       setDeck(newDeck);
       setMasteredHistory(historyCopy);
@@ -452,11 +456,20 @@ export default function FlashcardPlayer() {
         localStorage.setItem(`session_${currentCategory}_${currentLevel}`, JSON.stringify(newDeck));
       }
       
-      // 🛡️ Enterprise Fix: หักลบสถิติให้ตรงกับปุ่มที่ผู้ใช้ปัดไปก่อนหน้าเป๊ะๆ (ลบฝั่ง Remembered หรือ Forgotten ตามความจริง)
       setSessionStats(prev => ({ 
         remembered: Math.max(0, prev.remembered - (lastMastered.isRemembered ? 1 : 0)), 
         forgotten: Math.max(0, prev.forgotten - (!lastMastered.isRemembered ? 1 : 0)) 
       }));
+
+      // 🛡️ ส่งคำสั่งเคลียร์ Database แบบ Fire-and-forget เบื้องหลังโดยไม่บล็อก Main Thread (60FPS คงที่)
+      (async () => {
+        try {
+          if (lastMastered.previousSrs) await db.vocab_srs.put(lastMastered.previousSrs);
+          if (lastMastered.eventId) await db.sync_outbox.delete(lastMastered.eventId);
+        } catch (e) {
+          console.warn("Undo DB Error:", e);
+        }
+      })();
     });
   };
 
