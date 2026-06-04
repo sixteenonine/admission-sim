@@ -1,15 +1,5 @@
 PRAGMA defer_foreign_keys = TRUE;
-
-DROP TABLE IF EXISTS payments;
-DROP TABLE IF EXISTS exam_history;
-DROP TABLE IF EXISTS user_sync_data;
-DROP TABLE IF EXISTS user_vocab_progress;
-DROP TABLE IF EXISTS user_study_stats;
-DROP TABLE IF EXISTS vocab_repository;
-DROP TABLE IF EXISTS stories;
-DROP TABLE IF EXISTS users;
-
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     display_name TEXT NOT NULL,
@@ -23,7 +13,7 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE exam_history (
+CREATE TABLE IF NOT EXISTS exam_history (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     mode TEXT NOT NULL,
@@ -33,7 +23,7 @@ CREATE TABLE exam_history (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     transaction_id TEXT,
@@ -44,7 +34,7 @@ CREATE TABLE payments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE stories (
+CREATE TABLE IF NOT EXISTS stories (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
     image_url TEXT,
@@ -57,7 +47,7 @@ CREATE TABLE stories (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_sync_data (
+CREATE TABLE IF NOT EXISTS user_sync_data (
     user_id TEXT PRIMARY KEY,
     favorites TEXT DEFAULT '{"stories":[], "vocab":[]}',
     custom_decks TEXT DEFAULT '[]',
@@ -67,7 +57,7 @@ CREATE TABLE user_sync_data (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE TABLE vocab_repository (
+CREATE TABLE IF NOT EXISTS vocab_repository (
     id TEXT PRIMARY KEY,
     eng TEXT NOT NULL UNIQUE,
     thai TEXT NOT NULL,
@@ -83,7 +73,7 @@ CREATE TABLE vocab_repository (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_vocab_progress (
+CREATE TABLE IF NOT EXISTS user_vocab_progress (
     user_id TEXT NOT NULL,
     vocab_id TEXT NOT NULL,
     status TEXT DEFAULT 'learning',
@@ -97,9 +87,9 @@ CREATE TABLE user_vocab_progress (
     FOREIGN KEY (vocab_id) REFERENCES vocab_repository(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_user_vocab_review ON user_vocab_progress(user_id, next_review_date);
+CREATE INDEX IF NOT EXISTS idx_user_vocab_review ON user_vocab_progress(user_id, next_review_date);
 
-CREATE TABLE user_study_stats (
+CREATE TABLE IF NOT EXISTS user_study_stats (
     user_id TEXT NOT NULL,
     study_date DATE NOT NULL,
     cards_reviewed INTEGER DEFAULT 0,
@@ -113,23 +103,3 @@ CREATE INDEX IF NOT EXISTS idx_exam_history_user ON exam_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_vocab_category_order ON vocab_repository(category, sort_order);
 CREATE INDEX IF NOT EXISTS idx_user_vocab_status ON user_vocab_progress(user_id, status);
-CREATE TRIGGER IF NOT EXISTS update_user_sync_data_timestamp
-AFTER UPDATE ON user_sync_data
-FOR EACH ROW
-BEGIN
-    UPDATE user_sync_data SET updated_at = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_vocab_repository_timestamp
-AFTER UPDATE ON vocab_repository
-FOR EACH ROW
-BEGIN
-    UPDATE vocab_repository SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;
-
-CREATE TRIGGER IF NOT EXISTS update_user_vocab_progress_timestamp
-AFTER UPDATE ON user_vocab_progress
-FOR EACH ROW
-BEGIN
-    UPDATE user_vocab_progress SET last_updated = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id AND vocab_id = NEW.vocab_id;
-END;

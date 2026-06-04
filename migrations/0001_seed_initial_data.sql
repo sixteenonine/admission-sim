@@ -1,0 +1,2 @@
+INSERT INTO stories (id, title, content, translation, image_url, is_premium)
+VALUES ('story-test-01', 'The Magical Forest', 'This is a test story content.', 'นี่คือเนื้อหาเรื่องสั้นสำหรับทดสอบ', '', 0);
