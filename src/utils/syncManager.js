@@ -5,37 +5,29 @@ let isSyncing = false;
 let isVocabSyncing = false;
 let isUserSyncing = false; // 🛡️ เพิ่ม Flag แยกการทำงานป้องกันคิวชนกัน
 let vocabSyncTimer = null; // 🛡️ ตัวแปรเก็บเวลาหน่วงสำหรับ Smart Batching
+let historyRetryDelay = 2000;
+let userRetryDelay = 2000;
 
 export const syncManager = {
   async addToQueue(payload) {
-    const queueStr = localStorage.getItem('bw_syncQueue');
-    const queue = queueStr ? JSON.parse(queueStr) : [];
-    
     const sessionId = payload.reflectionData?.id;
-    const exists = queue.find(item => item.reflectionData?.id === sessionId);
-    
-    if (!exists) {
-      queue.push(payload);
-      localStorage.setItem('bw_syncQueue', JSON.stringify(queue));
+    if (sessionId) {
+      await db.history_queue.put({ sessionId, payload });
+      this.triggerSync();
     }
-    
-    this.triggerSync();
   },
 
   async triggerSync() {
     if (isSyncing || !navigator.onLine) return;
-    
     try {
       isSyncing = true;
-      const queueStr = localStorage.getItem('bw_syncQueue');
-      let queue = [];
-      // 🛡️ Enterprise Fix: ป้องกันเบราว์เซอร์โยน Fatal Error ถาวรกรณีที่ข้อมูล LocalStorage พัง (Corrupted)
-      try { queue = queueStr ? JSON.parse(queueStr) : []; } catch(e) { localStorage.removeItem('bw_syncQueue'); }
-      
-      if (queue.length === 0) return;
+      const queue = await db.history_queue.toArray();
+      if (queue.length === 0) {
+        historyRetryDelay = 2000;
+        return;
+      }
 
-      const chunk = queue.slice(0, CHUNK_SIZE);
-      
+      const chunk = queue.slice(0, CHUNK_SIZE).map(q => q.payload);
       const response = await fetch('/api/history/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,34 +37,32 @@ export const syncManager = {
       if (response.ok) {
         const result = await response.json();
         const successIds = result.successIds || chunk.map(p => p.reflectionData.id);
-        
-        const freshQueueStr = localStorage.getItem('bw_syncQueue');
-        queue = freshQueueStr ? JSON.parse(freshQueueStr) : [];
-        queue = queue.filter(item => !successIds.includes(item.reflectionData.id));
-        
-        localStorage.setItem('bw_syncQueue', JSON.stringify(queue));
-        
-        if (queue.length > 0) {
+        await db.history_queue.bulkDelete(successIds);
+        historyRetryDelay = 2000;
+        if (queue.length > chunk.length) {
           setTimeout(() => this.triggerSync(), 2000);
         }
       } else {
-        isSyncing = false;
+        throw new Error('Sync API rejected');
       }
     } catch (err) {
       console.warn("Sync suspended:", err.message);
+      historyRetryDelay = Math.min(historyRetryDelay * 2, 60000);
+      setTimeout(() => this.triggerSync(), historyRetryDelay);
     } finally {
       isSyncing = false;
     }
   },
 
-  flushWithBeacon() {
-    const queueStr = localStorage.getItem('bw_syncQueue');
-    const queue = queueStr ? JSON.parse(queueStr) : [];
-    if (queue.length > 0) {
-      const chunk = queue.slice(0, CHUNK_SIZE);
-      const blob = new Blob([JSON.stringify({ data: chunk, isBeacon: true })], { type: 'application/json' });
-      navigator.sendBeacon('/api/history/bulk', blob);
-    }
+  async flushWithBeacon() {
+    try {
+      const queue = await db.history_queue.toArray();
+      if (queue.length > 0) {
+        const chunk = queue.slice(0, CHUNK_SIZE).map(q => q.payload);
+        const blob = new Blob([JSON.stringify({ data: chunk, isBeacon: true })], { type: 'application/json' });
+        navigator.sendBeacon('/api/history/bulk', blob);
+      }
+    } catch(e) {}
   },
 
   async triggerVocabSync(userId, force = false) {
@@ -149,10 +139,7 @@ export const syncManager = {
 
   // 🛡️ ระบบคิวสำหรับ User Preferences (เช่น การกดดาว) ทนทานต่อสถานะ Offline
   async queueUserAction(actionPayload) {
-    const queueStr = localStorage.getItem('bw_userSyncQueue');
-    const queue = queueStr ? JSON.parse(queueStr) : [];
-    queue.push(actionPayload);
-    localStorage.setItem('bw_userSyncQueue', JSON.stringify(queue));
+    await db.user_sync_queue.add({ actionPayload });
     this.triggerUserSync();
   },
 
@@ -160,29 +147,32 @@ export const syncManager = {
     if (isUserSyncing || !navigator.onLine) return;
     try {
       isUserSyncing = true;
-      const queueStr = localStorage.getItem('bw_userSyncQueue');
-      let queue = [];
-      // 🛡️ Enterprise Fix: ป้องกันคิวกดดาวติดค้างถาวรจาก Parse Exception
-      try { queue = queueStr ? JSON.parse(queueStr) : []; } catch(e) { localStorage.removeItem('bw_userSyncQueue'); }
-      if (queue.length === 0) return;
+      const queue = await db.user_sync_queue.toArray();
+      if (queue.length === 0) {
+        userRetryDelay = 2000;
+        return;
+      }
 
+      const actions = queue.map(q => q.actionPayload);
       const response = await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ syncActions: queue })
+        body: JSON.stringify({ syncActions: actions })
       });
 
       if (response.ok) {
-        // เคลียร์เฉพาะข้อมูลชุดที่ส่งสำเร็จ (Slice) ป้องกันเหตุการณ์ผู้ใช้กดดาวเพิ่มจังหวะกำลังส่ง
-        const freshQueueStr = localStorage.getItem('bw_userSyncQueue');
-        const freshQueue = freshQueueStr ? JSON.parse(freshQueueStr) : [];
-        const remainingQueue = freshQueue.slice(queue.length); 
-        localStorage.setItem('bw_userSyncQueue', JSON.stringify(remainingQueue));
-        
-        if (remainingQueue.length > 0) setTimeout(() => this.triggerUserSync(), 2000);
+        const idsToDelete = queue.map(q => q.id);
+        await db.user_sync_queue.bulkDelete(idsToDelete);
+        userRetryDelay = 2000;
+        const remaining = await db.user_sync_queue.count();
+        if (remaining > 0) setTimeout(() => this.triggerUserSync(), 2000);
+      } else {
+        throw new Error('User sync API rejected');
       }
     } catch (err) {
       console.warn("User sync suspended:", err.message);
+      userRetryDelay = Math.min(userRetryDelay * 2, 60000);
+      setTimeout(() => this.triggerUserSync(), userRetryDelay);
     } finally {
       isUserSyncing = false;
     }

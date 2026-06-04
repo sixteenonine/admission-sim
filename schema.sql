@@ -113,3 +113,23 @@ CREATE INDEX IF NOT EXISTS idx_exam_history_user ON exam_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_vocab_category_order ON vocab_repository(category, sort_order);
 CREATE INDEX IF NOT EXISTS idx_user_vocab_status ON user_vocab_progress(user_id, status);
+CREATE TRIGGER IF NOT EXISTS update_user_sync_data_timestamp
+AFTER UPDATE ON user_sync_data
+FOR EACH ROW
+BEGIN
+    UPDATE user_sync_data SET updated_at = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_vocab_repository_timestamp
+AFTER UPDATE ON vocab_repository
+FOR EACH ROW
+BEGIN
+    UPDATE vocab_repository SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_user_vocab_progress_timestamp
+AFTER UPDATE ON user_vocab_progress
+FOR EACH ROW
+BEGIN
+    UPDATE user_vocab_progress SET last_updated = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id AND vocab_id = NEW.vocab_id;
+END;
