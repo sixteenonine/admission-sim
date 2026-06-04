@@ -277,14 +277,8 @@ export default function FlashcardPlayer() {
 
   const triggerCardAnim = (direction, actionFn) => {
     if (isChangingWord) return;
-    setIsChangingWord(true);
-    setShowExampleFront(false);
-    setShowSynAnt(false);
+    setIsChangingWord(true); // 🛡️ บล็อก UI ทันที
     
-    if (deck.length > 1 && (direction === 'up' || direction === 'down')) {
-      setIsLayerZeroAnimating(true);
-    }
-
     // 🛡️ Safe Execute: ปกป้องการทำงานเมื่อ Component ถูก Unmount
     const safeExec = (fn, ms) => {
       const t = setTimeout(() => { if (cardRef.current) fn(); }, ms);
@@ -298,12 +292,12 @@ export default function FlashcardPlayer() {
       setAnimClass('');
       
       safeExec(() => {
-        // 🛡️ Enterprise Fix: แอนิเมชัน Undo แบบ Time Rewind (การ์ดร่วงลงมาจากฟ้า)
+        // 🛡️ Enterprise Fix: Undo (Time Rewind 60FPS)
         cardRef.current.style.transition = 'none';
         cardRef.current.style.transform = 'translate3d(0, -150vh, 0) rotateZ(-15deg)';
         cardRef.current.style.opacity = '1';
         
-        void cardRef.current.offsetWidth; // บังคับให้ Browser เรนเดอร์เฟรมใหม่ทันที
+        void cardRef.current.offsetWidth; // บังคับเฟรม
         
         cardRef.current.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         cardRef.current.style.transform = 'translate3d(0, 0, 0) rotateZ(0deg)';
@@ -318,60 +312,84 @@ export default function FlashcardPlayer() {
     }
 
     if (cardRef.current) {
-      const currentTransform = cardRef.current.style.transform;
-      let currentX = '0px';
-      if (currentTransform && currentTransform.includes('translate3d')) {
-        const xMatch = currentTransform.match(/translate3d\(([^,]+),/);
-        if (xMatch) currentX = xMatch[1];
-      }
-
       cardRef.current.style.transition = 'transform 0.25s ease-in, opacity 0.2s ease-in';
-      
       if (direction === 'up') {
-        cardRef.current.style.transform = `translate3d(${currentX}, -150vh, 0) rotateZ(15deg)`;
+        cardRef.current.style.transform = 'translate3d(0, -150vh, 0) rotateZ(15deg)';
         cardRef.current.style.opacity = '0';
         setSwipeGlow('shadow-[0_0_120px_rgba(52,199,89,1)] scale-105');
         setSwipeBg('#34C759');
       } else if (direction === 'down') {
-        cardRef.current.style.transform = `translate3d(${currentX}, 150vh, 0) rotateZ(-15deg)`;
+        cardRef.current.style.transform = 'translate3d(0, 150vh, 0) rotateZ(-15deg)';
         cardRef.current.style.opacity = '0';
         setSwipeGlow('shadow-[0_0_120px_rgba(255,59,48,1)] scale-105');
         setSwipeBg('#FF3B30');
       }
     }
 
+    if (deck.length > 1 && (direction === 'up' || direction === 'down')) {
+      setIsLayerZeroAnimating(true);
+    }
+
+    // 🛡️ Enterprise Fix: จัดลำดับแอนิเมชันใหม่ (UI State Preservation)
+    // เรารอจนแอนิเมชันปัดไพ่ (0.25s) จบก่อน ค่อยสั่งงาน React 
     safeExec(() => {
+      
+      // จังหวะที่ 1: เปลี่ยนคำศัพท์ "ภายใน" React state (User ยังไม่เห็น)
       setIsResettingFlip(true);
       actionFn();
       setIsFlipped(false);
-      setSwipeGlow('');
-      setSwipeBg(null);
       setAnimClass(''); 
-
+      setShowExampleFront(false);
+      setShowSynAnt(false);
+      
+      // จังหวะที่ 2: เตรียม DOM การ์ดให้พร้อม
       if (cardRef.current) {
         cardRef.current.style.transition = 'none';
         cardRef.current.style.transform = 'translate3d(0, 0, 0)';
-        cardRef.current.style.opacity = '0'; 
+        cardRef.current.style.opacity = '0'; // พรางใบใหม่ไว้
       }
 
+      // จังหวะที่ 3: สั่ง React เคลียร์สีพื้นหลังและ Glow ในจังหวะนี้ ( user จะไม่เห็นสี Pop-in แล้ว)
       safeExec(() => {
-        if (cardRef.current) void cardRef.current.offsetWidth; 
-        if (cardRef.current) {
-          cardRef.current.style.transition = 'opacity 100ms ease-in-out';
-          cardRef.current.style.opacity = '1'; 
-        }
+        setSwipeGlow('');
+        setSwipeBg(null);
 
+        // จังหวะที่ 4: เคลียร์ DOM styles ให้กลับที่เดิม
+        if (cardRef.current) void cardRef.current.offsetWidth; // บังคับเรนเดอร์ใบใหม่
+
+        const resetDOM = () => {
+          if (cardRef.current) {
+            const flipContainer = cardRef.current.children[0];
+            if (flipContainer && flipContainer.children.length >= 2) {
+              flipContainer.children[0].style.transition = '';
+              flipContainer.children[0].style.boxShadow = '';
+              flipContainer.children[1].style.transition = '';
+              flipContainer.children[1].style.boxShadow = '';
+            }
+          }
+        };
+        resetDOM();
+
+        // จังหวะที่ 5: เฟดใบใหม่ขึ้นมา (smooth fade-in)
         safeExec(() => {
           if (cardRef.current) {
-            cardRef.current.style.transition = '';
-            cardRef.current.style.opacity = '';
-          } 
-          setIsChangingWord(false);
-          setIsResettingFlip(false);
-          setIsLayerZeroAnimating(false);
-        }, 100);
+            cardRef.current.style.transition = 'opacity 150ms ease-in-out';
+            cardRef.current.style.opacity = '1'; 
+          }
+
+          // จังหวะที่ 6: ปลดล็อก UI กลับสู่สภาวะปกติ
+          safeExec(() => {
+            if (cardRef.current) {
+              cardRef.current.style.transition = '';
+              cardRef.current.style.opacity = '';
+            } 
+            setIsChangingWord(false);
+            setIsResettingFlip(false);
+            setIsLayerZeroAnimating(false);
+          }, 150);
+        }, 50);
       }, 50);
-    }, 200);
+    }, 250); // รอแอนิเมชันปัดจบ (ตรงนี้สำคัญสุด)
   };
   const handleAnswer = async (isRemembered) => {
     if (!currentWord || isChangingWord) return;
