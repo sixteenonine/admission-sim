@@ -26,7 +26,12 @@ async function sync() {
   let rowsToSync = validRows;
   
   try {
-    const rawOutput = execSync('npx wrangler d1 execute admission-sim-db --remote --command="SELECT id, eng, thai, pos, category, example, synonyms, antonyms FROM vocab_repository" --json', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] });
+    // 🛡️ เพิ่ม maxBuffer เป็น 10MB (10 * 1024 * 1024) ป้องกันการดึง JSON ขนาดใหญ่แล้วแครชจนหลุดไปทำ Full Sync
+    const rawOutput = execSync('npx wrangler d1 execute admission-sim-db --remote --command="SELECT id, eng, thai, pos, category, example, synonyms, antonyms FROM vocab_repository" --json', { 
+      encoding: 'utf8', 
+      stdio: ['pipe', 'pipe', 'ignore'],
+      maxBuffer: 10 * 1024 * 1024
+    });
     
     // ดักจับเฉพาะ Array ของ JSON ป้องกัน Log ของ Wrangler ปะปน
     const jsonStart = rawOutput.indexOf('[');
