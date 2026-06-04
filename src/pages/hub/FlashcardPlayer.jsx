@@ -84,12 +84,14 @@ export default function FlashcardPlayer() {
   const cardRef = useRef(null); // 🛡️ Enterprise Fix: Ref ควบคุมการ์ดโดยตรง ไม่ผ่าน React Render Cycle (60FPS)
   const isDragging = useRef(false); // 🛡️ กันการลากซ้อน
   const animTimers = useRef([]); // 🛡️ Enterprise Fix: เก็บ Timers ทั้งหมดเพื่อทำลายทิ้งตอนสลับหน้า
+  const requestRef = useRef(null); // 🛡️ 120FPS Fix: ซิงก์การวาดภาพให้ตรงกับอัตรารีเฟรชของจอ
   // บังคับล็อกไม่ให้หน้าจอ Scroll ได้
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = '';
       animTimers.current.forEach(clearTimeout); // 🛡️ ล้าง Timeline ทิ้ง ป้องกันแอป Crash
+      if (requestRef.current) cancelAnimationFrame(requestRef.current); // 🛡️ 120FPS Fix: เคลียร์คิวแอนิเมชันที่ค้างอยู่ตอนสลับหน้าจอ
     };
   }, []);
 
@@ -176,17 +178,24 @@ export default function FlashcardPlayer() {
     const deltaY = currentY - touchStartY.current;
     const deltaX = currentX - touchStartX.current;
 
-    if (cardRef.current) {
+    // 🛡️ Enterprise Fix: ล้างคิวเฟรมเก่าทิ้ง ป้องกัน DOM Thrashing (อาการลากแล้วภาพกระตุก)
+    if (requestRef.current) cancelAnimationFrame(requestRef.current);
+
+    // 🛡️ 120FPS Fix: บังคับให้เบราว์เซอร์อัปเดต DOM พร้อมกับจังหวะ Refresh ของหน้าจอเท่านั้น
+    requestRef.current = requestAnimationFrame(() => {
+      if (!cardRef.current) return;
+      
       const rotateDeg = deltaX * 0.04; 
       cardRef.current.style.transform = `translate3d(${deltaX}px, ${deltaY}px, 0) rotateZ(${rotateDeg}deg)`;
 
+      // 🛡️ GPU Optimization: ระงับเงาฟุ้ง (Outer Blur) ขณะลากนิ้ว เพราะมันกินสเปค GPU มือถือมหาศาล
       let targetShadow = '';
       if (deltaY < -10) { 
         const intensity = Math.min(Math.abs(deltaY) / 120, 1); 
-        targetShadow = `inset 0 0 0 1000px rgba(52,199,89,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(52,199,89,${intensity * 0.8})`;
+        targetShadow = `inset 0 0 0 1000px rgba(52,199,89,${intensity * 0.9})`; 
       } else if (deltaY > 10) { 
         const intensity = Math.min(Math.abs(deltaY) / 120, 1);
-        targetShadow = `inset 0 0 0 1000px rgba(255,59,48,${intensity * 0.9}), 0 0 ${intensity * 100}px rgba(255,59,48,${intensity * 0.8})`;
+        targetShadow = `inset 0 0 0 1000px rgba(255,59,48,${intensity * 0.9})`;
       }
 
       const flipContainer = cardRef.current.children[0];
@@ -199,7 +208,7 @@ export default function FlashcardPlayer() {
           flipContainer.children[1].style.boxShadow = '';
         }
       }
-    }
+    });
   };
 
   const resetCardPosition = () => {
@@ -220,6 +229,7 @@ export default function FlashcardPlayer() {
   const handlePointerUp = (e) => {
     if (!isDragging.current || isChangingWord) return;
     isDragging.current = false;
+    if (requestRef.current) cancelAnimationFrame(requestRef.current); // 🛡️ เคลียร์คิวแอนิเมชันทันทีที่ปล่อยนิ้ว
 
     if (!touchStartY.current) return;
     
@@ -253,6 +263,7 @@ export default function FlashcardPlayer() {
     isDragging.current = false;
     touchStartY.current = null;
     touchStartX.current = null;
+    if (requestRef.current) cancelAnimationFrame(requestRef.current); // 🛡️ เคลียร์คิวแอนิเมชัน
     resetCardPosition();
   };
 
