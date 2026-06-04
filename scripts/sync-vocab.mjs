@@ -119,7 +119,9 @@ async function sync() {
     }
 
     console.log("🔄 Triggering KV Cache update...");
-    const kvRes = await fetch("https://admission-sim.sixteenonine99.workers.dev/api/vocab/sync-to-kv");
+    const kvRes = await fetch("https://admission-sim.sixteenonine99.workers.dev/api/vocab/sync-to-kv", {
+      method: "POST"
+    });
     
     if (kvRes.ok) {
       console.log("🎉 Database and KV Sync completed! Frontend is 100% up to date.");
