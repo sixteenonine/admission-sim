@@ -104,38 +104,48 @@ export default function SpeedRead() {
 
   // Teleprompter Smooth Scroll Loop
   useEffect(() => {
+    let cachedDistance = 0;
+    let cachedTotalTime = 0;
+    let currentScroll = 0;
+
+    // 1. อ่านค่า DOM เพียงแค่ 1 ครั้งก่อนเริ่มลูป เพื่อหลีกเลี่ยงการทำ Layout Thrashing
+    if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
+      const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
+      cachedDistance = scrollHeight - clientHeight;
+      cachedTotalTime = (words.length / wpm) * 60000;
+      currentScroll = scrollTop;
+    }
+
     const animateScroll = time => {
-      if (previousTimeRef.current != undefined) {
+      if (previousTimeRef.current != undefined && cachedDistance > 0) {
         const deltaTime = time - previousTimeRef.current;
-        if (teleprompterRef.current && isPlaying && readMode === 'teleprompter') {
-          const { scrollTop, scrollHeight, clientHeight } = teleprompterRef.current;
-              
-              // คำนวณเวลาที่ต้องใช้ทั้งหมด (มิลลิวินาที) อิงจากจำนวนคำจริงและ WPM
-              const totalTimeMs = (words.length / wpm) * 60000;
-              
-              // ระยะทางที่ต้องเลื่อนทั้งหมด (ความสูงของเนื้อหาจริง)
-              const totalScrollDistance = scrollHeight - clientHeight;
-              
-              // ความเร็วในการเลื่อน (Pixel ต่อมิลลิวินาที) ที่แม่นยำ 100% ตาม DOM Height
-              const pixelsPerMs = totalTimeMs > 0 ? (totalScrollDistance / totalTimeMs) : 0;
-              const scrollPixels = pixelsPerMs * deltaTime;
-              
-              teleprompterRef.current.scrollTop += scrollPixels;
-              
-              // หยุดเมื่อเลื่อนสุดขอบล่าง
-              if (Math.ceil(scrollTop + clientHeight) >= scrollHeight) {
-                setIsPlaying(false);
-              }
+        
+        // 2. คำนวณความเร็วและระยะทางทั้งหมดภายใน Memory (Zero-DOM Read)
+        const pixelsPerMs = cachedTotalTime > 0 ? (cachedDistance / cachedTotalTime) : 0;
+        currentScroll += pixelsPerMs * deltaTime;
+        
+        // 3. สั่งเขียนค่าลง DOM อย่างเดียว (Write Only) 
+        if (teleprompterRef.current) {
+          teleprompterRef.current.scrollTop = currentScroll;
+        }
+        
+        // 4. สั่งหยุดเมื่อเลื่อนครบระยะทางจริง
+        if (currentScroll >= cachedDistance) {
+          setIsPlaying(false);
         }
       }
       previousTimeRef.current = time;
+      
       if (isPlaying && readMode === 'teleprompter') {
         requestRef.current = requestAnimationFrame(animateScroll);
       }
     };
 
-    if (isPlaying && readMode === 'teleprompter') {
+    if (isPlaying && readMode === 'teleprompter' && cachedDistance > 0) {
       requestRef.current = requestAnimationFrame(animateScroll);
+    } else if (isPlaying && readMode === 'teleprompter' && cachedDistance <= 0) {
+      // 5. ดักจับ Edge Case: กรณีข้อความสั้นจนไม่มี Scrollbar ให้หยุดการเล่นทันที
+      setIsPlaying(false);
     } else {
       previousTimeRef.current = undefined; // รีเซ็ตเวลาเพื่อป้องกันการกระตุกเมื่อกดเล่นต่อ
     }
@@ -245,11 +255,12 @@ export default function SpeedRead() {
           <div 
             className="w-full px-6 md:px-12 lg:px-16" 
             style={{ 
-              whiteSpace: 'pre-wrap', 
               textAlign: alignment 
             }}
           >
-            {articleData?.content || ""}
+            {words.map((word, i) => (
+              <span key={i}>{word}{' '}</span>
+            ))}
           </div>
         </div>
       );
