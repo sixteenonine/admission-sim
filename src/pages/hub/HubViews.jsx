@@ -160,6 +160,37 @@ export function HubFlashcardDecks() {
   const navigate = useNavigate();
   const [favCount, setFavCount] = React.useState(null);
   const [activeCategory, setActiveCategory] = React.useState(null);
+  // 🛡️ Search Feature States
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length > 1) {
+        setIsSearching(true);
+        try {
+          const query = searchQuery.toLowerCase();
+          const results = await db.flashcards
+            .filter(card => 
+              card.eng.toLowerCase().includes(query) || 
+              (card.thai && card.thai.includes(query))
+            )
+            .limit(20) // จำกัดผลลัพธ์ 20 คำเพื่อความลื่นไหล
+            .toArray();
+          setSearchResults(results);
+        } catch (error) {
+          console.error("Search error:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   // 1. เช็คข้อมูล Meta พร้อมแนบเวลาปัจจุบัน (?t=) เพื่อบังคับทะลวง Cache ของเบราว์เซอร์ 100%
   const { data: metaData } = useQuery({
@@ -285,6 +316,55 @@ export function HubFlashcardDecks() {
         </button>
         <h1 className="text-2xl font-black tracking-widest uppercase" style={{ color: themeVals.textMain }}>ALL DECKS</h1>
         <div className="w-12 h-12"></div>
+      </div>
+      {/* 🛡️ Search Bar UI */}
+      <div className="w-full max-w-5xl px-4 relative z-50">
+        <div className="relative w-full rounded-[1.5rem] flex items-center px-4 py-3 sm:py-4 border border-white/10 transition-shadow focus-within:ring-2 focus-within:ring-[#0070fb]" style={{ background: themeVals.raisedGradient, boxShadow: themeVals.shadowPlateau }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: themeVals.textMain, opacity: 0.5 }}>
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            placeholder="ค้นหาคำศัพท์ (Eng / ไทย)..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-transparent outline-none ml-3 text-base sm:text-lg font-medium placeholder:opacity-40"
+            style={{ color: themeVals.textMain }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="p-1 opacity-50 hover:opacity-100 transition-opacity shrink-0" style={{ color: themeVals.textMain }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          )}
+        </div>
+
+        {/* 🛡️ Search Results Dropdown */}
+        {searchQuery.trim().length > 1 && (
+          <div className="absolute top-[calc(100%+8px)] left-4 right-4 rounded-[1.5rem] border border-white/10 overflow-hidden flex flex-col max-h-[50vh] sm:max-h-[60vh] overflow-y-auto animate-in slide-in-from-top-2 duration-200" style={{ background: themeVals.isDark ? '#1a1a1a' : '#ffffff', boxShadow: '0 15px 40px -10px rgba(0,0,0,0.3)' }}>
+            {isSearching ? (
+              <div className="p-8 text-center text-sm font-medium opacity-60" style={{ color: themeVals.textMain }}>กำลังค้นหา...</div>
+            ) : searchResults.length > 0 ? (
+              searchResults.map(word => {
+                const catDef = FLASHCARD_CATEGORIES.find(c => c.name === word.category);
+                const color = catDef ? catDef.color : '#8c52ff';
+                return (
+                  <div key={word.id} className="flex flex-col p-4 sm:p-5 border-b border-white/5 last:border-b-0 hover:bg-black/5 transition-colors cursor-default">
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
+                      <span className="text-lg sm:text-xl font-bold leading-none" style={{ color: themeVals.textMain }}>{word.eng}</span>
+                      <span className="text-[9px] sm:text-[10px] font-black px-2 sm:px-2.5 py-1 rounded-full text-white text-center leading-none" style={{ backgroundColor: color }}>{word.category}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      {word.pos && <span className="text-[11px] sm:text-xs font-black opacity-40 uppercase tracking-wider" style={{ color: themeVals.textMain }}>{word.pos}</span>}
+                      <span className="text-sm sm:text-base font-medium opacity-80 leading-tight" style={{ color: themeVals.textMain }}>{word.thai}</span>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center text-sm font-medium opacity-60" style={{ color: themeVals.textMain }}>ไม่พบคำศัพท์ที่ค้นหา</div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8 px-4">
