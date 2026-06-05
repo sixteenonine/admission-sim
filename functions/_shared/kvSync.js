@@ -12,7 +12,7 @@ export async function syncStoriesListToKV(env) {
 export async function syncSingleStoryToKV(env, storyId) {
   const story = await env.DB.prepare(`
     SELECT id, title, type, image_url, is_premium, content, translation, vocab_levels, status 
-    FROM stories WHERE id = ?
+    FROM stories WHERE id = ? AND status = 'published'
   `).bind(storyId).first();
 
   if (story) {

@@ -21,14 +21,8 @@ export async function onRequestPost(context) {
       return cachedResponse;
     }
 
-    let responseData = await env.APP_KV.get(`story_${storyId}`);
+    const responseData = await env.APP_KV.get(`story_${storyId}`);
     
-    // Fallback
-    if (!responseData) {
-      await syncSingleStoryToKV(env, storyId);
-      responseData = await env.APP_KV.get(`story_${storyId}`);
-    }
-
     if (!responseData) {
       return new Response(JSON.stringify({ status: "error", message: "ไม่พบข้อมูลในระบบ (หรือถูกลบไปแล้ว)" }), { status: 404 });
     }
