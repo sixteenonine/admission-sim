@@ -53,18 +53,24 @@ export default function StoryReader() {
   const pendingSyncRef = useRef(false);
   const actionQueueRef = useRef([]);
 
+  // เปลี่ยนไปใช้ React Query ผูก Global State ดึงครั้งเดียวอยู่ได้ 1 ชั่วโมง (ไม่สูบ D1 Read)
+  const { data: syncData } = useQuery({
+    queryKey: ['userSync', user?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/user/sync`);
+      return res.json();
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false
+  });
+
   useEffect(() => {
-    if (user?.id && storyId) {
-      fetch(`/api/user/sync?userId=${user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success' && data.data?.favorites) {
-            const favs = JSON.parse(data.data.favorites);
-            if (favs.stories?.includes(storyId)) setIsFav(true);
-          }
-        }).catch(console.error);
+    if (syncData?.status === 'success' && syncData.data?.favorites) {
+      const favs = JSON.parse(syncData.data.favorites);
+      if (favs.stories?.includes(storyId)) setIsFav(true);
     }
-  }, [user?.id, storyId]);
+  }, [syncData, storyId]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

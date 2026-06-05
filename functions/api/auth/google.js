@@ -79,6 +79,15 @@ export async function onRequestPost(context) {
 
     const token = await createJWT(payload, secretKey);
 
+    // เขียนข้อมูลผู้ใช้ลง KV ทันที (Write-Through Cache) เพื่อให้หน้า check.js ไม่ต้องดึง D1
+    const userProfile = { 
+      id: user.id, email: user.email, display_name: user.display_name, 
+      avatar_id: user.avatar_id, avatar_url: user.avatar_url, plan_tier: user.plan_tier, 
+      plan_expire_at: user.plan_expire_at, generation: user.generation, 
+      target_uni: user.target_uni, target_fac: user.target_fac, created_at: user.created_at 
+    };
+    context.waitUntil(context.env.APP_KV.put(`user_profile_${user.id}`, JSON.stringify(userProfile)));
+
     // ตั้งค่า HttpOnly Cookie (ป้องกัน XSS) พร้อมระบบป้องกัน CSRF
     const isProd = new URL(context.request.url).protocol === 'https:';
     // ปรับ SameSite เป็น Lax เพื่อให้ Cookie ไม่หลุดเวลา Refresh

@@ -12,10 +12,19 @@ export async function onRequestGet(context) {
     const db = context.env.DB;
     const userId = userPayload.userId;
 
-    // 2. ดึงข้อมูลโปรไฟล์ล่าสุดจากฐานข้อมูล (เพื่อให้อัปเดตสถานะ Premium ตลอดเวลา)
-    const user = await db.prepare(
-      "SELECT id, email, display_name, avatar_id, avatar_url, plan_tier, plan_expire_at, generation, target_uni, target_fac, created_at FROM users WHERE id = ?"
-    ).bind(userId).first();
+    // 2. ดึงข้อมูลโปรไฟล์จาก KV (Zero-D1-Read)
+    let user = await context.env.APP_KV.get(`user_profile_${userId}`, "json");
+
+    // Safe Fallback: เนื่องจาก API นี้ป้องกันด้วย JWT จึงปลอดภัยที่จะดึง D1 เมื่อแคชหลุด แล้วอัปเดต KV ทันที
+    if (!user) {
+      user = await db.prepare(
+        "SELECT id, email, display_name, avatar_id, avatar_url, plan_tier, plan_expire_at, generation, target_uni, target_fac, created_at FROM users WHERE id = ?"
+      ).bind(userId).first();
+      
+      if (user) {
+        context.waitUntil(context.env.APP_KV.put(`user_profile_${userId}`, JSON.stringify(user)));
+      }
+    }
 
     if (!user) {
       // กรณีบัญชีถูกลบออกจากฐานข้อมูลไปแล้ว แต่ Token ยังไม่หมดอายุ
