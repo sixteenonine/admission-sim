@@ -9,7 +9,10 @@ export async function onRequestGet(context) {
     `).all();
 
     return new Response(JSON.stringify({ status: "success", stories: results }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { 
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=15, s-maxage=60, stale-while-revalidate=3600"
+      }
     });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), {

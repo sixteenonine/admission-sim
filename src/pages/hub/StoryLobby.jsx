@@ -113,7 +113,7 @@ export default function StoryLobby() {
             }
 
             return displayStories.map((story) => {
-              const isLocked = story.is_premium === 1 && user?.plan_tier !== 'pro' && user?.plan_tier !== 'premium';
+              const isLocked = false;
               const isFav = favoriteIds.includes(story.id);
               
               return (

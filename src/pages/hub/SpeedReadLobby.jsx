@@ -149,7 +149,7 @@ export default function SpeedReadLobby() {
               );
             }
             return systemArticles.map(art => {
-              const isLocked = art.is_premium === 1 && currentUser?.plan_tier !== 'pro' && currentUser?.plan_tier !== 'premium';
+              const isLocked = false;
               return (
                 <div 
                   key={art.id} 
