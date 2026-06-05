@@ -1,4 +1,3 @@
-import { syncStoriesListToKV } from '../../_shared/kvSync.js';
 export async function onRequestGet(context) {
   try {
     const kvData = await context.env.APP_KV.get('stories_list') || JSON.stringify({ status: "success", stories: [] });
@@ -6,7 +5,7 @@ export async function onRequestGet(context) {
     return new Response(kvData, {
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=60"
+        "Cache-Control": "public, max-age=60, s-maxage=60, stale-while-revalidate=300"
       }
     });
   } catch (error) {

@@ -9,7 +9,6 @@ export async function onRequestGet(context) {
     }
 
     const cache = caches.default;
-    // ใช้ URL ตรงๆ เป็น Cache Key เพื่อให้ Edge Cache ทำงานได้ 100%
     const cacheKey = new Request(url.toString(), request);
 
     let cachedResponse = await cache.match(cacheKey);
@@ -23,7 +22,6 @@ export async function onRequestGet(context) {
       return new Response(JSON.stringify({ status: "error", message: "ไม่พบข้อมูลในระบบ (หรือถูกลบไปแล้ว)" }), { status: 404 });
     }
 
-    // Enterprise Stale-While-Revalidate (SWR)
     const responseToCache = new Response(responseData, {
       headers: { 
         "Content-Type": "application/json",
