@@ -19,12 +19,16 @@ export default function StoryReader() {
       if (!storyId) throw new Error('ไม่พบรหัสเรื่องสั้น');
       
       // สลับ API อัตโนมัติตามโหมดการเข้าถึง
-      const endpoint = isPreview ? '/api/admin/stories/preview' : '/api/stories/get';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId })
-      });
+      let res;
+      if (isPreview) {
+        res = await fetch('/api/admin/stories/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storyId })
+        });
+      } else {
+        res = await fetch(`/api/stories/get?id=${storyId}`);
+      }
       const data = await res.json();
       if (data.status !== 'success') throw new Error(data.message || 'ไม่สามารถโหลดเรื่องสั้นได้');
       return data.story;

@@ -16,11 +16,7 @@ export default function SpeedRead() {
     queryFn: async () => {
       if (!id) return { title: '', content: '' };
       if (source === 'system') {
-        const res = await fetch('/api/stories/get', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storyId: id })
-        });
+        const res = await fetch(`/api/stories/get?id=${id}`);
         const data = await res.json();
         if (data.status !== 'success') throw new Error('ไม่สามารถโหลดบทความได้');
         return { title: data.story.title, content: data.story.content || "" };

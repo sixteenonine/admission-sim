@@ -34,11 +34,7 @@ export default function StoryAdmin() {
     setLoading(true);
     setStatus({ type: '', msg: '' });
     try {
-      const res = await fetch('/api/stories/get', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId })
-      });
+      const res = await fetch(`/api/stories/get?id=${storyId}`);
       const data = await res.json();
       if (data.status === 'success') {
         setActiveTab(itemType || 'story');
