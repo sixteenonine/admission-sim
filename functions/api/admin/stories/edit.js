@@ -38,6 +38,13 @@ export async function onRequestPost(context) {
       id
     ).run();
 
+    // 4. เตะข้อมูลเก่าออกจาก Cache ทันที (Cache Invalidation)
+    const cache = caches.default;
+    const cacheUrl = new URL(context.request.url);
+    cacheUrl.pathname = `/internal-cache/story/${id}`;
+    const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
+    context.waitUntil(cache.delete(cacheKey));
+
     return new Response(JSON.stringify({ status: 'success' }), {
       headers: { 'Content-Type': 'application/json' }
     });

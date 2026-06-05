@@ -4,7 +4,7 @@ export async function onRequestPost(context) {
     const { storyId } = await request.json();
     
     await env.DB.prepare("DELETE FROM stories WHERE id = ?").bind(storyId).run();
-    await env.STORY_CONTENT.delete(storyId);
+    // ถอดคำสั่ง env.STORY_CONTENT.delete(storyId); ออกเพราะเนื้อหาถูกลบออกจาก D1 เรียบร้อยแล้ว
 
     return new Response(JSON.stringify({ status: 'success' }), {
       headers: { 'Content-Type': 'application/json' }
