@@ -21,7 +21,7 @@ export default function SpeedReadLobby() {
       const data = await res.json();
       return data.status === 'success' ? data.stories.filter(s => s.type === 'speedread') : [];
     },
-      staleTime: 1000 * 60 * 60,
+      staleTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false
     
   });

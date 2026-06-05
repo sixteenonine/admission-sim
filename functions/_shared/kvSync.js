@@ -2,6 +2,7 @@ export async function syncStoriesListToKV(env) {
   const { results } = await env.DB.prepare(`
     SELECT id, title, image_url, is_premium, type, status 
     FROM stories 
+    WHERE status = 'published'
     ORDER BY created_at DESC
   `).all();
   

@@ -56,7 +56,7 @@ export default function StoryLobby() {
       // กรองเอาเฉพาะหมวด StoryDiary (ซ่อน Speedread)
       return data.stories.filter(story => !story.type || story.type === 'story');
     },
-      staleTime: 1000 * 60 * 60,
+      staleTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false
     
   });

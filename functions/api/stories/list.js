@@ -12,7 +12,7 @@ export async function onRequestGet(context) {
     return new Response(kvData, {
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
+        "Cache-Control": "public, max-age=60"
       }
     });
   } catch (error) {

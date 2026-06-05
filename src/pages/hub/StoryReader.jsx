@@ -25,7 +25,7 @@ export default function StoryReader() {
       return data.story;
     },
     enabled: !!storyId,
-    staleTime: 1000 * 60 * 60,
+    staleTime: 1000 * 60 * 5,
         refetchOnWindowFocus: false
   });
 

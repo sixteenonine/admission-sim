@@ -36,7 +36,7 @@ export async function onRequestPost(context) {
     const responseToCache = new Response(responseData, {
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" 
+        "Cache-Control": "public, max-age=60"
       }
     });
 
