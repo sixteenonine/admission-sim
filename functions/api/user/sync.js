@@ -5,7 +5,12 @@ export async function onRequestGet(context) {
     if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
-    const data = await db.prepare("SELECT * FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+    let data = await context.env.APP_KV.get(`user_sync_${userId}`, "json");
+    
+    if (!data) {
+      data = await db.prepare("SELECT * FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+      if (data) context.waitUntil(context.env.APP_KV.put(`user_sync_${userId}`, JSON.stringify(data)));
+    }
 
     return new Response(JSON.stringify({ status: "success", data: data || null }), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
@@ -23,8 +28,11 @@ export async function onRequestPost(context) {
     if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
-    // 🛡️ Enterprise Feature: Optimistic Concurrency Control (OCC) ป้องกัน Data Overwrite ข้ามอุปกรณ์
-    const currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+    // 🛡️ Enterprise Feature: Optimistic Concurrency Control ผ่าน KV เพื่อลด D1 Read
+    let currentServerData = await context.env.APP_KV.get(`user_sync_${userId}`, "json");
+    if (!currentServerData) {
+      currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
+    }
     
     // เช็ค Conflict: ถ้าเวลา Server ใหม่กว่า Client (มีคนใช้อีกอุปกรณ์) จะเตะ HTTP 409 แจ้งให้ดึงข้อมูลก่อน
     if (payload.last_synced_at && currentServerData && currentServerData.updated_at) {
@@ -75,7 +83,7 @@ export async function onRequestPost(context) {
 
     const nowIso = new Date().toISOString();
     
-    await db.prepare(`
+    const updatedSyncData = await db.prepare(`
       INSERT INTO user_sync_data (user_id, favorites, custom_decks, custom_speedreads, updated_at)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(user_id) DO UPDATE SET
@@ -83,13 +91,18 @@ export async function onRequestPost(context) {
       custom_decks = COALESCE(excluded.custom_decks, user_sync_data.custom_decks),
       custom_speedreads = COALESCE(excluded.custom_speedreads, user_sync_data.custom_speedreads),
       updated_at = excluded.updated_at
+      RETURNING *
     `).bind(
       userId,
       finalFavoritesJson,
       custom_decks ? JSON.stringify(custom_decks) : null,
       custom_speedreads ? JSON.stringify(custom_speedreads) : null,
       nowIso
-    ).run();
+    ).first();
+
+    if (updatedSyncData) {
+      context.waitUntil(context.env.APP_KV.put(`user_sync_${userId}`, JSON.stringify(updatedSyncData)));
+    }
 
     return new Response(JSON.stringify({ status: "success", synced_at: nowIso }), { headers: { "Content-Type": "application/json" } });
   } catch (error) {
