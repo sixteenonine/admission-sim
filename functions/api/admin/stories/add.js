@@ -40,6 +40,10 @@ export async function onRequestPost(context) {
       JSON.stringify(finalVocab), // แปลง JSON ลง TEXT
       storyStatus
     ).run();
+    const cache = caches.default;
+    const listCacheUrl = new URL(context.request.url);
+    listCacheUrl.pathname = '/internal-cache/stories/list';
+    context.waitUntil(cache.delete(new Request(listCacheUrl.toString(), { method: 'GET' })));
 
     return new Response(JSON.stringify({ status: "success", message: "บันทึกข้อมูลเรียบร้อย", storyId }), {
       headers: { "Content-Type": "application/json" }

@@ -44,6 +44,9 @@ export async function onRequestPost(context) {
     cacheUrl.pathname = `/internal-cache/story/${id}`;
     const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
     context.waitUntil(cache.delete(cacheKey));
+    const listCacheUrl = new URL(context.request.url);
+    listCacheUrl.pathname = '/internal-cache/stories/list';
+    context.waitUntil(cache.delete(new Request(listCacheUrl.toString(), { method: 'GET' })));
 
     return new Response(JSON.stringify({ status: 'success' }), {
       headers: { 'Content-Type': 'application/json' }
