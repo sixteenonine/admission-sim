@@ -1,8 +1,6 @@
 import { syncStoriesListToKV } from '../../_shared/kvSync.js';
 export async function onRequestGet(context) {
   try {
-    let kvData = await context.env.APP_KV.get('stories_list');
-    
     const kvData = await context.env.APP_KV.get('stories_list') || JSON.stringify({ status: "success", stories: [] });
 
     return new Response(kvData, {
