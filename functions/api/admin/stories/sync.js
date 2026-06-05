@@ -1,18 +1,18 @@
-import { syncStoriesListToKV, syncSingleStoryToKV } from '../../../_shared/kvSync.js';
+import { forceSyncStoriesListToKV, forceSyncSingleStoryToKV } from '../../../_shared/kvSync.js';
 
 export async function onRequestPost(context) {
   try {
-    // 1. ซิงค์ List หลัก
-    await syncStoriesListToKV(context.env);
+    await forceSyncStoriesListToKV(context.env);
 
-    // 2. ดึง ID ทั้งหมดมาเพื่อซิงค์รายตัว
-    const { results } = await context.env.DB.prepare('SELECT id FROM stories').all();
+    const { results } = await context.env.DB.prepare("SELECT id FROM stories WHERE status = 'published'").all();
     
-    for (const story of results) {
-      await syncSingleStoryToKV(context.env, story.id);
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < results.length; i += CHUNK_SIZE) {
+      const chunk = results.slice(i, i + CHUNK_SIZE);
+      await Promise.allSettled(chunk.map(story => forceSyncSingleStoryToKV(context.env, story.id)));
     }
 
-    return new Response(JSON.stringify({ status: "success", message: "Force Sync D1 to KV สำเร็จ" }), {
+    return new Response(JSON.stringify({ status: "success", message: "Force Sync D1 to KV สำเร็จ (Emergency Mode)" }), {
       headers: { "Content-Type": "application/json" }
     });
   } catch (error) {
