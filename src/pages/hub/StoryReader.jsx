@@ -11,11 +11,16 @@ export default function StoryReader() {
   const navigate = useNavigate();
   const storyId = searchParams.get('id');
 
+  const isPreview = searchParams.get('preview') === 'true';
+
   const { data: story, isLoading: loading, isError, error: queryError } = useQuery({
-    queryKey: ['story', storyId],
+    queryKey: ['story', storyId, isPreview], // แยก Cache ฝั่งหน้าบ้านไม่ให้ปนกัน
     queryFn: async () => {
       if (!storyId) throw new Error('ไม่พบรหัสเรื่องสั้น');
-      const res = await fetch('/api/stories/get', {
+      
+      // สลับ API อัตโนมัติตามโหมดการเข้าถึง
+      const endpoint = isPreview ? '/api/admin/stories/preview' : '/api/stories/get';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storyId })
