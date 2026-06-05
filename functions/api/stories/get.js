@@ -1,3 +1,4 @@
+import { syncSingleStoryToKV } from '../../_shared/kvSync.js';
 export async function onRequestPost(context) {
   try {
     const { request, env, waitUntil } = context;
@@ -20,28 +21,22 @@ export async function onRequestPost(context) {
       return cachedResponse;
     }
 
-    const story = await db.prepare(`
-      SELECT id, title, type, image_url, is_premium, content, translation, vocab_levels, status 
-      FROM stories WHERE id = ?
-    `).bind(storyId).first();
+    let responseData = await env.APP_KV.get(`story_${storyId}`);
+    
+    // Fallback
+    if (!responseData) {
+      await syncSingleStoryToKV(env, storyId);
+      responseData = await env.APP_KV.get(`story_${storyId}`);
+    }
 
-    if (!story) {
+    if (!responseData) {
       return new Response(JSON.stringify({ status: "error", message: "ไม่พบข้อมูลในระบบ (หรือถูกลบไปแล้ว)" }), { status: 404 });
     }
 
-    let parsedVocab = {};
-    try {
-      if (story.vocab_levels) parsedVocab = JSON.parse(story.vocab_levels);
-    } catch (e) {
-      console.error("JSON Parse Error for story vocab:", storyId);
-    }
-    story.vocab_levels = parsedVocab;
-
-    const responseData = JSON.stringify({ status: "success", story });
     const responseToCache = new Response(responseData, {
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "s-maxage=60" 
+        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400" 
       }
     });
 

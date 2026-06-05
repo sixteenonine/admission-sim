@@ -1,17 +1,18 @@
+import { syncStoriesListToKV } from '../../_shared/kvSync.js';
 export async function onRequestGet(context) {
   try {
-    const db = context.env.DB;
-    // โหลดเฉพาะ Meta เหมือนเดิม แต่แนบ status มาด้วย
-    const { results } = await db.prepare(`
-      SELECT id, title, image_url, is_premium, type, status 
-      FROM stories 
-      ORDER BY created_at DESC
-    `).all();
+    let kvData = await context.env.APP_KV.get('stories_list');
+    
+    // Fallback: ถ้ายังไม่มีใน KV ให้ซิงค์จาก D1 ด่วนแล้วดึงใหม่
+    if (!kvData) {
+      await syncStoriesListToKV(context.env);
+      kvData = await context.env.APP_KV.get('stories_list') || JSON.stringify({ status: "success", stories: [] });
+    }
 
-    return new Response(JSON.stringify({ status: "success", stories: results }), {
+    return new Response(kvData, {
       headers: { 
         "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=15, s-maxage=60, stale-while-revalidate=3600"
+        "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400"
       }
     });
   } catch (error) {

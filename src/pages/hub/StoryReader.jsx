@@ -25,6 +25,8 @@ export default function StoryReader() {
       return data.story;
     },
     enabled: !!storyId,
+    staleTime: 1000 * 60 * 60,
+        refetchOnWindowFocus: false
   });
 
   const error = isError ? (queryError?.message || 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว') : '';

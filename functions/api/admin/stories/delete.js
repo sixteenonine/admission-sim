@@ -1,17 +1,12 @@
+import { syncStoriesListToKV } from '../../../_shared/kvSync.js';
 export async function onRequestPost(context) {
   const { env, request } = context;
   try {
     const { storyId } = await request.json();
     
     await env.DB.prepare("DELETE FROM stories WHERE id = ?").bind(storyId).run();
-    const cache = caches.default;
-    const cacheUrl = new URL(request.url);
-    
-    cacheUrl.pathname = `/internal-cache/story/${storyId}`;
-    context.waitUntil(cache.delete(new Request(cacheUrl.toString(), { method: 'GET' })));
-    
-    cacheUrl.pathname = '/internal-cache/stories/list';
-    context.waitUntil(cache.delete(new Request(cacheUrl.toString(), { method: 'GET' })));
+    context.waitUntil(syncStoriesListToKV(env));
+    context.waitUntil(env.APP_KV.delete(`story_${storyId}`));
 
     return new Response(JSON.stringify({ status: 'success' }), {
       headers: { 'Content-Type': 'application/json' }

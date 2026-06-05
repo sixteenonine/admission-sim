@@ -36,6 +36,9 @@ export default function SpeedRead() {
       }
     },
     enabled: !!id
+    ,
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false
   });
 
   const [isPlaying, setIsPlaying] = useState(false);

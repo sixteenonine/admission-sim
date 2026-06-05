@@ -1,3 +1,4 @@
+import { syncStoriesListToKV, syncSingleStoryToKV } from '../../../_shared/kvSync.js';
 export async function onRequestPost(context) {
   try {
     const db = context.env.DB;
@@ -38,15 +39,8 @@ export async function onRequestPost(context) {
       id
     ).run();
 
-    // 4. เตะข้อมูลเก่าออกจาก Cache ทันที (Cache Invalidation)
-    const cache = caches.default;
-    const cacheUrl = new URL(context.request.url);
-    cacheUrl.pathname = `/internal-cache/story/${id}`;
-    const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
-    context.waitUntil(cache.delete(cacheKey));
-    const listCacheUrl = new URL(context.request.url);
-    listCacheUrl.pathname = '/internal-cache/stories/list';
-    context.waitUntil(cache.delete(new Request(listCacheUrl.toString(), { method: 'GET' })));
+    context.waitUntil(syncStoriesListToKV(context.env));
+    context.waitUntil(syncSingleStoryToKV(context.env, id));
 
     return new Response(JSON.stringify({ status: 'success' }), {
       headers: { 'Content-Type': 'application/json' }

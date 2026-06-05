@@ -20,7 +20,10 @@ export default function SpeedReadLobby() {
       const res = await fetch('/api/stories/list');
       const data = await res.json();
       return data.status === 'success' ? data.stories.filter(s => s.type === 'speedread') : [];
-    }
+    },
+      staleTime: 1000 * 60 * 60,
+      refetchOnWindowFocus: false
+    
   });
 
   const { data: customArticles = [] } = useQuery({

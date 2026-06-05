@@ -55,7 +55,10 @@ export default function StoryLobby() {
       if (data.status !== 'success') throw new Error('ไม่สามารถโหลดรายการเรื่องสั้นได้');
       // กรองเอาเฉพาะหมวด StoryDiary (ซ่อน Speedread)
       return data.stories.filter(story => !story.type || story.type === 'story');
-    }
+    },
+      staleTime: 1000 * 60 * 60,
+      refetchOnWindowFocus: false
+    
   });
 
   return (
