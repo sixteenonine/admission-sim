@@ -33,6 +33,8 @@ export async function onRequestPost(context) {
             WHERE id = ?
           `).bind(payment.plan_tier, daysToAdd.toString(), payment.user_id).run();
         }
+        // บังคับลบแคชทันทีที่จ่ายเงินสำเร็จ เพื่อให้สถานะ Premium อัปเดตแบบเรียลไทม์
+        context.waitUntil(context.env.APP_KV.delete(`user_profile_${payment.user_id}`));
       }
     }
 

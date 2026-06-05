@@ -34,6 +34,7 @@ export async function onRequestPost(context) {
 
     // ดึง ID ออกมาส่งกลับให้ Frontend
     const successIds = data.map(item => item.reflectionData?.id).filter(Boolean);
+    context.waitUntil(context.env.APP_KV.delete(`user_history_${userId}`));
 
     return new Response(JSON.stringify({ status: "success", successIds }), {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }

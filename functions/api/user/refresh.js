@@ -8,6 +8,8 @@ export async function onRequestPost(context) {
     if (!user) {
       return new Response(JSON.stringify({ status: "error", message: "ไม่พบผู้ใช้" }), { status: 404 });
     }
+    // อัปเดตข้อมูลล่าสุดลง KV ทันทีเพื่อปิดรอยรั่ว D1 Read ในอนาคต
+    context.waitUntil(context.env.APP_KV.put(`user_profile_${userId}`, JSON.stringify(user)));
 
     return new Response(JSON.stringify({ 
       status: "success", 
