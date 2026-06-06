@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Loader2, AlertCircle, CheckCircle2, Trash2, Edit3, Plus, BookOpen, Zap } from 'lucide-react';
 import { Database, RefreshCw } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function StoryAdmin() {
   const [stories, setStories] = useState([]);
@@ -152,6 +153,26 @@ export default function StoryAdmin() {
   const [totalSync, setTotalSync] = useState(0);
   const [isHardSync, setIsHardSync] = useState(false);
 
+  const [isSyncingKV, setIsSyncingKV] = useState(false);
+
+  const handleForceSync = async () => {
+    if (!confirm("⚠️ คำเตือน: ระบบจะกวาดข้อมูลจาก D1 ไปเขียนทับ KV ทั้งหมด\n\nใช้เฉพาะเมื่อเกิดเหตุฉุกเฉินหรือข้อมูลหน้าบ้านไม่ตรงกับฐานข้อมูลเท่านั้น ดำเนินการต่อหรือไม่?")) return;
+    setIsSyncingKV(true);
+    setStatus({ type: '', msg: 'กำลังบังคับซิงค์ข้อมูล D1 ลง Edge Storage...' });
+    try {
+      const res = await fetch('/api/admin/stories/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setStatus({ type: 'success', msg: 'Force Sync สำเร็จ ข้อมูลหน้าบ้านอัปเดตตรงกับฐานข้อมูลแล้ว' });
+      } else {
+        setStatus({ type: 'error', msg: data.message });
+      }
+    } catch (err) {
+      setStatus({ type: 'error', msg: 'การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว' });
+    } finally {
+      setIsSyncingKV(false);
+    }
+  };
   const handleSyncVocab = async (e) => {
     e.preventDefault();
     if (!sheetUrl) return setStatus({ type: 'error', msg: 'กรุณาวางลิงก์ Google Sheets (.tsv)' });
@@ -285,9 +306,15 @@ export default function StoryAdmin() {
         
         {/* Header & Tab Switcher */}
         <div className="bg-blue-600 flex flex-col sm:flex-row justify-between items-stretch">
-          <div className="p-6 text-white flex-1">
-            <h1 className="text-2xl font-black tracking-widest uppercase">Content Management</h1>
-            <p className="opacity-80 text-sm font-medium mt-1">ระบบจัดการเนื้อหาบทความอ่าน</p>
+          <div className="p-6 text-white flex-1 flex justify-between items-start gap-4">
+            <div>
+              <h1 className="text-2xl font-black tracking-widest uppercase">Content Management</h1>
+              <p className="opacity-80 text-sm font-medium mt-1">ระบบจัดการเนื้อหาบทความอ่าน</p>
+            </div>
+            <button type="button" onClick={handleForceSync} disabled={isSyncingKV} className="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50 border border-red-400">
+              {isSyncingKV ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />}
+              FORCE SYNC KV
+            </button>
           </div>
           <div className="flex bg-blue-700/50">
             <button 

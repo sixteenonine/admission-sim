@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext, useSearchParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Volume2, Star, Languages, Layers, ZoomIn, ZoomOut, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import DOMPurify from 'dompurify';
 
 export default function StoryReader() {
   const contextVals = useOutletContext();
@@ -223,7 +224,11 @@ export default function StoryReader() {
     if (!story) return null;
     if (showThai) {
       // 🇹🇭 แก้ขนาดตัวหนังสือภาษาไทยที่นี่ (เปลี่ยนจาก text-[1.05em] เป็นเล็กลง เช่น text-[0.95rem] หรือ text-[0.9rem])
-      return <div className="font-sans leading-relaxed text-[1.05rem] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>" }} />;
+      const cleanHTML = DOMPurify.sanitize(story.translation || "<i>(ยังไม่มีคำแปลภาษาไทยสำหรับเรื่องนี้)</i>", {
+        ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'span', 'div', 'u'],
+        ALLOWED_ATTR: ['href', 'target', 'style', 'class']
+      });
+      return <div className="font-sans leading-relaxed text-[0.95rem] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: cleanHTML }} />;
     }
     if (!story.content) return null;
 
