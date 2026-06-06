@@ -23,9 +23,13 @@ export default function StoryAdmin() {
     try {
       const res = await fetch('/api/admin/stories/list');
       const data = await res.json();
-      if (data.status === 'success') setStories(data.stories);
+      if (data.status === 'success') {
+        setStories(data.stories);
+      } else {
+        alert("🚨 ฐานข้อมูล D1 แจ้งเตือน:\n" + data.message);
+      }
     } catch (err) {
-      console.error("โหลดรายการข้อมูลล้มเหลว");
+      alert("🚨 ไม่สามารถเชื่อมต่อ API ได้:\n" + err.message);
     }
   };
 
