@@ -2,9 +2,9 @@ import { db } from './db.js';
 
 const CHUNK_SIZE = 10;
 let isSyncing = false;
-let isVocabSyncing = {}; // 🛡️ เปลี่ยนเป็น Object เพื่อแยกคิวตาม User ID
-let isUserSyncing = false; // 🛡️ เพิ่ม Flag แยกการทำงานป้องกันคิวชนกัน
-let vocabSyncTimer = null; // 🛡️ ตัวแปรเก็บเวลาหน่วงสำหรับ Smart Batching
+let isVocabSyncing = {}; 
+let isUserSyncing = false; 
+let vocabSyncTimers = {};
 let historyRetryDelay = 2000;
 let userRetryDelay = 2000;
 
@@ -72,8 +72,8 @@ export const syncManager = {
     if (!force) {
       const count = await db.sync_outbox.where('user_id').equals(userId).count();
       if (count < 50) { // 🛡️ ขยาย Batch เป็น 50 คำ ลดภาระ Network
-        if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
-        vocabSyncTimer = setTimeout(() => this.triggerVocabSync(userId, true), 30000); // 🛡️ หน่วงเวลาเป็น 30 วินาที
+        if (vocabSyncTimers[userId]) clearTimeout(vocabSyncTimers[userId]);
+        vocabSyncTimers[userId] = setTimeout(() => this.triggerVocabSync(userId, true), 30000); 
         return;
       }
     }
@@ -81,7 +81,7 @@ export const syncManager = {
     if (isVocabSyncing[userId]) return;
     try {
       isVocabSyncing[userId] = true;
-      if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
+      if (vocabSyncTimers[userId]) clearTimeout(vocabSyncTimers[userId]);
 
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
       if (outboxItems.length === 0) return;
@@ -164,6 +164,9 @@ export const syncManager = {
         const idsToDelete = queue.map(q => q.id);
         await db.user_sync_queue.bulkDelete(idsToDelete);
         userRetryDelay = 2000;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('user-sync-completed'));
+        }
         const remaining = await db.user_sync_queue.count();
         if (remaining > 0) setTimeout(() => this.triggerUserSync(), 2000);
       } else {

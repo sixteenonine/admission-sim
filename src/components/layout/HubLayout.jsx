@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import TopBar from './TopBar';
 import AuthModal from '../../components/AuthModal';
 import Sidebar from './Sidebar';
@@ -22,7 +24,13 @@ const themeVals = {
 export default function HubLayout() {
   const { themeVals } = useTheme();
   const { currentUser, isAuthChecking, handleLoginSuccess, handleLogout, handleRefreshUser } = useAuth();
-   
+   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const onUserSync = () => queryClient.invalidateQueries({ queryKey: ['userSyncData'] });
+    window.addEventListener('user-sync-completed', onUserSync);
+    return () => window.removeEventListener('user-sync-completed', onUserSync);
+  }, [queryClient]);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
