@@ -2,7 +2,7 @@ import { db } from './db.js';
 
 const CHUNK_SIZE = 10;
 let isSyncing = false;
-let isVocabSyncing = false;
+let isVocabSyncing = {}; // 🛡️ เปลี่ยนเป็น Object เพื่อแยกคิวตาม User ID
 let isUserSyncing = false; // 🛡️ เพิ่ม Flag แยกการทำงานป้องกันคิวชนกัน
 let vocabSyncTimer = null; // 🛡️ ตัวแปรเก็บเวลาหน่วงสำหรับ Smart Batching
 let historyRetryDelay = 2000;
@@ -78,9 +78,9 @@ export const syncManager = {
       }
     }
 
-    if (isVocabSyncing) return;
+    if (isVocabSyncing[userId]) return;
     try {
-      isVocabSyncing = true;
+      isVocabSyncing[userId] = true;
       if (vocabSyncTimer) clearTimeout(vocabSyncTimer);
 
       const outboxItems = await db.sync_outbox.where('user_id').equals(userId).toArray();
@@ -107,7 +107,7 @@ export const syncManager = {
     } catch (err) {
       console.warn("Vocab sync suspended:", err.message);
     } finally {
-      isVocabSyncing = false;
+      isVocabSyncing[userId] = false;
     }
   },
 

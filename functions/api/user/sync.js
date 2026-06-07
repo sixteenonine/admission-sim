@@ -12,7 +12,9 @@ export async function onRequestGet(context) {
       if (data) context.waitUntil(context.env.APP_KV.put(`user_sync_${userId}`, JSON.stringify(data)));
     }
 
-    return new Response(JSON.stringify({ status: "success", data: data || null }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ status: "success", data: data || null }), { 
+      headers: { "Content-Type": "application/json", "Cache-Control": "private, no-cache" } 
+    });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { status: 500 });
   }
@@ -104,7 +106,9 @@ export async function onRequestPost(context) {
       context.waitUntil(context.env.APP_KV.put(`user_sync_${userId}`, JSON.stringify(updatedSyncData)));
     }
 
-    return new Response(JSON.stringify({ status: "success", synced_at: nowIso }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ status: "success", synced_at: nowIso }), { 
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } 
+    });
   } catch (error) {
     return new Response(JSON.stringify({ status: "error", message: error.message }), { status: 500 });
   }

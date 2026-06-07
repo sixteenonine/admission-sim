@@ -24,28 +24,32 @@ export default function StoryLobby() {
     }
   }, [location.state]);
 
+  const { data: syncData } = useQuery({
+    queryKey: ['userSyncData', user?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/user/sync`);
+      return res.json();
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5 // เก็บแคชส่วนตัวไว้ใน RAM 5 นาที
+  });
+
   useEffect(() => {
-    if (user?.id) {
-      fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success' && data.data?.favorites) {
-            const favs = JSON.parse(data.data.favorites);
-            let storiesList = favs.stories || [];
-            
-            if (location.state?.toggledStoryId) {
-              const { toggledStoryId, toggledStatus } = location.state;
-              if (toggledStatus && !storiesList.includes(toggledStoryId)) {
-                storiesList.push(toggledStoryId);
-              } else if (!toggledStatus) {
-                storiesList = storiesList.filter(id => id !== toggledStoryId);
-              }
-            }
-            setFavoriteIds(storiesList);
-          }
-        }).catch(console.error);
+    if (syncData?.status === 'success' && syncData.data?.favorites) {
+      const favs = JSON.parse(syncData.data.favorites);
+      let storiesList = favs.stories || [];
+      
+      if (location.state?.toggledStoryId) {
+        const { toggledStoryId, toggledStatus } = location.state;
+        if (toggledStatus && !storiesList.includes(toggledStoryId)) {
+          storiesList.push(toggledStoryId);
+        } else if (!toggledStatus) {
+          storiesList = storiesList.filter(id => id !== toggledStoryId);
+        }
+      }
+      setFavoriteIds(storiesList);
     }
-  }, [user?.id, location.state]);
+  }, [syncData, location.state]);
 
   const { data: stories = [], isLoading: loading, isError: error } = useQuery({
     queryKey: ['storiesList'],

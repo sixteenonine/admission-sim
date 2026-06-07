@@ -19,9 +19,12 @@ export const AuthProvider = ({ children }) => {
             'Expires': '0'
           }
         });
-        const data = await res.json();
-        if (data.status === 'success' && data.user) {
-          setCurrentUser(data.user);
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data.status === 'success' && data.user) {
+            setCurrentUser(data.user);
+          }
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -41,7 +44,11 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
     try {
       const { db } = await import('../utils/db.js');
-      await db.sync_outbox.clear();
+      await Promise.all([
+        db.sync_outbox.clear(),
+        db.history_queue.clear(),
+        db.user_sync_queue.clear()
+      ]);
     } catch (e) {
       console.error(e);
     }
