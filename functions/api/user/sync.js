@@ -30,14 +30,11 @@ export async function onRequestPost(context) {
     if (!userId) return new Response(JSON.stringify({ status: "error", message: "Unauthorized" }), { status: 401 });
 
     const db = context.env.DB;
-    // 🛡️ Enterprise Feature: Optimistic Concurrency Control ผ่าน KV เพื่อลด D1 Read
-    let currentServerData = await context.env.APP_KV.get(`user_sync_${userId}`, "json");
-    if (!currentServerData) {
-      currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
-    }
-    // 🛡️ Enterprise Fix: ห้ามดึง KV (Cache) มาเป็นฐานข้อมูลตั้งต้นในการทำ Delta Merge เด็ดขาด ป้องกันข้อมูลที่เพิ่งอัปเดตสูญหายถาวรหาก Cache ดีเลย์
+
+    // 🛡️ Enterprise Fix: ดึงข้อมูลจากฐานข้อมูลหลัก (D1) โดยตรงเพื่อเป็น Source of Truth 
+    // ป้องกันปัญหาข้อมูลสูญหายจากการ Merge ข้ามข้อมูลเก่าใน Cache (KV)
     let currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
-    
+
     // เช็ค Conflict: ถ้าเวลา Server ใหม่กว่า Client (มีคนใช้อีกอุปกรณ์) จะเตะ HTTP 409 แจ้งให้ดึงข้อมูลก่อน
     if (payload.last_synced_at && currentServerData && currentServerData.updated_at) {
       const serverTime = new Date(currentServerData.updated_at).getTime();
