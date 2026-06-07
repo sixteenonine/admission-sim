@@ -153,7 +153,9 @@ export const syncManager = {
         return;
       }
 
-      const actions = queue.map(q => q.actionPayload);
+      const chunk = queue.slice(0, 50); // 🛡️ Enterprise Fix: หั่น Batch 50 ป้องกัน Payload Timeout
+      const actions = chunk.map(q => q.actionPayload);
+      
       const response = await fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,7 +163,7 @@ export const syncManager = {
       });
 
       if (response.ok) {
-        const idsToDelete = queue.map(q => q.id);
+        const idsToDelete = chunk.map(q => q.id); // 🛡️ เคลียร์คิวเฉพาะที่ส่งผ่านแล้ว
         await db.user_sync_queue.bulkDelete(idsToDelete);
         userRetryDelay = 2000;
         if (typeof window !== 'undefined') {

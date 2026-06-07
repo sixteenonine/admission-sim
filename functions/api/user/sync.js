@@ -35,6 +35,8 @@ export async function onRequestPost(context) {
     if (!currentServerData) {
       currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
     }
+    // 🛡️ Enterprise Fix: ห้ามดึง KV (Cache) มาเป็นฐานข้อมูลตั้งต้นในการทำ Delta Merge เด็ดขาด ป้องกันข้อมูลที่เพิ่งอัปเดตสูญหายถาวรหาก Cache ดีเลย์
+    let currentServerData = await db.prepare("SELECT updated_at, favorites, custom_decks, custom_speedreads, srs_progress FROM user_sync_data WHERE user_id = ?").bind(userId).first();
     
     // เช็ค Conflict: ถ้าเวลา Server ใหม่กว่า Client (มีคนใช้อีกอุปกรณ์) จะเตะ HTTP 409 แจ้งให้ดึงข้อมูลก่อน
     if (payload.last_synced_at && currentServerData && currentServerData.updated_at) {
