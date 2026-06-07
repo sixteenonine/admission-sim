@@ -13,16 +13,7 @@ export default function StoryLobby() {
 
   const location = useLocation();
 
-  useEffect(() => {
-    if (location.state?.toggledStoryId) {
-      const { toggledStoryId, toggledStatus } = location.state;
-      setFavoriteIds(prev => {
-        if (toggledStatus && !prev.includes(toggledStoryId)) return [...prev, toggledStoryId];
-        if (!toggledStatus) return prev.filter(id => id !== toggledStoryId);
-        return prev;
-      });
-    }
-  }, [location.state]);
+  // 🛡️ ลบ useEffect โค้ดเก่าที่จัดการ location.state ซ้ำซ้อนทิ้ง เพื่อให้เหลือแค่บล็อกที่ทำงานร่วมกับ syncData (TanStack Query) ป้องกัน UI กระพริบ
 
   const { data: syncData } = useQuery({
     queryKey: ['userSyncData', user?.id],
