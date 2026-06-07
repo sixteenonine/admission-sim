@@ -10,7 +10,7 @@ export async function onRequestGet(context) {
     return new Response(JSON.stringify({ status: 'success', version, counts }), {
       headers: { 
         'Content-Type': 'application/json', 
-        'Cache-Control': 'no-store' // บังคับให้เบราว์เซอร์ไม่แคชไฟล์นี้
+        'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
       }
     });
   } catch (err) {

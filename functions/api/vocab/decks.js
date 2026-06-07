@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
     return new Response(JSON.stringify({ status: 'success', data: kvData }), {
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store'
+        'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300'
       }
     });
   } catch (err) {
